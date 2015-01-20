@@ -1,4 +1,11 @@
-    Draft specification
+	RLPx: Cryptographic Network & Transport Protocol
+	Alex Leverington
+    Final Draft
+
+# A Different Approach: Application Interface
+The advent of SSL and consumers' ability to interface with 3rd parties over encrypted channels of communication was a leading factor in spurring the growth and advancements of the Internet. Accordingly, and in contrast to the Internet being powered by the TCP/IP protocol suite, one finds that the Internet has become synonymous with HTTP and this detracts from the scalability and privacy gains which the Internet and advances in cryptography provide. The modern manifestation of privacy today is browser bundled SSL certificates of which their security is heavily dependent on large corporations, states, and the choices of browser vendors. Moreover, and as has been observed by global flow analysis, HTTP is the modern interface for network communication -- email, ecommerce, streaming media -- chances are, if it's encrypted, typically uses HTTPS. Ironically, this is due to the successes of both the Internet and HTTP. Looking back, TLS wasn't built to be tightly coupled with HTTP (it's also used for SMTP) and large corporations and state governments ran the internet before it was The Internet.
+
+Going forward there is a necessity and desire to make networks better, privacy better, and to give end users and systems a better interface, more insight, and more control for network communication. RLPx is a protocol specification which, via implemenations, provide an easy to use network interface which doesn't contstrain developers to opaque, text-based, stateless, point-to-point connections. RLPx provides a p2p network, a multieplexed cryptographic transport protocol, and an interface to both network and transport which percolates security and network state thru every layer of the application stack.
 
 # Introduction
 RLPx is a network layer which provides a general-purpose transport and interface for applications to communicate via a p2p network. The first version is geared towards building a robust transport, well-formed network, and software interface in order to provide infrastructure which meets the requirements of distributed or decentralized applications such as Ethereum. Encryption is employed to provide better privacy and integrity than would be provided by a cleartext implementation.
@@ -21,20 +28,23 @@ https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper
 ### Objectives
 * nodes have access to a uniform network topology
 * peers can uniformly connect to network
+* network robustness >= kademlia
 * protocols sharing a connection are provided uniform bandwidth
 * authenticated connectivity
 * authenticated discovery protocol
-* encrypted transport
-* robust protocol advertisement and versioning
+* encrypted transport (TCP now; UDP in future)
+* robust node discovery
 
 # Network Formation
 ### Objectives
+A kademlia-like protocol is implemented in order to fascilitate a well-formed network. We define a well-formed network as a network wherein:
 * nodes can resolve the endpoint information of other nodes via node ids
 * new nodes can reliably find nodes to connect to
 * nodes have sufficient network topology information to uniformly connect to other nodes
-* nodes can resolve other nodes in 6 hops
+* nodes can resolve other nodes in log(n) hops, where log(n) ~ 6
+* node identifiers are random
 
-A kademlia-like protocol is implemented in order to fascilitate a well-formed network. Major differences are that packets are signed, node ids are 512-bit public keys, and DHT features are not implemented.
+Significant differences between kademlia and RLPx are that packets are signed, node ids are 512-bit public keys, and DHT features are not implemented.
 
 # Transport
 ### Objectives
@@ -44,29 +54,38 @@ A kademlia-like protocol is implemented in order to fascilitate a well-formed ne
 
 Authenticated encryption is employed in order to provide confidentiality and protect against network disruption. This is particularly important for a well-formed network where nodes make long-term decisions about other nodes which yield non-local effects.
 
-Throughput guarantees, such that each protocol is allotted the same amount of bandwidth, are achieved by packet framing.
+Dynamic framing and flow control ensure that each protocol is allotted the same amount of bandwidth.
 
 # Implementation Overview
 Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, and authenticated. Multiplexing is achieved via the frame header which specifies the destination protocol of a packet.
+
+All cryptographic operations are based on secp256k1 and each node is expected to maintain a static private key which is saved and restored between sessions. It is recommended that the private key can only be reset manually, for example, by deleting a file or database entry.
 
 An RLPx implementation is composed of:
 * Node Discovery & Peer Preference
 * Encrypted Handshake
 * Framing
-* Multiplexing
+* Flow Control
 
 # Node Discovery & Peer Preference
 **Node**: An entity on the network.  
 **Peer**: Node which is currently connected to local node.  
 **NodeId**: public key of node
 
-Node discovery and network formation are implemented via a kademlia-like protocol. The major differences are that packets are signed, node ids are the public keys, and DHT-related features are excluded. The FIND_VALUE and STORE packets are not implemented. The parameters necessary to implement the protocol are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
+Node discovery and network formation are implemented via a kademlia-like UDP. Major differences from Kademlia:
 
-Aside from the previously described exclusions, node discovery closely follows system and protocol described by Maymounkov and Mazieres.
+* packets are signed
+* node ids are public keys
+* DHT-related features are excluded. FIND_VALUE and STORE packets are not implemented. 
+* xor distance metric is based on sha3(nodeid) instead of the nodeid
 
-Packets are signed and authenticated. Authentication is performed by recovering the public key from the signature and checking that it matches the expected value. Packet properties are serialized in the order in which they're defined.
+The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
 
-RLPx provides 'potential' nodes along with distance information and can maintain connections for well-formedness based on an ideal peer count (default is 5). This strategy is implemented by connecting to 1 random node for every 'close' node which is connected.
+Except for the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
+
+Packets are signed. Verification is performed by recovering the public key from the signature and checking that it matches an expected value. Packet properties are serialized in the order in which they're defined.
+
+RLPx provides a list of 'potential' nodes, based on distance metrics, and can maintain connections for well-formedness based on an ideal peer count (default is 5). This strategy is implemented by connecting to 1 random node for every 'close' node which is connected.
 
 Other connection strategies which can be manually implemented by a protocol; a protocol can use it's own metadata and strategies for making connectivity decisions.
 
@@ -74,40 +93,42 @@ Other connection strategies which can be manually implemented by a protocol; a p
 
 Packet Encapsulation:
 
-    mac || signature || packet-type || packet-data
-		mac: sha3(pubkey || packet-type || packet-data)
-		signature: sign(privkey, mac)
-		packet-type: single byte < 2**7
+    hash || signature || packet-type || packet-data
+		hash: sha3(signature || packet-type || packet-data)	// used to verify integrity of datagram
+		signature: sign(privkey, sha3(packet-type || packet-data))
+		signature: sign(privkey, sha3(pubkey || packet-type || packet-data)) // implementation w/MCD
+		packet-type: single byte < 2**7 // valid values are [1,4]
     	packet-data: RLP encoded list. Packet properties are serialized in the order in which they're defined. See packet-data below.
+
 
 DRAFT Encrypted Packet Encapsulation:
 
-	mac || header-data || frame
-	
-    frame-size: 3-byte integer size of frame, big endian encoded
-    header-data:
-        normal: rlp.list(protocol-type[, sequence-id])
-        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
-		chunked-n: rlp.list(protocol-type, sequence-id)
-        values:
-            protocol-type: < 2**16
-            sequence-id: < 2**16 (this value is optional for normal frames)
-            total-packet-size: < 2**32
+	mac || header || frame
+		header: frame-size || header-data
+	    frame-size: 3-byte integer size of frame, big endian encoded
+	    header-data:
+	        normal: rlp.list(protocol-type[, sequence-id])
+	        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
+			chunked-n: rlp.list(protocol-type, sequence-id)
+	        values:
+	            protocol-type: < 2**16
+	            sequence-id: < 2**16 (this value is optional for normal frames)
+	            total-packet-size: < 2**32
 
 Packet Data (packet-data):
 
 	PingNode packet-type: 0x01
     struct PingNode
     {
-    	std::string ipAddress; // our IP
-    	unsigned port; // our port
+		unsigned version = 0x1;
+    	Endpoint endpoint;
     	unsigned expiration;
     };
 	
 	Pong packet-type: 0x02
     struct Pong  // response to PingNode
     {
-    	h256 replyTo; // hash of rlp of PingNode
+    	h256 echo; // hash of PingNode payload
     	unsigned expiration;
     };
 	
@@ -123,9 +144,7 @@ Packet Data (packet-data):
     {
     	struct Node
     	{
-    		unsigned version = 0x01;
-    		std::string ipAddress;
-    		unsigned port;
+    		Endpoint endpoint;
     		NodeId node;
     	};
 		
@@ -133,62 +152,85 @@ Packet Data (packet-data):
     	unsigned expiration;
     };
 	
+	struct Endpoint
+	{
+		unsigned network; // ipv4:4, ipv6:6
+		unsigned transport; // tcp:6, udp:17
+		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address)
+		unsigned port; // BE encoded 16-bit unsigned (layer4 port)
+	}
+	
     NodeId is the node's public key.
 
 # Encrypted Handshake
 Connections are established via a handshake and, once established, packets are encapsulated as frames which are encrypted using AES-256 in CTR mode. Key material for the session is derived via a KDF with ECDHE-derived keying material. ECC uses secp256k1 curve (ECP). Note: "remote" is host which receives the connection.
 
-The handshake is carried out in two phases. The first phase is authentication and key exchange and the second phase is to negotiate supported protocols. The authentication and key exchange is an ECIES encrypted message which includes ephemeral keys for Perfect Forward Secrecy (PFS). The second phase of the handshake is a part of DEVp2p and is an exchange of capabilities that each node supports. It's up to the implementation how to handle the outcome of the second phase of the handshake.
+The handshake is carried out in two phases. The first phase is key exchange and the second phase is authentication and protocol negotiation. The key exchange is an ECIES encrypted message which includes ephemeral keys for Perfect Forward Secrecy (PFS). The second phase of the handshake is a part of DEVp2p and is an exchange of capabilities that each node supports. It's up to the implementation how to handle the outcome of the second phase of the handshake.
 
-There are several variants of ECIES, of which, some modes are malleable and must not be used. This specification relies on the implementation of ECIES as defined by Shoup. Thus, decryption will not occur if ciphertext authentication fails. http://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
+There are several variants of ECIES, of which, some modes are malleable and must not be used. This specification relies on the implementation of ECIES as defined by Shoup. Thus, decryption will not occur if message authentication fails. http://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
 
 There are two kinds of connections which can be established. A node can connect to a known peer, or a node can connect to a new peer. A known peer is one which has previously been connected to and from which a corresponding session token is available for authenticating the requested connection.
 
-If the handshake fails, if and only if initiating a connection TO a known peer, then the nodes information should be removed from the node table and the connection MUST NOT be reattempted. Due to the limited IPv4 space and common ISP practices, this is likely a common and normal occurrence, therefore, no other action should occur. If a handshake fails for a connection which is received, no action pertaining to the node table should occur.
+If the handshake fails upon initiating a connection TO a known peer, then the nodes information should be removed from the node table and the connection MUST NOT be reattempted. Due to the limited IPv4 space and common ISP practices, this is likely a common and normal occurrence, therefore, no other action should occur. If a handshake fails for a connection which is received, no action pertaining to the node table should occur.
 
 Handshake:
 
-    New: authInitiator -> E(remote-pubk, S(ecdhe-random, ecdh-shared-secret^nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
-	     authRecipient -> E(remote-pubk, ecdhe-random-pubk || nonce || 0x0)
-	
-    Known: authInitiator = E(remote-pubk, S(ecdhe-random, token^nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x1)
-           authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x1) // token found
-		   authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x0) // token not found
+    New: authInitiator -> E(remote-pubk, S(ephemeral-privk, ecdh-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
+         authRecipient -> E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0)
+
+    Known: authInitiator = E(remote-pubk, S(ephemeral-privk, token ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x1)
+           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x1) // token found
+           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0) // token not found
 
 Values generated following the handshake (see below for steps):
 
-    ecdhe-shared-secret = ecdh.agree(ecdhe-random, remote-ecdhe-random-pubk)
+    ecdhe-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
     shared-secret = sha3(ecdhe-shared-secret || sha3(nonce || initiator-nonce))
     token = sha3(shared-secret)
     aes-secret = sha3(ecdhe-shared-secret || shared-secret)
     # destroy shared-secret
     mac-secret = sha3(ecdhe-shared-secret || aes-secret)
     # destroy ecdhe-shared-secret
-    egress-mac = sha3(mac-secret^nonce || auth)
+    
+    Initiator:
+    egress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-sent-init)
     # destroy nonce
-    ingress-mac = sha3(mac-secret^initiator-nonce || auth)
+    ingress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-recvd-ack)
+    # destroy remote-nonce
+    
+    Recipient:
+    egress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-sent-ack)
+    # destroy nonce
+    ingress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-recvd-init)
     # destroy remote-nonce
 
-Creating a connection (needs update!):
+Creating authenticated connection:
 
-    1. initiator generates ecdhe-random and nonce and creates auth
+    1. initiator generates auth from ecdhe-random, ecdh-shared-secret, and nonce (auth = authInitiator handshake)
     2. initiator connects to remote and sends auth
+	
+    3. optionally, remote decrypts and verifies auth (checks that recovery of signature == H(ephemeral-pubk))
+    4. remote generates authAck from remote-ephemeral-pubk and nonce (authAck = authRecipient handshake)
+	
+	optional: remote derives secrets and preemptively sends protocol-handshake (steps 9,11,8,10)
+	
+    5. initiator receives authAck
+    6. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
+    7. initiator sends protocol-handshake
+	
+    8. remote receives protocol-handshake
+    9. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
+    10. remote authenticates protocol-handshake
+    11. remote sends protocol-handshake
+	
+    12. initiator receives protocol-handshake
+    13. initiator authenticates protocol-handshake
+    13. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
+    14. begin sending/receiving data
+	
+	All packets following auth, including protocol negotiation handshake, are framed.
 
-    3. remote generates ecdhe-random and nonce and creates auth
-    4. remote receives auth and decrypts (ECIES performs authentication before decryption)
-
-    5. remote sends auth
-    6. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    7. remote sends protocol-handshake
-
-    10. initiator receives auth
-    11. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    12. initiator sends protocol-handshake
-
-    13. cryptographic handshake is complete if mac of protocol-handshake is valid; permanent-token is replaced with token
-	14. begin sending/receiving data
-
-Either side may disconnect if authentication of the first framed packet fails or if the protocol handshake isn't appropriate (ex: version is too old). All packets following auth, including protocol negotiation handshake, are framed.
+Either side may disconnect if and only if authentication of the first framed packet fails, or, if the protocol handshake isn't appropriate (ex: version is too old).
 
 # Framing
 The primary purpose behind framing packets is in order to robustly support multiplexing multiple protocols over a single connection. Secondarily, as framed packets yield reasonable demarcation points for message authentication codes, supporting an encrypted stream becomes straight-forward. Accordingly, frames are authenticated via key material which is generated during the handshake.
@@ -202,15 +244,15 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
       ^ is xor
 
     Single-frame packet:
-    header || header-mac || frame || mac
+    header || header-mac || frame || frame-mac
 
     Multi-frame packet:
     header || header-mac || frame-0 ||
     [ header || header-mac || frame-n || ... || ]
-    header || header-mac || frame-last || mac
+    header || header-mac || frame-last || frame-mac
 
     header: frame-size || header-data || padding
-    frame-size: 3-byte integer size of frame, big endian encoded
+    frame-size: 3-byte integer size of frame, big endian encoded (excludes padding)
     header-data:
         normal: rlp.list(protocol-type[, sequence-id])
         chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
@@ -221,15 +263,15 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
             total-packet-size: < 2**32
     padding: zero-fill to 16-byte boundary
 
-    header-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac)^header-ciphertext)
+    header-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac) ^ header-ciphertext).digest
 
     frame:
         normal: rlp(packet-type) [|| rlp(packet-data)] || padding
 		chunked-0: rlp(packet-type) || rlp(packet-data...)
         chunked-n: rlp(...packet-data) || padding
-    padding: zero-fill to 16-byte boundary
+    padding: zero-fill to 16-byte boundary (only necessary for last frame)
 
-    packet-mac: output of egress-mac.update(packet)
+    frame-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac) ^ right128(egress-mac.update(frame-ciphertext).digest))
 
     egress-mac: h256, continuously updated with egress-bytes*
     ingress-mac: h256, continuously updated with ingress-bytes*
@@ -242,10 +284,39 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
 Notes on Terminology:  
 "Packet" is used because not all packets are messages; RLPx doesn't yet have a notation for destination address. "Frame" is used to refer to a packet which is to be transported over RLPx. Although somewhat confusing, the term "message" is used in the case of text (plain or cipher) which is authenticated via a message authentication code (MAC or mac).
 
+# Flow Control
+
+**Note:** The initial version of RLPx will set a static window-size of 8KB; fair queueing and flow control (DeltaUpdate packet) will not be implemented.
+
+Dynamic framing is a process by which both sides send frames which are limited in size by the sender window size and the number of active protocols. Dynamic framing provides flow control and is implemented by a sender transfer window and protocol window. The data transfer window is a 32-bit value set by the sender and indicates how many bytes of data the sender can transmit. The protocol window is the transfer window, divided by the number of active protocols. After a connection is established, but before any frames have been transmitted, the sender begins with the initial window size. This window size is a measure of the buffering capability of the recipient. The sender must not send a data frame larger than the protocol window size. After sending each data frame, the sender decrements its transfer window size by the amount of data transmitted. When the window size becomes less than or equal to 0, the sender must pause transmitting data frames. At the other end of the stream, the recipient sends a DeltaUpdate packet back to notify the sender that it has consumed some data and freed up buffer space to receive more data. When a connection is first established the initial window size is 8KB.
+
+    pws = protocol-window-size = window-size / active-protocol-count
+	
+    The initial window-size is 8KB.
+    A protocol is considered active if it's queue contains one or more packets.
+
+	DeltaUpdate protocol-type: 0x0, packet-type: 0x0
+	struct DeltaUpdate
+	{
+		unsigned size; // < 2**31
+	}
+
+Multiplexing of protocols is performed via dynamic framing and fair queueing. Dequeuing packets is performed in a cycle which dequeues one or more packets from the queue(s) of each active protocol. The multiplexor determines the amount of bytes to send for each protocol prior to each round of dequeuing packets.
+
+If the size of a frame is less than 1 KB then the protocol may request that the network layer prioritize the delivery of the packet. This should be used if the packet must be delivered before all other packets. The senders network layer maintains two queues and three buffers per protocol: a queue for normal packets, a queue for priority packets, a chunked-frame buffer, a normal-frame buffer, and a priority-frame buffer.
+
+    If priority packet and normal packet exist: send up to pws/2 bytes from each (priority first!)
+    else if priority packet and chunked-frame exist: send up to pws/2 bytes from each
+    else if normal packet and chunked-frame exist: send up to pws/2 bytes from each
+    else read pws bytes from active buffer
+
+    If there are bytes leftover -- for example, if the bytes sent is < pws, then repeat the cycle.
+
 # References
-Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}
-Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL {http://www.shoup.net/papers/iso-2_1.pdf}
-Gavin Wood. libp2p Whitepaper. 2014. URL {https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper}
+Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}  
+Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL {http://www.shoup.net/papers/iso-2_1.pdf}  
+Gavin Wood. libp2p Whitepaper. 2014. URL {https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper}  
+Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL {http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3}  
 Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL {http://vitalik.ca/ethereum/patricia.html}
 
 # Contributors
@@ -259,3 +330,6 @@ Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL {http:/
 - devp2p protocol and paper
 
 RLPx was inspired by circuit-switched networks, BitTorrent, TLS, the Whisper protocol, and the PMT used by Ethereum.
+
+Copyright &copy; 2014 Alex Leverington.  
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
