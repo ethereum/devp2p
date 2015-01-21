@@ -25,7 +25,7 @@ https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper
 * authenticated connectivity
 * authenticated discovery protocol
 * encrypted transport
-* robust protocol advertisement and versioning
+* robust node discovery
 
 # Network Formation
 ### Objectives
