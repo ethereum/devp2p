@@ -56,7 +56,7 @@ An RLPx implementation is composed of:
 * Node Discovery & Peer Preference
 * Encrypted Handshake
 * Framing
-* Multiplexing
+* Flow Control
 
 # Node Discovery & Peer Preference
 **Node**: An entity on the network.  
@@ -253,10 +253,39 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
 Notes on Terminology:  
 "Packet" is used because not all packets are messages; RLPx doesn't yet have a notation for destination address. "Frame" is used to refer to a packet which is to be transported over RLPx. Although somewhat confusing, the term "message" is used in the case of text (plain or cipher) which is authenticated via a message authentication code (MAC or mac).
 
+# Flow Control
+
+**Note:** The initial version of RLPx will set a static window-size of 8KB; fair queueing and flow control (DeltaUpdate packet) will not be implemented.
+
+Dynamic framing is a process by which both sides send frames which are limited in size by the sender window size and the number of active protocols. Dynamic framing provides flow control and is implemented by a sender transfer window and protocol window. The data transfer window is a 32-bit value set by the sender and indicates how many bytes of data the sender can transmit. The protocol window is the transfer window, divided by the number of active protocols. After a connection is established, but before any frames have been transmitted, the sender begins with the initial window size. This window size is a measure of the buffering capability of the recipient. The sender must not send a data frame larger than the protocol window size. After sending each data frame, the sender decrements its transfer window size by the amount of data transmitted. When the window size becomes less than or equal to 0, the sender must pause transmitting data frames. At the other end of the stream, the recipient sends a DeltaUpdate packet back to notify the sender that it has consumed some data and freed up buffer space to receive more data. When a connection is first established the initial window size is 8KB.
+
+    pws = protocol-window-size = window-size / active-protocol-count
+	
+    The initial window-size is 8KB.
+    A protocol is considered active if it's queue contains one or more packets.
+
+	DeltaUpdate protocol-type: 0x0, packet-type: 0x0
+	struct DeltaUpdate
+	{
+		unsigned size; // < 2**31
+	}
+
+Multiplexing of protocols is performed via dynamic framing and fair queueing. Dequeuing packets is performed in a cycle which dequeues one or more packets from the queue(s) of each active protocol. The multiplexor determines the amount of bytes to send for each protocol prior to each round of dequeuing packets.
+
+If the size of a frame is less than 1 KB then the protocol may request that the network layer prioritize the delivery of the packet. This should be used if the packet must be delivered before all other packets. The senders network layer maintains two queues and three buffers per protocol: a queue for normal packets, a queue for priority packets, a chunked-frame buffer, a normal-frame buffer, and a priority-frame buffer.
+
+    If priority packet and normal packet exist: send up to pws/2 bytes from each (priority first!)
+    else if priority packet and chunked-frame exist: send up to pws/2 bytes from each
+    else if normal packet and chunked-frame exist: send up to pws/2 bytes from each
+    else read pws bytes from active buffer
+
+    If there are bytes leftover -- for example, if the bytes sent is < pws, then repeat the cycle.
+
 # References
 Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}
 Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL {http://www.shoup.net/papers/iso-2_1.pdf}
 Gavin Wood. libp2p Whitepaper. 2014. URL {https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper}
+Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL {http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3}
 Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL {http://vitalik.ca/ethereum/patricia.html}
 
 # Contributors
