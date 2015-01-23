@@ -1,4 +1,4 @@
-    Draft specification
+    Final Draft
 
 # Introduction
 RLPx is a network layer which provides a general-purpose transport and interface for applications to communicate via a p2p network. The first version is geared towards building a robust transport, well-formed network, and software interface in order to provide infrastructure which meets the requirements of distributed or decentralized applications such as Ethereum. Encryption is employed to provide better privacy and integrity than would be provided by a cleartext implementation.
@@ -138,8 +138,8 @@ Packet Data (packet-data):
 	
 	struct Endpoint
 	{
-		unsigned layer3; // ipv4:4, ipv6:6
-		unsigned layer4; // tcp:6, udp:17
+		unsigned network; // ipv4:4, ipv6:6
+		unsigned transport; // tcp:6, udp:17
 		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address)
 		unsigned port; // BE encoded 16-bit unsigned (layer4 port)
 	}
