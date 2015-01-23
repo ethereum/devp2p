@@ -47,7 +47,7 @@ Significant differences between kademlia and RLPx are that packets are signed, n
 
 Authenticated encryption is employed in order to provide confidentiality and protect against network disruption. This is particularly important for a well-formed network where nodes make long-term decisions about other nodes which yield non-local effects.
 
-Throughput guarantees, such that each protocol is allotted the same amount of bandwidth, are achieved by packet framing.
+Dynamic framing and flow control ensure that each protocol is allotted the same amount of bandwidth.
 
 # Implementation Overview
 Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, and authenticated. Multiplexing is achieved via the frame header which specifies the destination protocol of a packet.
@@ -182,24 +182,31 @@ Values generated following the handshake (see below for steps):
 
 Creating a connection (needs update!):
 
-    1. initiator generates ecdhe-random and nonce and creates auth
+    1. initiator generates auth from ecdhe-random, ecdh-shared-secret, and nonce (auth = authInitiator handshake)
     2. initiator connects to remote and sends auth
-
-    3. remote generates ecdhe-random and nonce and creates auth
-    4. remote receives auth and decrypts (ECIES performs authentication before decryption)
-
-    5. remote sends auth
-    6. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    7. remote sends protocol-handshake
-
-    10. initiator receives auth
-    11. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    12. initiator sends protocol-handshake
-
-    13. cryptographic handshake is complete if mac of protocol-handshake is valid; permanent-token is replaced with token
+	
+    3. optionally, remote decrypts and verifies auth
+    4. remote generates authAck from ecdhe-random and nonce (authAck = authRecipient handshake)
+	
+	optional: remote derives secrets and preemptively sends protocol-handshake (steps 9,11,8,10)
+	
+    5. initiator receives authAck
+    6. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
+    7. initiator sends protocol-handshake
+	
+	8. remote receives protocol-handshake
+    9. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
+	10. remote authenticates protocol-handshake
+    11. remote sends protocol-handshake
+	
+	12. initiator receives protocol-handshake
+	13. initiator authenticates protocol-handshake
+    13. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
 	14. begin sending/receiving data
+	
+	All packets following auth, including protocol negotiation handshake, are framed.
 
-Either side may disconnect if authentication of the first framed packet fails or if the protocol handshake isn't appropriate (ex: version is too old). All packets following auth, including protocol negotiation handshake, are framed.
+Either side may disconnect if and only if authentication of the first framed packet fails, or, if the protocol handshake isn't appropriate (ex: version is too old).
 
 # Framing
 The primary purpose behind framing packets is in order to robustly support multiplexing multiple protocols over a single connection. Secondarily, as framed packets yield reasonable demarcation points for message authentication codes, supporting an encrypted stream becomes straight-forward. Accordingly, frames are authenticated via key material which is generated during the handshake.
