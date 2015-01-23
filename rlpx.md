@@ -21,10 +21,11 @@ https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper
 ### Objectives
 * nodes have access to a uniform network topology
 * peers can uniformly connect to network
+* network robustness >= kademlia
 * protocols sharing a connection are provided uniform bandwidth
 * authenticated connectivity
 * authenticated discovery protocol
-* encrypted transport
+* encrypted transport (TCP now; UDP in future)
 * robust node discovery
 
 # Network Formation
@@ -62,13 +63,13 @@ An RLPx implementation is composed of:
 **Peer**: Node which is currently connected to local node.  
 **NodeId**: public key of node
 
-Node discovery and network formation are implemented via a kademlia-like protocol. The major differences are that packets are signed, node ids are the public keys, and DHT-related features are excluded. The FIND_VALUE and STORE packets are not implemented. The parameters necessary to implement the protocol are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
+Node discovery and network formation are implemented via a kademlia-like UDP. The major differences are that packets are signed, node ids are the public keys, and DHT-related features are excluded. The FIND_VALUE and STORE packets are not implemented. The parameters necessary to implement the protocol are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
 
-Aside from the previously described exclusions, node discovery closely follows system and protocol described by Maymounkov and Mazieres.
+Aside from the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
-Packets are signed and authenticated. Authentication is performed by recovering the public key from the signature and checking that it matches the expected value. Packet properties are serialized in the order in which they're defined.
+Packets are signed. Verification is performed by recovering the public key from the signature and checking that it matches an expected value. Packet properties are serialized in the order in which they're defined.
 
-RLPx provides 'potential' nodes along with distance information and can maintain connections for well-formedness based on an ideal peer count (default is 5). This strategy is implemented by connecting to 1 random node for every 'close' node which is connected.
+RLPx provides a list of 'potential' nodes, based on distance metrics, and can maintain connections for well-formedness based on an ideal peer count (default is 5). This strategy is implemented by connecting to 1 random node for every 'close' node which is connected.
 
 Other connection strategies which can be manually implemented by a protocol; a protocol can use it's own metadata and strategies for making connectivity decisions.
 
@@ -76,40 +77,42 @@ Other connection strategies which can be manually implemented by a protocol; a p
 
 Packet Encapsulation:
 
-    mac || signature || packet-type || packet-data
-		mac: sha3(pubkey || packet-type || packet-data)
-		signature: sign(privkey, mac)
-		packet-type: single byte < 2**7
+    hash || signature || packet-type || packet-data
+		hash: sha3(signature || packet-type || packet-data)	// used to verify integrity of datagram
+		signature: sign(privkey, sha3(packet-type || packet-data))
+		signature: sign(privkey, sha3(pubkey || packet-type || packet-data)) // implementation w/MCD
+		packet-type: single byte < 2**7 // valid values are [1,4]
     	packet-data: RLP encoded list. Packet properties are serialized in the order in which they're defined. See packet-data below.
+
 
 DRAFT Encrypted Packet Encapsulation:
 
-	mac || header-data || frame
-	
-    frame-size: 3-byte integer size of frame, big endian encoded
-    header-data:
-        normal: rlp.list(protocol-type[, sequence-id])
-        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
-		chunked-n: rlp.list(protocol-type, sequence-id)
-        values:
-            protocol-type: < 2**16
-            sequence-id: < 2**16 (this value is optional for normal frames)
-            total-packet-size: < 2**32
+	mac || header || frame
+		header: frame-size || header-data
+	    frame-size: 3-byte integer size of frame, big endian encoded
+	    header-data:
+	        normal: rlp.list(protocol-type[, sequence-id])
+	        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
+			chunked-n: rlp.list(protocol-type, sequence-id)
+	        values:
+	            protocol-type: < 2**16
+	            sequence-id: < 2**16 (this value is optional for normal frames)
+	            total-packet-size: < 2**32
 
 Packet Data (packet-data):
 
 	PingNode packet-type: 0x01
     struct PingNode
     {
-    	std::string ipAddress; // our IP
-    	unsigned port; // our port
+		unsigned version = 0x1;
+    	Endpoint endpoint;
     	unsigned expiration;
     };
 	
 	Pong packet-type: 0x02
     struct Pong  // response to PingNode
     {
-    	h256 replyTo; // hash of rlp of PingNode
+    	h256 echo; // hash of PingNode payload
     	unsigned expiration;
     };
 	
@@ -125,9 +128,7 @@ Packet Data (packet-data):
     {
     	struct Node
     	{
-    		unsigned version = 0x01;
-    		std::string ipAddress;
-    		unsigned port;
+    		Endpoint endpoint;
     		NodeId node;
     	};
 		
@@ -135,18 +136,26 @@ Packet Data (packet-data):
     	unsigned expiration;
     };
 	
+	struct Endpoint
+	{
+		unsigned layer3; // ipv4:4, ipv6:6
+		unsigned layer4; // tcp:6, udp:17
+		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address)
+		unsigned port; // BE encoded 16-bit unsigned (layer4 port)
+	}
+	
     NodeId is the node's public key.
 
 # Encrypted Handshake
 Connections are established via a handshake and, once established, packets are encapsulated as frames which are encrypted using AES-256 in CTR mode. Key material for the session is derived via a KDF with ECDHE-derived keying material. ECC uses secp256k1 curve (ECP). Note: "remote" is host which receives the connection.
 
-The handshake is carried out in two phases. The first phase is authentication and key exchange and the second phase is to negotiate supported protocols. The authentication and key exchange is an ECIES encrypted message which includes ephemeral keys for Perfect Forward Secrecy (PFS). The second phase of the handshake is a part of DEVp2p and is an exchange of capabilities that each node supports. It's up to the implementation how to handle the outcome of the second phase of the handshake.
+The handshake is carried out in two phases. The first phase is key exchange and the second phase is authentication and protocol negotiation. The key exchange is an ECIES encrypted message which includes ephemeral keys for Perfect Forward Secrecy (PFS). The second phase of the handshake is a part of DEVp2p and is an exchange of capabilities that each node supports. It's up to the implementation how to handle the outcome of the second phase of the handshake.
 
-There are several variants of ECIES, of which, some modes are malleable and must not be used. This specification relies on the implementation of ECIES as defined by Shoup. Thus, decryption will not occur if ciphertext authentication fails. http://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
+There are several variants of ECIES, of which, some modes are malleable and must not be used. This specification relies on the implementation of ECIES as defined by Shoup. Thus, decryption will not occur if message authentication fails. http://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
 
 There are two kinds of connections which can be established. A node can connect to a known peer, or a node can connect to a new peer. A known peer is one which has previously been connected to and from which a corresponding session token is available for authenticating the requested connection.
 
-If the handshake fails, if and only if initiating a connection TO a known peer, then the nodes information should be removed from the node table and the connection MUST NOT be reattempted. Due to the limited IPv4 space and common ISP practices, this is likely a common and normal occurrence, therefore, no other action should occur. If a handshake fails for a connection which is received, no action pertaining to the node table should occur.
+If the handshake fails upon initiating a connection TO a known peer, then the nodes information should be removed from the node table and the connection MUST NOT be reattempted. Due to the limited IPv4 space and common ISP practices, this is likely a common and normal occurrence, therefore, no other action should occur. If a handshake fails for a connection which is received, no action pertaining to the node table should occur.
 
 Handshake:
 
