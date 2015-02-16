@@ -52,6 +52,8 @@ Dynamic framing and flow control ensure that each protocol is allotted the same 
 # Implementation Overview
 Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, and authenticated. Multiplexing is achieved via the frame header which specifies the destination protocol of a packet.
 
+Each node is expected to maintain a private key for cryptographic operations. A node's private key must be static and must be saved and restored between sessions. It is recommended that the private key can only be reset manually, for example, by deleting a file or database entry.
+
 An RLPx implementation is composed of:
 * Node Discovery & Peer Preference
 * Encrypted Handshake
@@ -72,7 +74,7 @@ Node discovery and network formation are implemented via a kademlia-like UDP. Ma
 
 The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
 
-Aside from the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
+Except for the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
 Packets are signed. Verification is performed by recovering the public key from the signature and checking that it matches an expected value. Packet properties are serialized in the order in which they're defined.
 
