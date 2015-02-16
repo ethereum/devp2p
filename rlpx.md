@@ -197,7 +197,7 @@ Values generated following the handshake (see below for steps):
     ingress-mac = sha3(mac-secret^recipient-nonce || auth-recvd-init)
     # destroy remote-nonce
 
-Creating a connection (needs update!):
+Creating authenticated connection:
 
     1. initiator generates auth from ecdhe-random, ecdh-shared-secret, and nonce (auth = authInitiator handshake)
     2. initiator connects to remote and sends auth
