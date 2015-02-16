@@ -63,7 +63,14 @@ An RLPx implementation is composed of:
 **Peer**: Node which is currently connected to local node.  
 **NodeId**: public key of node
 
-Node discovery and network formation are implemented via a kademlia-like UDP. The major differences are that packets are signed, node ids are the public keys, and DHT-related features are excluded. The FIND_VALUE and STORE packets are not implemented. The parameters necessary to implement the protocol are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
+Node discovery and network formation are implemented via a kademlia-like UDP. Major differences from Kademlia:
+
+* packets are signed
+* node ids are public keys
+* DHT-related features are excluded. FIND_VALUE and STORE packets are not implemented. 
+* xor distance metric is based on sha3(nodeid) instead of the nodeid
+
+The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
 
 Aside from the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
