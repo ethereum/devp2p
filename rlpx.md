@@ -52,7 +52,7 @@ Dynamic framing and flow control ensure that each protocol is allotted the same 
 # Implementation Overview
 Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, and authenticated. Multiplexing is achieved via the frame header which specifies the destination protocol of a packet.
 
-Each node is expected to maintain a private key for cryptographic operations. A node's private key must be static and must be saved and restored between sessions. It is recommended that the private key can only be reset manually, for example, by deleting a file or database entry.
+All cryptographic operations are based on secp256k1 and each node is expected to maintain a static private key which is saved and restored between sessions. It is recommended that the private key can only be reset manually, for example, by deleting a file or database entry.
 
 An RLPx implementation is composed of:
 * Node Discovery & Peer Preference
