@@ -168,10 +168,10 @@ If the handshake fails upon initiating a connection TO a known peer, then the no
 
 Handshake:
 
-    New: authInitiator -> E(remote-pubk, S(ecdhe-random, ecdh-shared-secret^nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
+    New: authInitiator -> E(remote-pubk, S(ecdhe-random, ecdh-shared-secret ^ nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
 	     authRecipient -> E(remote-pubk, ecdhe-random-pubk || nonce || 0x0)
 	
-    Known: authInitiator = E(remote-pubk, S(ecdhe-random, token^nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x1)
+    Known: authInitiator = E(remote-pubk, S(ecdhe-random, token ^ nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x1)
            authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x1) // token found
 		   authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x0) // token not found
 
@@ -186,15 +186,15 @@ Values generated following the handshake (see below for steps):
     # destroy ecdhe-shared-secret
     
     Initiator:
-    egress-mac = sha3(mac-secret^recipient-nonce || auth-sent-init)
+    egress-mac = sha3(mac-secret ^ recipient-nonce || auth-sent-init)
     # destroy nonce
-    ingress-mac = sha3(mac-secret^initiator-nonce || auth-recvd-ack)
+    ingress-mac = sha3(mac-secret ^ initiator-nonce || auth-recvd-ack)
     # destroy remote-nonce
     
     Recipient:
-    egress-mac = sha3(mac-secret^initiator-nonce || auth-sent-ack)
+    egress-mac = sha3(mac-secret ^ initiator-nonce || auth-sent-ack)
     # destroy nonce
-    ingress-mac = sha3(mac-secret^recipient-nonce || auth-recvd-init)
+    ingress-mac = sha3(mac-secret ^ recipient-nonce || auth-recvd-init)
     # destroy remote-nonce
 
 Creating authenticated connection:
@@ -237,12 +237,12 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
       ^ is xor
 
     Single-frame packet:
-    header || header-mac || frame || mac
+    header || header-mac || frame || frame-mac
 
     Multi-frame packet:
     header || header-mac || frame-0 ||
     [ header || header-mac || frame-n || ... || ]
-    header || header-mac || frame-last || mac
+    header || header-mac || frame-last || frame-mac
 
     header: frame-size || header-data || padding
     frame-size: 3-byte integer size of frame, big endian encoded
@@ -256,15 +256,15 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
             total-packet-size: < 2**32
     padding: zero-fill to 16-byte boundary
 
-    header-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac)^header-ciphertext)
+    header-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac) ^ header-ciphertext).digest
 
     frame:
         normal: rlp(packet-type) [|| rlp(packet-data)] || padding
 		chunked-0: rlp(packet-type) || rlp(packet-data...)
         chunked-n: rlp(...packet-data) || padding
-    padding: zero-fill to 16-byte boundary
+    padding: zero-fill to 16-byte boundary (only necessary for last frame)
 
-    packet-mac: output of egress-mac.update(packet)
+    frame-mac: right128 of egress-mac.update(aes(mac-secret,egress-mac) ^ right128(egress-mac.update(frame-ciphertext).digest))
 
     egress-mac: h256, continuously updated with egress-bytes*
     ingress-mac: h256, continuously updated with ingress-bytes*
