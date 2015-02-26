@@ -245,7 +245,7 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
     header || header-mac || frame-last || frame-mac
 
     header: frame-size || header-data || padding
-    frame-size: 3-byte integer size of frame, big endian encoded
+    frame-size: 3-byte integer size of frame, big endian encoded (excludes padding)
     header-data:
         normal: rlp.list(protocol-type[, sequence-id])
         chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
