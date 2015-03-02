@@ -168,16 +168,16 @@ If the handshake fails upon initiating a connection TO a known peer, then the no
 
 Handshake:
 
-    New: authInitiator -> E(remote-pubk, S(ecdhe-random, ecdh-shared-secret ^ nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x0)
-	     authRecipient -> E(remote-pubk, ecdhe-random-pubk || nonce || 0x0)
-	
-    Known: authInitiator = E(remote-pubk, S(ecdhe-random, token ^ nonce) || H(ecdhe-random-pubk) || pubk || nonce || 0x1)
-           authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x1) // token found
-		   authRecipient = E(remote-pubk, ecdhe-random-pubk || nonce || 0x0) // token not found
+    New: authInitiator -> E(remote-pubk, S(ephemeral-privk, ecdh-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
+         authRecipient -> E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0)
+
+    Known: authInitiator = E(remote-pubk, S(ephemeral-privk, token ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x1)
+           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x1) // token found
+           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0) // token not found
 
 Values generated following the handshake (see below for steps):
 
-    ecdhe-shared-secret = ecdh.agree(ecdhe-random, remote-ecdhe-random-pubk)
+    ecdhe-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
     shared-secret = sha3(ecdhe-shared-secret || sha3(nonce || initiator-nonce))
     token = sha3(shared-secret)
     aes-secret = sha3(ecdhe-shared-secret || shared-secret)
@@ -202,8 +202,8 @@ Creating authenticated connection:
     1. initiator generates auth from ecdhe-random, ecdh-shared-secret, and nonce (auth = authInitiator handshake)
     2. initiator connects to remote and sends auth
 	
-    3. optionally, remote decrypts and verifies auth
-    4. remote generates authAck from ecdhe-random and nonce (authAck = authRecipient handshake)
+    3. optionally, remote decrypts and verifies auth (checks that recovery of signature == H(ephemeral-pubk))
+    4. remote generates authAck from remote-ephemeral-pubk and nonce (authAck = authRecipient handshake)
 	
 	optional: remote derives secrets and preemptively sends protocol-handshake (steps 9,11,8,10)
 	
@@ -211,15 +211,15 @@ Creating authenticated connection:
     6. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
     7. initiator sends protocol-handshake
 	
-	8. remote receives protocol-handshake
+    8. remote receives protocol-handshake
     9. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-	10. remote authenticates protocol-handshake
+    10. remote authenticates protocol-handshake
     11. remote sends protocol-handshake
 	
-	12. initiator receives protocol-handshake
-	13. initiator authenticates protocol-handshake
+    12. initiator receives protocol-handshake
+    13. initiator authenticates protocol-handshake
     13. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
-	14. begin sending/receiving data
+    14. begin sending/receiving data
 	
 	All packets following auth, including protocol negotiation handshake, are framed.
 
