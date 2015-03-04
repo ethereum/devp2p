@@ -186,15 +186,15 @@ Values generated following the handshake (see below for steps):
     # destroy ecdhe-shared-secret
     
     Initiator:
-    egress-mac = sha3(mac-secret ^ recipient-nonce || auth-sent-init)
+    egress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-sent-init)
     # destroy nonce
-    ingress-mac = sha3(mac-secret ^ initiator-nonce || auth-recvd-ack)
+    ingress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-recvd-ack)
     # destroy remote-nonce
     
     Recipient:
-    egress-mac = sha3(mac-secret ^ initiator-nonce || auth-sent-ack)
+    egress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-sent-ack)
     # destroy nonce
-    ingress-mac = sha3(mac-secret ^ recipient-nonce || auth-recvd-init)
+    ingress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-recvd-init)
     # destroy remote-nonce
 
 Creating authenticated connection:
