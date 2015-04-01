@@ -41,7 +41,6 @@ The current version of RLPx provides a network layer for Ethereum. Roadmap:
 * Winter '15: 1.0
 	* Node Discovery for multiple protocols
 	* Feature complete UDP
-	* New Features
 
 # Features
 * Node Discovery and Network Formation
