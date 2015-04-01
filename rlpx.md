@@ -2,108 +2,46 @@
 	Alex Leverington
 	Version 0.3
 
-* [Introduction](#introduction)
-* [Release History](#release-history)
-* [Implementation Status](#implementation-status)
-* [Features](#features)
-* [Security Overview](#security-overview)
-* [Network Formation](#network-formation)
-* [Transport](#transport)
-* [Implementation Overview](#implementation-overview)
-* [Node Discovery](#node-discovery)
-* [Encrypted Handshake](#encrypted-handshake)
-* [Framing](#framing)
-* [Flow Control](#flow-control)
+* Protocol Overview
+	* [Introduction](#introduction)
+	* [Features](#features)
+	* [Security Overview](#security-overview)
+	* [Network Formation](#network-formation)
+	* [Transport](#transport)
+	* [Implementation Overview](#implementation-overview)
+	* [Node Discovery](#node-discovery)
+	* [Encrypted Handshake](#encrypted-handshake)
+	* [Framing](#framing)
+	* [Flow Control](#flow-control)
+* Status
+	* [Release History](#release-history)
+	* [Implementation Status](#implementation-status)
 * [References](#references)
 * [Contributors](#contributors)
 
 # Introduction
 RLPx is a cryptographic peer-to-peer network and protocol suite which provides a general-purpose transport and interface for applications to communicate via a p2p network. RLPx is designed to meet the requirements of decentralized applications and is used by Ethereum.
 
-The current version of RLPx provides a network layer for Ethereum. Planned roadmap (subject to change, at any time):
+The current version of RLPx provides a network layer for Ethereum. Roadmap:
 
-* May '15: Beta
-	* Node Discovery for single protocol.
-	* Transport is feature complete.
-	* Basic encrypted datagrams.
-* July '15: Beta
-	* Revisit node table algorithm.
-	* Basic discovery support for multiple protocols.
-* Winter '15: 1.0
-	* Node Discovery for multiple protocols.
-	* Feature complete UDP.
-	* New Features.
-
-# Release History
-
-* Upcoming
-	* flow control
-	* capabilities
-* Version 0.x (in progress)
-	* IPv6 and split-port endpoints
-	* External IP & Public Key discovery
-	* Move protocol-type to frame
-* Version 0.3:
-	* ignore unsolicited messages
-	* persistence (Go)
-* Version 0.2:
-	* versioning
-	* persistence (C++)
-* Version 0.1:
+* Completed:
+	* UDP Node Discovery for single protocol
+	* ECDSA Signed UDP
+	* Encrypted Handshake/Authentication
+	* Peer Persistence
 	* Encrypted/Authenticated TCP
-	* Basic TCP Framing (only frame-size is used)
-	* Signed UDP (via ecdsa)
-	* Basic Node Discovery
-	* removal of TCP peer sharing
-	
-# Implementation Status
-
-Client implementation status of RLPx.  
-x! py implemented but not active
-
-#### Known Issues
-* Clients use left128 instead of right128
-* whether to update mac state after sending mac digest
-* Go/C++ client distance is xor(pubkA,pubkB) instead of sha3(pubkA,pubkB)
-
-### Node Discovery
-- Go [ ] C++ [ ] Py [ ]: proper endpoint encapsulation
-- Go [ ] C++ [ ] Py [x!]: distance based on xor(sha3(NodeIdA),sha3(NodeIdB))
-- Go [ ] C++ [ ] Py [ ]: refresh: perform discovery of random target every 56250ms
-- Go [x] C++ [ ] Py [x]: timeout any packet operation if response is not received within 300ms
-- Go [x] C++ [x] Py [ ]: ignore unsolicited messages
-- Go [ ] C++ [x] Py [x]: tcp addresses are only updated upon receipt of Pong packet
-- Go [x] C++ [x] Py [ ]: init udp addresses determined by socket address of recvd Ping packets
-- Go [x] C++ [x] Py [x]: init tcp address determined by contents of Ping packet
-- Go [x] C++ [x] Py [x]: perform discovery protocol with a concurrency of 3
-- Go [x] C++ [x] Py [x]: Signed discovery packets
-- Go [ ] C++ [ ] Py [ ]: discovery performed via 8 bits-per-hop routing
-
-WiP:  
-- peer protocol maintains an ideal peer count
-
-### Authentication Handshake
-- Go [x] C++ [x] Py [x]: Initiation and Acknowledge implemented with ECIES std w/AES128-CTR
-- Go [x] C++ [x] Py [x]: Initiation, Acknowledgement, and Authentication for unknown node
-- Go [x] C++ [ ] Py [ ]: Initiation, Acknowledgement, and Authentication for known node
-- Go [x] C++ [x] Py [x]: Derive shared secrets from handshake
-- Go [x] C++ [x] Py [ ]: Move capabilities into authentication payload (replaces Hello packet)
-
-### Framing
-- Go [x] C++ [x] Py [x]: mac of header and frame
-- Go [ ] C++ [ ] Py [x]: basic frame, move protocol-type into frame header (replace magic sequence w/frame header)
-- Go [ ] C++ [ ] Py [ ]: chunking with static 1KB frame size (requires fair queueing)
-- Go [ ] C++ [ ] Py [x!]: dynamic framing
-- Go [ ] C++ [ ] Py [ ]: sequence-ids for non-chunked packets
-
-### Flow Control
-- Go [ ] C++ [ ] Py [ ]: fair queueing (required for chunking)
-- Go [ ] C++ [ ] Py [ ]: DeltaUpdate packet (required for fair queueing)
-- Go [ ] C++ [ ] Py [x!]: dynamic framing
-
-### Encryption
-- Go [x] C++ [x] Py [x]: AES256 CTR
-
+	* TCP Framing
+* May '15: Beta
+	* Node Discovery for single protocol
+	* Transport is feature complete
+	* Encrypted UDP
+* July '15: Beta
+	* Revisit node table algorithm
+	* Discovery support for multiple protocols
+* Winter '15: 1.0
+	* Node Discovery for multiple protocols
+	* Feature complete UDP
+	* New Features
 
 # Features
 * Node Discovery and Network Formation
@@ -399,6 +337,76 @@ If the size of a frame is less than 1 KB then the protocol may request that the 
     else read pws bytes from active buffer
 
     If there are bytes leftover -- for example, if the bytes sent is < pws, then repeat the cycle.
+
+# Release History
+
+* Upcoming
+	* flow control
+	* capabilities
+* Version 0.x (in progress)
+	* IPv6 and split-port endpoints
+	* External IP & Public Key discovery
+	* Move protocol-type to frame
+* Version 0.3:
+	* ignore unsolicited messages
+	* persistence (Go)
+* Version 0.2:
+	* versioning
+	* persistence (C++)
+* Version 0.1:
+	* Encrypted/Authenticated TCP
+	* Basic TCP Framing (only frame-size is used)
+	* Signed UDP (via ecdsa)
+	* Basic Node Discovery
+	* removal of TCP peer sharing
+	
+# Implementation Status
+
+Client implementation status of RLPx.  
+x! py implemented but not active
+
+#### Known Issues
+* Clients use left128 instead of right128
+* whether to update mac state after sending mac digest
+* Go/C++ client distance is xor(pubkA,pubkB) instead of sha3(pubkA,pubkB)
+
+### Node Discovery
+- Go [ ] C++ [ ] Py [ ]: proper endpoint encapsulation
+- Go [ ] C++ [ ] Py [x!]: distance based on xor(sha3(NodeIdA),sha3(NodeIdB))
+- Go [ ] C++ [ ] Py [ ]: refresh: perform discovery of random target every 56250ms
+- Go [x] C++ [ ] Py [x]: timeout any packet operation if response is not received within 300ms
+- Go [x] C++ [x] Py [ ]: ignore unsolicited messages
+- Go [ ] C++ [x] Py [x]: tcp addresses are only updated upon receipt of Pong packet
+- Go [x] C++ [x] Py [ ]: init udp addresses determined by socket address of recvd Ping packets
+- Go [x] C++ [x] Py [x]: init tcp address determined by contents of Ping packet
+- Go [x] C++ [x] Py [x]: perform discovery protocol with a concurrency of 3
+- Go [x] C++ [x] Py [x]: Signed discovery packets
+- Go [ ] C++ [ ] Py [ ]: discovery performed via 8 bits-per-hop routing
+
+WiP:  
+- peer protocol maintains an ideal peer count
+
+### Authentication Handshake
+- Go [x] C++ [x] Py [x]: Initiation and Acknowledge implemented with ECIES std w/AES128-CTR
+- Go [x] C++ [x] Py [x]: Initiation, Acknowledgement, and Authentication for unknown node
+- Go [x] C++ [ ] Py [ ]: Initiation, Acknowledgement, and Authentication for known node
+- Go [x] C++ [x] Py [x]: Derive shared secrets from handshake
+- Go [x] C++ [x] Py [ ]: Move capabilities into authentication payload (replaces Hello packet)
+
+### Framing
+- Go [x] C++ [x] Py [x]: mac of header and frame
+- Go [ ] C++ [ ] Py [x]: basic frame, move protocol-type into frame header (replace magic sequence w/frame header)
+- Go [ ] C++ [ ] Py [ ]: chunking with static 1KB frame size (requires fair queueing)
+- Go [ ] C++ [ ] Py [x!]: dynamic framing
+- Go [ ] C++ [ ] Py [ ]: sequence-ids for non-chunked packets
+
+### Flow Control
+- Go [ ] C++ [ ] Py [ ]: fair queueing (required for chunking)
+- Go [ ] C++ [ ] Py [ ]: DeltaUpdate packet (required for fair queueing)
+- Go [ ] C++ [ ] Py [x!]: dynamic framing
+
+### Encryption
+- Go [x] C++ [x] Py [x]: AES256 CTR
 
 # References
 Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}  
