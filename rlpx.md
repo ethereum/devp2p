@@ -1,60 +1,144 @@
 	RLPx: Cryptographic Network & Transport Protocol
 	Alex Leverington
-    Final Draft
+	Version 0.3
 
-# A Different Approach: Application Interface
-The advent of SSL and consumers' ability to interface with 3rd parties over encrypted channels of communication was a leading factor in spurring the growth and advancements of the Internet. Accordingly, and in contrast to the Internet being powered by the TCP/IP protocol suite, one finds that the Internet has become synonymous with HTTP and this detracts from the scalability and privacy gains which the Internet and advances in cryptography provide. The modern manifestation of privacy today is browser bundled SSL certificates of which their security is heavily dependent on large corporations, states, and the choices of browser vendors. Moreover, and as has been observed by global flow analysis, HTTP is the modern interface for network communication -- email, ecommerce, streaming media -- chances are, if it's encrypted, typically uses HTTPS. Ironically, this is due to the successes of both the Internet and HTTP. Looking back, TLS wasn't built to be tightly coupled with HTTP (it's also used for SMTP) and large corporations and state governments ran the internet before it was The Internet.
-
-Going forward there is a necessity and desire to make networks better, privacy better, and to give end users and systems a better interface, more insight, and more control for network communication. RLPx is a protocol specification which, via implemenations, provide an easy to use network interface which doesn't contstrain developers to opaque, text-based, stateless, point-to-point connections. RLPx provides a p2p network, a multieplexed cryptographic transport protocol, and an interface to both network and transport which percolates security and network state thru every layer of the application stack.
+* [Introduction](#introduction)
+* [Release History](#release-history)
+* [Implementation Status](#implementation-status)
+* [Features](#features)
+* [Security Overview](#security-overview)
+* [Network Formation](#network-formation)
+* [Transport](#transport)
+* [Implementation Overview](#implementation-overview)
+* [Node Discovery](#node-discovery)
+* [Encrypted Handshake](#encrypted-handshake)
+* [Framing](#framing)
+* [Flow Control](#flow-control)
+* [References](#references)
+* [Contributors](#contributors)
 
 # Introduction
-RLPx is a network layer which provides a general-purpose transport and interface for applications to communicate via a p2p network. The first version is geared towards building a robust transport, well-formed network, and software interface in order to provide infrastructure which meets the requirements of distributed or decentralized applications such as Ethereum. Encryption is employed to provide better privacy and integrity than would be provided by a cleartext implementation.
+RLPx is a cryptographic peer-to-peer network and protocol suite which provides a general-purpose transport and interface for applications to communicate via a p2p network. RLPx is designed to meet the requirements of decentralized applications and is used by Ethereum.
 
-RLPx underpins the DEVp2p interface:  
-https://github.com/ethereum/wiki/wiki/ÐΞVp2p-Wire-Protocol  
-https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper
+The current version of RLPx provides a network layer for Ethereum. Planned roadmap (subject to change, at any time):
+
+* May '15: Beta
+	* Node Discovery for single protocol.
+	* Transport is feature complete.
+	* Basic encrypted datagrams.
+* July '15: Beta
+	* Revisit node table algorithm.
+	* Basic discovery support for multiple protocols.
+* Winter '15: 1.0
+	* Node Discovery for multiple protocols.
+	* Feature complete UDP.
+	* New Features.
+
+# Release History
+
+* Upcoming
+	* flow control
+	* capabilities
+* Version 0.x (in progress)
+	* IPv6 and split-port endpoints
+	* External IP & Public Key discovery
+	* Move protocol-type to frame
+* Version 0.3:
+	* ignore unsolicited messages
+	* persistence (Go)
+* Version 0.2:
+	* versioning
+	* persistence (C++)
+* Version 0.1:
+	* Encrypted/Authenticated TCP
+	* Basic TCP Framing (only frame-size is used)
+	* Signed UDP (via ecdsa)
+	* Basic Node Discovery
+	* removal of TCP peer sharing
+	
+# Implementation Status
+
+Client implementation status of RLPx.  
+x! py implemented but not active
+
+#### Known Issues
+* Clients use left128 instead of right128
+* whether to update mac state after sending mac digest
+* Go/C++ client distance is xor(pubkA,pubkB) instead of sha3(pubkA,pubkB)
+
+### Node Discovery
+- Go [ ] C++ [ ] Py [ ]: proper endpoint encapsulation
+- Go [ ] C++ [ ] Py [x!]: distance based on xor(sha3(NodeIdA),sha3(NodeIdB))
+- Go [ ] C++ [ ] Py [ ]: refresh: perform discovery of random target every 56250ms
+- Go [x] C++ [ ] Py [x]: timeout any packet operation if response is not received within 300ms
+- Go [x] C++ [x] Py [ ]: ignore unsolicited messages
+- Go [ ] C++ [x] Py [x]: tcp addresses are only updated upon receipt of Pong packet
+- Go [x] C++ [x] Py [ ]: init udp addresses determined by socket address of recvd Ping packets
+- Go [x] C++ [x] Py [x]: init tcp address determined by contents of Ping packet
+- Go [x] C++ [x] Py [x]: perform discovery protocol with a concurrency of 3
+- Go [x] C++ [x] Py [x]: Signed discovery packets
+- Go [ ] C++ [ ] Py [ ]: discovery performed via 8 bits-per-hop routing
+
+WiP:  
+- peer protocol maintains an ideal peer count
+
+### Authentication Handshake
+- Go [x] C++ [x] Py [x]: Initiation and Acknowledge implemented with ECIES std w/AES128-CTR
+- Go [x] C++ [x] Py [x]: Initiation, Acknowledgement, and Authentication for unknown node
+- Go [x] C++ [ ] Py [ ]: Initiation, Acknowledgement, and Authentication for known node
+- Go [x] C++ [x] Py [x]: Derive shared secrets from handshake
+- Go [x] C++ [x] Py [ ]: Move capabilities into authentication payload (replaces Hello packet)
+
+### Framing
+- Go [x] C++ [x] Py [x]: mac of header and frame
+- Go [ ] C++ [ ] Py [x]: basic frame, move protocol-type into frame header (replace magic sequence w/frame header)
+- Go [ ] C++ [ ] Py [ ]: chunking with static 1KB frame size (requires fair queueing)
+- Go [ ] C++ [ ] Py [x!]: dynamic framing
+- Go [ ] C++ [ ] Py [ ]: sequence-ids for non-chunked packets
+
+### Flow Control
+- Go [ ] C++ [ ] Py [ ]: fair queueing (required for chunking)
+- Go [ ] C++ [ ] Py [ ]: DeltaUpdate packet (required for fair queueing)
+- Go [ ] C++ [ ] Py [x!]: dynamic framing
+
+### Encryption
+- Go [x] C++ [x] Py [x]: AES256 CTR
+
 
 # Features
 * Node Discovery and Network Formation
-* Peer Preference Strategies
-* Peer Reputation
-* Multiple protocols
 * Encrypted handshake
 * Encrypted transport
-* Dynamically framed transport
-* Fair queuing
-
-# Security Overview
-### Objectives
-* nodes have access to a uniform network topology
-* peers can uniformly connect to network
-* network robustness >= kademlia
-* protocols sharing a connection are provided uniform bandwidth
-* authenticated connectivity
-* authenticated discovery protocol
-* encrypted transport (TCP now; UDP in future)
-* robust node discovery
-
-# Network Formation
-### Objectives
-A kademlia-like protocol is implemented in order to fascilitate a well-formed network. We define a well-formed network as a network wherein:
-* nodes can resolve the endpoint information of other nodes via node ids
-* new nodes can reliably find nodes to connect to
-* nodes have sufficient network topology information to uniformly connect to other nodes
-* nodes can resolve other nodes in log(n) hops, where log(n) ~ 6
-* node identifiers are random
-
-Significant differences between kademlia and RLPx are that packets are signed, node ids are 512-bit public keys, and DHT features are not implemented.
+* Protocol Mux (framing)
+* Flow Control
+* Peer Preference Strategies
+* Peer Reputation
+* Security
+	* authenticated connectivity (ECDH+ECDHE, AES128)
+	* authenticated discovery protocol (ECDSA)
+	* encrypted transport (AES256)
+	* protocols sharing a connection are provided uniform bandwidth (framing)
+	* nodes have access to a uniform network topology
+	* peers can uniformly connect to network
+	* localised peer reputation model
 
 # Transport
 ### Objectives
-* multiple p2p protocols over a single connection
+* multiple protocols over single connection
 * encrypted
-* flow control, simple quality of service
+* flow control
 
 Authenticated encryption is employed in order to provide confidentiality and protect against network disruption. This is particularly important for a well-formed network where nodes make long-term decisions about other nodes which yield non-local effects.
 
 Dynamic framing and flow control ensure that each protocol is allotted the same amount of bandwidth.
+
+# Network Formation
+### Objectives
+* new nodes can reliably find nodes to connect to
+* nodes have sufficient network topology information to uniformly connect to other nodes
+* node identifiers are random
+
+RLPx utilizes Kademlia-like routing which has been repurposed as a p2p neighbour discovery protocol. RLPx discovery uses 512-bit public keys as node ids and sha3(node-id) for xor metric. DHT features are not implemented.
 
 # Implementation Overview
 Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, and authenticated. Multiplexing is achieved via the frame header which specifies the destination protocol of a packet.
@@ -62,14 +146,15 @@ Packets are dynamically framed, prefixed with an RLP encoded header, encrypted, 
 All cryptographic operations are based on secp256k1 and each node is expected to maintain a static private key which is saved and restored between sessions. It is recommended that the private key can only be reset manually, for example, by deleting a file or database entry.
 
 An RLPx implementation is composed of:
-* Node Discovery & Peer Preference
-* Encrypted Handshake
+
+* Node Discovery
+* Encrypted Transport
 * Framing
 * Flow Control
 
-# Node Discovery & Peer Preference
+# Node Discovery
 **Node**: An entity on the network.  
-**Peer**: Node which is currently connected to local node.  
+**Peer**: Node which is currently connected to host node.  
 **NodeId**: public key of node
 
 Node discovery and network formation are implemented via a kademlia-like UDP. Major differences from Kademlia:
@@ -77,13 +162,13 @@ Node discovery and network formation are implemented via a kademlia-like UDP. Ma
 * packets are signed
 * node ids are public keys
 * DHT-related features are excluded. FIND_VALUE and STORE packets are not implemented. 
-* xor distance metric is based on sha3(nodeid) instead of the nodeid
+* xor distance metric is based on sha3(nodeid)
 
 The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
 
 Except for the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
-Packets are signed. Verification is performed by recovering the public key from the signature and checking that it matches an expected value. Packet properties are serialized in the order in which they're defined.
+Packets are signed. Verification is performed by recovering the public key from the signature and checking that it matches an expected value. Packet properties are serialized as RLP in the order in which they're defined.
 
 RLPx provides a list of 'potential' nodes, based on distance metrics, and can maintain connections for well-formedness based on an ideal peer count (default is 5). This strategy is implemented by connecting to 1 random node for every 'close' node which is connected.
 
@@ -175,22 +260,25 @@ If the handshake fails upon initiating a connection TO a known peer, then the no
 
 Handshake:
 
-    New: authInitiator -> E(remote-pubk, S(ephemeral-privk, ecdh-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
+    New: authInitiator -> E(remote-pubk, S(ephemeral-privk, static-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
          authRecipient -> E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0)
-
+		 
     Known: authInitiator = E(remote-pubk, S(ephemeral-privk, token ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x1)
            authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x1) // token found
            authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0) // token not found
+    
+	static-shared-secret = ecdh.agree(privkey, remote-pubk)
+	ephemeral-shared-secret = ecdh.agree(ephemeral-privk, remote-ephemeral-pubk)
 
 Values generated following the handshake (see below for steps):
 
-    ecdhe-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
-    shared-secret = sha3(ecdhe-shared-secret || sha3(nonce || initiator-nonce))
+    ephemeral-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
+    shared-secret = sha3(ephemeral-shared-secret || sha3(nonce || initiator-nonce))
     token = sha3(shared-secret)
-    aes-secret = sha3(ecdhe-shared-secret || shared-secret)
+    aes-secret = sha3(ephemeral-shared-secret || shared-secret)
     # destroy shared-secret
-    mac-secret = sha3(ecdhe-shared-secret || aes-secret)
-    # destroy ecdhe-shared-secret
+    mac-secret = sha3(ephemeral-shared-secret || aes-secret)
+    # destroy ephemeral-shared-secret
     
     Initiator:
     egress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-sent-init)
@@ -206,7 +294,7 @@ Values generated following the handshake (see below for steps):
 
 Creating authenticated connection:
 
-    1. initiator generates auth from ecdhe-random, ecdh-shared-secret, and nonce (auth = authInitiator handshake)
+    1. initiator generates auth from ecdhe-random, static-shared-secret, and nonce (auth = authInitiator handshake)
     2. initiator connects to remote and sends auth
 	
     3. optionally, remote decrypts and verifies auth (checks that recovery of signature == H(ephemeral-pubk))
