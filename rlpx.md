@@ -39,7 +39,7 @@ The current version of RLPx provides a network layer for Ethereum. Planned roadm
 * Upcoming
 	* flow control
 	* capabilities
-* Version 0.x (in progress)
+* Version 0.4 (in progress)
 	* IPv6 and split-port endpoints
 	* External IP & Public Key discovery
 	* Move protocol-type to frame
