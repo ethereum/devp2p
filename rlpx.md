@@ -139,50 +139,53 @@ DRAFT Encrypted Packet Encapsulation:
 
 Packet Data (packet-data):
 
+	All data structures are RLP encoded.
+	NodeId: The node's public key.
+	inline: Properties are appened to current list instead of encoded as list.
+	Maximum byte size of packet is noted for reference.
+	
 	PingNode packet-type: 0x01
-    struct PingNode
+    struct PingNode				<= 59 bytes
     {
-		unsigned version = 0x1;
-    	Endpoint endpoint;
-    	unsigned expiration;
+		h256 version = 0x3;		<= 1
+    	Endpoint from;			<= 23
+		Endpoint to;			<= 23
+    	unsigned expiration;	<= 9
     };
 	
 	Pong packet-type: 0x02
-    struct Pong  // response to PingNode
+    struct Pong					<= 66 bytes
     {
-    	h256 echo; // hash of PingNode payload
+		Endpoint to;
+    	h256 echo;
     	unsigned expiration;
     };
 	
 	FindNode packet-type: 0x03
-    struct FindNode
+    struct FindNode				<= 76 bytes
     {
     	NodeId target; // Id of a node. The responding node will send back nodes closest to the target.
     	unsigned expiration;
     };
 	
 	Neighbors packet-type: 0x04
-    struct Neighbors  // reponse to FindNode
+    struct Neighbours			<= 1423
     {
-    	struct Node
+    	list nodes: struct Neighbour	<= 88: 1411; 76: 1219
     	{
-    		Endpoint endpoint;
+    		inline Endpoint endpoint;
     		NodeId node;
     	};
 		
-    	std::list<Node> nodes;
     	unsigned expiration;
     };
 	
-	struct Endpoint
+	struct Endpoint				<= 24 == [17,3,3]
 	{
-		unsigned network; // ipv4:4, ipv6:6
-		unsigned transport; // tcp:6, udp:17
-		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address)
-		unsigned port; // BE encoded 16-bit unsigned (layer4 port)
+		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address; size determins ipv4 vs ipv6)
+		unsigned udpPort; // BE encoded 16-bit unsigned
+		unsigned tcpPort; // BE encoded 16-bit unsigned
 	}
-	
-    NodeId is the node's public key.
 
 # Encrypted Handshake
 Connections are established via a handshake and, once established, packets are encapsulated as frames which are encrypted using AES-256 in CTR mode. Key material for the session is derived via a KDF with ECDHE-derived keying material. ECC uses secp256k1 curve (ECP). Note: "remote" is host which receives the connection.
