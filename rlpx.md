@@ -115,12 +115,12 @@ Other connection strategies which can be manually implemented by a protocol; a p
 
 Packet Encapsulation:
 
-    hash || signature || packet-type || packet-data
+	hash || signature || packet-type || packet-data
 		hash: sha3(signature || packet-type || packet-data)	// used to verify integrity of datagram
 		signature: sign(privkey, sha3(packet-type || packet-data))
 		signature: sign(privkey, sha3(pubkey || packet-type || packet-data)) // implementation w/MCD
 		packet-type: single byte < 2**7 // valid values are [1,4]
-    	packet-data: RLP encoded list. Packet properties are serialized in the order in which they're defined. See packet-data below.
+		packet-data: RLP encoded list. Packet properties are serialized in the order in which they're defined. See packet-data below.
 
 
 DRAFT Encrypted Packet Encapsulation:
@@ -145,46 +145,46 @@ Packet Data (packet-data):
 	Maximum byte size of packet is noted for reference.
 	
 	PingNode packet-type: 0x01
-    struct PingNode				<= 59 bytes
-    {
+	struct PingNode				<= 59 bytes
+	{
 		h256 version = 0x3;		<= 1
-    	Endpoint from;			<= 23
+		Endpoint from;			<= 23
 		Endpoint to;			<= 23
-    	unsigned expiration;	<= 9
-    };
+		uint32_t timestamp;		<= 9
+	};
 	
 	Pong packet-type: 0x02
-    struct Pong					<= 66 bytes
-    {
+	struct Pong					<= 66 bytes
+	{
 		Endpoint to;
-    	h256 echo;
-    	unsigned expiration;
-    };
+		h256 echo;
+		uint32_t timestamp;
+	};
 	
-	FindNode packet-type: 0x03
-    struct FindNode				<= 76 bytes
-    {
-    	NodeId target; // Id of a node. The responding node will send back nodes closest to the target.
-    	unsigned expiration;
-    };
+	FindNeighbours packet-type: 0x03
+	struct FindNeighbours				<= 76 bytes
+	{
+		NodeId target; // Id of a node. The responding node will send back nodes closest to the target.
+		uint32_t timestamp;
+	};
 	
 	Neighbors packet-type: 0x04
-    struct Neighbours			<= 1423
-    {
-    	list nodes: struct Neighbour	<= 88: 1411; 76: 1219
-    	{
-    		inline Endpoint endpoint;
-    		NodeId node;
-    	};
+	struct Neighbours			<= 1423
+	{
+		list nodes: struct Neighbour	<= 88: 1411; 76: 1219
+		{
+			inline Endpoint endpoint;
+			NodeId node;
+		};
 		
-    	unsigned expiration;
-    };
+		uint32_t timestamp;
+	};
 	
 	struct Endpoint				<= 24 == [17,3,3]
 	{
-		unsigned address; // BE encoded 32-bit or 128-bit unsigned (layer3 address; size determins ipv4 vs ipv6)
-		unsigned udpPort; // BE encoded 16-bit unsigned
-		unsigned tcpPort; // BE encoded 16-bit unsigned
+		bytes address; // BE encoded 4-byte or 16-byte address (size determines ipv4 vs ipv6)
+		uint16_t udpPort; // BE encoded 16-bit unsigned
+		uint16_t tcpPort; // BE encoded 16-bit unsigned
 	}
 
 # Encrypted Handshake
