@@ -101,7 +101,7 @@ Node discovery and network formation are implemented via a kademlia-like UDP. Ma
 * DHT-related features are excluded. FIND_VALUE and STORE packets are not implemented. 
 * xor distance metric is based on sha3(nodeid)
 
-The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds.
+The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds. Until encryption is implemented packets have a timestamp property to reduce the window of time for carrying out replay attacks. How the timestamp is handled is up to the receiver and it's recommended that the receiver only accept packets created within the last 3 seconds; timestamps can be ignored for Pong packets.
 
 Except for the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
@@ -143,18 +143,19 @@ Packet Data (packet-data):
 	NodeId: The node's public key.
 	inline: Properties are appened to current list instead of encoded as list.
 	Maximum byte size of packet is noted for reference.
+	timestamp: When packet was created (number of seconds since epoch).
 	
 	PingNode packet-type: 0x01
-	struct PingNode				<= 59 bytes
+	struct PingNode
 	{
-		h256 version = 0x3;		<= 1
-		Endpoint from;			<= 23
-		Endpoint to;			<= 23
-		uint32_t timestamp;		<= 9
+		h256 version = 0x3;
+		Endpoint from;
+		Endpoint to;
+		uint32_t timestamp;
 	};
 	
 	Pong packet-type: 0x02
-	struct Pong					<= 66 bytes
+	struct Pong
 	{
 		Endpoint to;
 		h256 echo;
@@ -162,16 +163,16 @@ Packet Data (packet-data):
 	};
 	
 	FindNeighbours packet-type: 0x03
-	struct FindNeighbours				<= 76 bytes
+	struct FindNeighbours
 	{
 		NodeId target; // Id of a node. The responding node will send back nodes closest to the target.
 		uint32_t timestamp;
 	};
 	
 	Neighbors packet-type: 0x04
-	struct Neighbours			<= 1423
+	struct Neighbours
 	{
-		list nodes: struct Neighbour	<= 88: 1411; 76: 1219
+		list nodes: struct Neighbour
 		{
 			inline Endpoint endpoint;
 			NodeId node;
@@ -180,7 +181,7 @@ Packet Data (packet-data):
 		uint32_t timestamp;
 	};
 	
-	struct Endpoint				<= 24 == [17,3,3]
+	struct Endpoint
 	{
 		bytes address; // BE encoded 4-byte or 16-byte address (size determines ipv4 vs ipv6)
 		uint16_t udpPort; // BE encoded 16-bit unsigned
