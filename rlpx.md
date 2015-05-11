@@ -101,7 +101,7 @@ Node discovery and network formation are implemented via a kademlia-like UDP. Ma
 * DHT-related features are excluded. FIND_VALUE and STORE packets are not implemented. 
 * xor distance metric is based on sha3(nodeid)
 
-The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds. Until encryption is implemented packets have a timestamp property to reduce the window of time for carrying out replay attacks. How the timestamp is handled is up to the receiver and it's recommended that the receiver only accept packets created within the last 3 seconds; timestamps can be ignored for Pong packets.
+The parameters chosen for kademlia are a bucket size of 16 (denoted k in Kademlia), concurrency of 3 (denoted alpha in Kademlia), and 8 bits per hop (denoted b in Kademlia) for routing. The eviction check interval is 75 milliseconds, request timeouts are 300ms, and the idle bucket-refresh interval is 3600 seconds. Until encryption is implemented packets have a timestamp property to reduce the window of time for carrying out replay attacks. How the timestamp is handled is up to the receiver and it's recommended that the receiver only accept packets created within the last 3 seconds; timestamps can be ignored for Pong packets. In order to reduce the chance that packets are fragmented the maximum size of a datagram is 1280 bytes, as this is the minimum size of an IPv6 datagram.
 
 Except for the previously described differences, node discovery employs the system and protocol described by Maymounkov and Mazieres.
 
@@ -140,6 +140,7 @@ DRAFT Encrypted Packet Encapsulation:
 Packet Data (packet-data):
 
 	All data structures are RLP encoded.
+	Total payload of packet (excluding IP headers) must be no greater than 1280 bytes.
 	NodeId: The node's public key.
 	inline: Properties are appened to current list instead of encoded as list.
 	Maximum byte size of packet is noted for reference.
