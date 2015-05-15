@@ -190,7 +190,7 @@ Packet Data (packet-data):
 	}
 
 # Encrypted Handshake
-Connections are established via a handshake and, once established, packets are encapsulated as frames which are encrypted using AES-256 in CTR mode. Key material for the session is derived via a KDF with ECDHE-derived keying material. ECC uses secp256k1 curve (ECP). Note: "remote" is host which receives the connection.
+Connections are established via a handshake and, once established, packets are encapsulated as frames which are encrypted using AES-256 in CTR mode. Key material for the session is derived via a KDF with ECDHE-derived keying material. ECC uses secp256k1 curve (ECP). Note: "remote" is host which receives the connection. The KDF use is NIST SP 800-56a Concatenation Key Derivation Function.
 
 The handshake is carried out in two phases. The first phase is key exchange and the second phase is authentication and protocol negotiation. The key exchange is an ECIES encrypted message which includes ephemeral keys for Perfect Forward Secrecy (PFS). The second phase of the handshake is a part of DEVp2p and is an exchange of capabilities that each node supports. It's up to the implementation how to handle the outcome of the second phase of the handshake.
 
@@ -413,11 +413,12 @@ WiP:
 - Go [x] C++ [x] Py [x]: AES256 CTR
 
 # References
-Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}  
-Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL {http://www.shoup.net/papers/iso-2_1.pdf}  
-Gavin Wood. libp2p Whitepaper. 2014. URL {https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper}  
-Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL {http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3}  
-Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL {http://vitalik.ca/ethereum/patricia.html}
+- [Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002.](http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf)  
+- [Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001.](http://www.shoup.net/papers/iso-2_1.pdf)  
+- [Gavin Wood. libp2p Whitepaper. 2014.](https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper)  
+- [Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014.]( http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3)  
+- [Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014.](http://vitalik.ca/ethereum/patricia.html)
+- [NIST SP 800-56a Concatenation Key Derivation Function (see section 5.8.1)](http://csrc.nist.gov/publications/nistpubs/800-56A/SP800-56A_Revision1_Mar08-2007.pdf)
 
 # Contributors
 (Contributors: Please create PR w/name or alias to reference)
