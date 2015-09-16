@@ -129,12 +129,12 @@ DRAFT Encrypted Packet Encapsulation:
 		header: frame-size || header-data
 	    frame-size: 3-byte integer size of frame, big endian encoded
 	    header-data:
-	        normal: rlp.list(protocol-type[, sequence-id])
-	        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
-			chunked-n: rlp.list(protocol-type, sequence-id)
+	        normal: rlp.list(protocol-type[, context-id])
+	        chunked-0: rlp.list(protocol-type, context-id, total-packet-size)
+			chunked-n: rlp.list(protocol-type, context-id)
 	        values:
 	            protocol-type: < 2**16
-	            sequence-id: < 2**16 (this value is optional for normal frames)
+	            context-id: < 2**16 (this value is optional for normal frames)
 	            total-packet-size: < 2**32
 
 Packet Data (packet-data):
@@ -284,12 +284,12 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
     header: frame-size || header-data || padding
     frame-size: 3-byte integer size of frame, big endian encoded (excludes padding)
     header-data:
-        normal: rlp.list(protocol-type[, sequence-id])
-        chunked-0: rlp.list(protocol-type, sequence-id, total-packet-size)
-		chunked-n: rlp.list(protocol-type, sequence-id)
+        normal: rlp.list(protocol-type[, context-id])
+        chunked-0: rlp.list(protocol-type, context-id, total-packet-size)
+        chunked-n: rlp.list(protocol-type, context-id)
         values:
             protocol-type: < 2**16
-            sequence-id: < 2**16 (this value is optional for normal frames)
+            context-id: < 2**16 (optional for normal frames)
             total-packet-size: < 2**32
     padding: zero-fill to 16-byte boundary
 
@@ -297,7 +297,7 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
 
     frame:
         normal: rlp(packet-type) [|| rlp(packet-data)] || padding
-		chunked-0: rlp(packet-type) || rlp(packet-data...)
+        chunked-0: rlp(packet-type) || rlp(packet-data...)
         chunked-n: rlp(...packet-data) || padding
     padding: zero-fill to 16-byte boundary (only necessary for last frame)
 
@@ -306,12 +306,13 @@ When sending a packet over RLPx, the packet is framed. The frame header provides
     egress-mac: h256, continuously updated with egress-bytes*
     ingress-mac: h256, continuously updated with ingress-bytes*
 
-* \* Message authentication is achieved by continuously updating egress-mac or ingress-mac with the ciphertext of bytes sent (egress) or received (ingress); for headers the update is performed by xoring the header with the encrypted output of it's corresponding mac (see header-mac above for example). This is done to ensure uniform operations are performed for both plaintext mac and ciphertext.
-* All macs are sent CLEARTEXT.
-* Padding is used to prevent buffer starvation, such that frame components are byte-aligned to block size of cipher.
-* Sequence-ids are local to the protocol-type and not the connection; two protocols may reuse the same sequence-ids.
+Message authentication is achieved by continuously updating egress-mac or ingress-mac with the ciphertext of bytes sent (egress) or received (ingress); for headers the update is performed by xoring the header with the encrypted output of it's corresponding mac (see header-mac above for example). This is done to ensure uniform operations are performed for both plaintext mac and ciphertext. All macs are sent CLEARTEXT.
 
-Notes on Terminology:  
+Padding is used to prevent buffer starvation, such that frame components are byte-aligned to block size of cipher.
+
+`context-id` distinguishes concurrent packet transfers within a protocol. All chunked frames for a certain packet share the same `context-id`. The assignment of packet ids is implementation-defined. The ids are local to the protocol-type and not the connection; two protocols may reuse the same context ids. 
+
+### Notes on Terminology:  
 "Packet" is used because not all packets are messages; RLPx doesn't yet have a notation for destination address. "Frame" is used to refer to a packet which is to be transported over RLPx. Although somewhat confusing, the term "message" is used in the case of text (plain or cipher) which is authenticated via a message authentication code (MAC or mac).
 
 # Flow Control
