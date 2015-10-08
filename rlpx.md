@@ -376,42 +376,42 @@ x! py implemented but not active
 * Go/C++ client distance is xor(pubkA,pubkB) instead of sha3(pubkA,pubkB)
 
 ### Node Discovery
-- Go [ ] C++ [ ] Py [ ]: proper endpoint encapsulation
-- Go [ ] C++ [ ] Py [x!]: distance based on xor(sha3(NodeIdA),sha3(NodeIdB))
-- Go [ ] C++ [ ] Py [ ]: refresh: perform discovery of random target every 56250ms
-- Go [x] C++ [ ] Py [x]: timeout any packet operation if response is not received within 300ms
-- Go [x] C++ [x] Py [ ]: ignore unsolicited messages
-- Go [ ] C++ [x] Py [x]: tcp addresses are only updated upon receipt of Pong packet
-- Go [x] C++ [x] Py [ ]: init udp addresses determined by socket address of recvd Ping packets
-- Go [x] C++ [x] Py [x]: init tcp address determined by contents of Ping packet
-- Go [x] C++ [x] Py [x]: perform discovery protocol with a concurrency of 3
-- Go [x] C++ [x] Py [x]: Signed discovery packets
-- Go [ ] C++ [ ] Py [ ]: discovery performed via 8 bits-per-hop routing
+- Go [ ] C++ [ ] Py [ ] Java [ ]: proper endpoint encapsulation
+- Go [ ] C++ [ ] Py [x] Java [ ]: distance based on xor(sha3(NodeIdA),sha3(NodeIdB))
+- Go [ ] C++ [ ] Py [ ] Java [ ]: refresh: perform discovery of random target every 56250ms
+- Go [x] C++ [ ] Py [x] Java [ ]: timeout any packet operation if response is not received within 300ms
+- Go [x] C++ [x] Py [ ] Java [ ]: ignore unsolicited messages
+- Go [ ] C++ [x] Py [x] Java [ ]: tcp addresses are only updated upon receipt of Pong packet
+- Go [x] C++ [x] Py [ ] Java [ ]: init udp addresses determined by socket address of recvd Ping packets
+- Go [x] C++ [x] Py [x] Java [ ]: init tcp address determined by contents of Ping packet
+- Go [x] C++ [x] Py [x] Java [ ]: perform discovery protocol with a concurrency of 3
+- Go [x] C++ [x] Py [x] Java [ ]: Signed discovery packets
+- Go [ ] C++ [ ] Py [ ] Java [ ]: discovery performed via 8 bits-per-hop routing
 
 WiP:  
 - peer protocol maintains an ideal peer count
 
 ### Authentication Handshake
-- Go [x] C++ [x] Py [x]: Initiation and Acknowledge implemented with ECIES std w/AES128-CTR
-- Go [x] C++ [x] Py [x]: Initiation, Acknowledgement, and Authentication for unknown node
-- Go [x] C++ [ ] Py [ ]: Initiation, Acknowledgement, and Authentication for known node
-- Go [x] C++ [x] Py [x]: Derive shared secrets from handshake
-- Go [x] C++ [x] Py [ ]: Move capabilities into authentication payload (replaces Hello packet)
+- Go [x] C++ [x] Py [x] Java [ ]: Initiation and Acknowledge implemented with ECIES std w/AES128-CTR
+- Go [x] C++ [x] Py [x] Java [ ]: Initiation, Acknowledgement, and Authentication for unknown node
+- Go [x] C++ [ ] Py [ ] Java [ ]: Initiation, Acknowledgement, and Authentication for known node
+- Go [x] C++ [x] Py [x] Java [ ]: Derive shared secrets from handshake
+- Go [x] C++ [x] Py [ ] Java [ ]: Move capabilities into authentication payload (replaces Hello packet)
 
 ### Framing
-- Go [x] C++ [x] Py [x]: mac of header and frame
-- Go [ ] C++ [ ] Py [x]: basic frame, move protocol-type into frame header (replace magic sequence w/frame header)
-- Go [ ] C++ [ ] Py [ ]: chunking with static 1KB frame size (requires fair queueing)
-- Go [ ] C++ [ ] Py [x!]: dynamic framing
-- Go [ ] C++ [ ] Py [ ]: sequence-ids for non-chunked packets
+- Go [x] C++ [x] Py [x] Java [x]: mac of header and frame
+- Go [ ] C++ [ ] Py [x] Java [ ]: basic frame, move protocol-type into frame header (replace magic sequence w/frame header)
+- Go [ ] C++ [ ] Py [ ] Java [ ]: chunking with static 1KB frame size (requires fair queueing)
+- Go [ ] C++ [ ] Py [x] Java [ ]: dynamic framing
+- Go [ ] C++ [ ] Py [ ] Java [ ]: sequence-ids for non-chunked packets
 
 ### Flow Control
-- Go [ ] C++ [ ] Py [ ]: fair queueing (required for chunking)
-- Go [ ] C++ [ ] Py [ ]: DeltaUpdate packet (required for fair queueing)
-- Go [ ] C++ [ ] Py [x!]: dynamic framing
+- Go [ ] C++ [ ] Py [ ] Java [ ]: fair queueing (required for chunking)
+- Go [ ] C++ [ ] Py [ ] Java [ ]: DeltaUpdate packet (required for fair queueing)
+- Go [ ] C++ [ ] Py [x] Java [ ]: dynamic framing
 
 ### Encryption
-- Go [x] C++ [x] Py [x]: AES256 CTR
+- Go [x] C++ [x] Py [x] Java [x]: AES256 CTR
 
 # References
  - Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}  
