@@ -414,11 +414,11 @@ WiP:
 - Go [x] C++ [x] Py [x] Java [x]: AES256 CTR
 
 # References
- - Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL {http://www.cs.rice.edu/Conferences/IPTPS02/109.pdf}  
- - Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL {http://www.shoup.net/papers/iso-2_1.pdf}  
- - Gavin Wood. libp2p Whitepaper. 2014. URL {https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper}  
- - Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL {http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3}  
- - Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL {http://vitalik.ca/ethereum/patricia.html}
+ - Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL [http://www.ic.unicamp.br/~bit/ensino/mo809_1s13/papers/P2P/Kademlia-%20A%20Peer-to-Peer%20Information%20System%20Based%20on%20the%20XOR%20Metric%20.pdf](http://www.ic.unicamp.br/~bit/ensino/mo809_1s13/papers/P2P/Kademlia-%20A%20Peer-to-Peer%20Information%20System%20Based%20on%20the%20XOR%20Metric%20.pdf)
+ - Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL [http://www.shoup.net/papers/iso-2_1.pdf](http://www.shoup.net/papers/iso-2_1.pdf)
+ - Gavin Wood. libp2p Whitepaper. 2014. URL [https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper](https://github.com/ethereum/wiki/wiki/libp2p-Whitepaper)  
+ - Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL [http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3](http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3)  
+ - Vitalik Buterin. Ethereum: Merkle Patricia Tree Specification. 2014. URL [https://github.com/ethereum/wiki/wiki/Patricia-Tree](https://github.com/ethereum/wiki/wiki/Patricia-Tree)
 
 # Contributors
 (Contributors: Please create PR w/name or alias to reference)
