@@ -1,3 +1,5 @@
-# ÐΞVp2p
+# devp2p
 
-[![Join the chat at https://gitter.im/ethereum/devp2p](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/devp2p?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://gitter.im/ethereum/devp2p](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethereum/devp2p)
+
+This repository contains specifications for the peer-to-peer protocols used by Ethereum.
