@@ -196,71 +196,63 @@ The handshake is carried out in two phases. The first phase is key exchange and 
 
 There are several variants of ECIES, of which, some modes are malleable and must not be used. This specification relies on the implementation of ECIES as defined by Shoup. Thus, decryption will not occur if message authentication fails. http://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
 
-There are two kinds of connections which can be established. A node can connect to a known peer, or a node can connect to a new peer. A known peer is one which has previously been connected to and from which a corresponding session token is available for authenticating the requested connection.
+## Handshake Protocol
 
-If the handshake fails upon initiating a connection TO a known peer, then the nodes information should be removed from the node table and the connection MUST NOT be reattempted. Due to the limited IPv4 space and common ISP practices, this is likely a common and normal occurrence, therefore, no other action should occur. If a handshake fails for a connection which is received, no action pertaining to the node table should occur.
+The initiator generates a random key pair, nonce and constructs `enc-auth-msg-initiator`, which it then sends to the recipient.
 
-Handshake:
+    version = 0x0000000000000005
+    token-flag = 0x00
+    initiator-nonce = <24 random bytes>
+    initiator-nonce-data = nonce || version
+    static-shared-secret = ecdh.agree(initiator-privk, recipient-pubk)
+    initiator-sig =
+        sign(initiator-ephemeral-privk, static-shared-secret ^ initiator-nonce-data)
+    auth-msg-initiator =
+        initiator-sig ||
+        sha3(initiator-ephemeral-pubk) ||
+        initiator-pubk ||
+        nonce ||
+        version ||
+        token-flag
+    enc-auth-msg-initiator = ecies.encrypt(recipient-pubk, auth-msg-initiator)
 
-    New: authInitiator -> E(remote-pubk, S(ephemeral-privk, static-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
-         authRecipient -> E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0)
-		 
-    Known: authInitiator = E(remote-pubk, S(ephemeral-privk, token ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x1)
-           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x1) // token found
-           authRecipient = E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0) // token not found
-    
-	static-shared-secret = ecdh.agree(privkey, remote-pubk)
-	ephemeral-shared-secret = ecdh.agree(ephemeral-privk, remote-ephemeral-pubk)
+The recipient decrypts the message and verifies that `initiator-sig` is valid by attempting to recover the initator's ephemeral public key from `initiator-sig`. The recipient generates a random ephemeral key pair and sends `enc-auth-msg-recipient` to the initator.
 
-Values generated following the handshake (see below for steps):
+    recipient-nonce = <24 random bytes>
+    initiator-ephemeral-pubk = ecrecover(initiator-ephemeral-sig)
+    auth-msg-recipient =
+        recipient-ephemeral-pubk || recipient-nonce || version || token-flag
+    enc-auth-msg-recipient = ecies.encrypt(initiator-pubk, recipient-nonce)
 
-    ephemeral-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
-    shared-secret = sha3(ephemeral-shared-secret || sha3(nonce || initiator-nonce))
-    token = sha3(shared-secret)
-    aes-secret = sha3(ephemeral-shared-secret || shared-secret)
-    # destroy shared-secret
-    mac-secret = sha3(ephemeral-shared-secret || aes-secret)
-    # destroy ephemeral-shared-secret
-    
+Initiator and recipient derive the connection secrets after the handshake:
+
+    ephemeral-shared-secret = ecdh.agree(ephemeral-privk, remote-ephemeral-pubk)
+    kdf-shared-data =
+        "rlpx handshake" ||
+        version ||
+        initiator-nonce || recipient-nonce ||
+        initiator-pubk || recipient-pubk
+    derived = kdf(ephemeral-shared-secret, kdf-shared-data, 160)
+    initator-aes-write-key = derived[0:32]
+    recipient-aes-write-key = derived[32:64]
+    initiator-aes-iv = derived[64:80]
+    recipient-aes-iv = derived[80:96]
+    initiator-mac-secret = derived[96:128]
+    recipient-mac-secret = derived[128:160]
+
+ `kdf(key, shared-data, length)` is the key derivation function specified by NIST.SP.800-56Ar2. The `shared-data` of the KDF is arbitrary data and `length` is the size of the derived output data in bytes.
+
+Both sides initiate the keccak states for the MAC as follows:
+
     Initiator:
-    egress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-sent-init)
-    # destroy nonce
-    ingress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-recvd-ack)
-    # destroy remote-nonce
-    
+        egress-mac = sha3.update(initiator-mac-secret)
+        ingress-mac = sha3.update(recipient-mac-secret)
+
     Recipient:
-    egress-mac = sha3.update(mac-secret ^ initiator-nonce || auth-sent-ack)
-    # destroy nonce
-    ingress-mac = sha3.update(mac-secret ^ recipient-nonce || auth-recvd-init)
-    # destroy remote-nonce
+        egress-mac = sha3.update(recipient-mac-secret)
+        ingress-mac = sha3.update(initiator-mac-secret)
 
-Creating authenticated connection:
-
-    1. initiator generates auth from ecdhe-random, static-shared-secret, and nonce (auth = authInitiator handshake)
-    2. initiator connects to remote and sends auth
-	
-    3. optionally, remote decrypts and verifies auth (checks that recovery of signature == H(ephemeral-pubk))
-    4. remote generates authAck from remote-ephemeral-pubk and nonce (authAck = authRecipient handshake)
-	
-	optional: remote derives secrets and preemptively sends protocol-handshake (steps 9,11,8,10)
-	
-    5. initiator receives authAck
-    6. initiator derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    7. initiator sends protocol-handshake
-	
-    8. remote receives protocol-handshake
-    9. remote derives shared-secret, aes-secret, mac-secret, ingress-mac, egress-mac
-    10. remote authenticates protocol-handshake
-    11. remote sends protocol-handshake
-	
-    12. initiator receives protocol-handshake
-    13. initiator authenticates protocol-handshake
-    13. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
-    14. begin sending/receiving data
-	
-	All packets following auth, including protocol negotiation handshake, are framed.
-
-Either side may disconnect if and only if authentication of the first framed packet fails, or, if the protocol handshake isn't appropriate (ex: version is too old).
+All packets following the handshake, including any protocol negotiation handshake, are framed. The authenticity of the remote end is not established until the first frame has been decrypted and authenticated sucessfully. Either side may disconnect if authentication of the first framed packet fails.
 
 # Framing
 The primary purpose behind framing packets is in order to robustly support multiplexing multiple protocols over a single connection. Secondarily, as framed packets yield reasonable demarcation points for message authentication codes, supporting an encrypted stream becomes straight-forward. Accordingly, frames are authenticated via key material which is generated during the handshake.
