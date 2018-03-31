@@ -166,7 +166,7 @@ Packet Data (packet-data):
 	FindNeighbours packet-type: 0x03
 	struct FindNeighbours
 	{
-		NodeId target; // Id of a node. The responding node will send back nodes closest to the target.
+		uint8_t target[32]; // the responding node will send back nodes closest to target.
 		uint32_t timestamp;
 	};
 	
