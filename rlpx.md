@@ -255,8 +255,8 @@ Creating authenticated connection:
 	
     12. initiator receives protocol-handshake
     13. initiator authenticates protocol-handshake
-    13. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
-    14. begin sending/receiving data
+    14. cryptographic handshake is complete if mac of protocol-handshakes are valid; permanent-token is replaced with token
+    15. begin sending/receiving data
 	
 	All packets following auth, including protocol negotiation handshake, are framed.
 
