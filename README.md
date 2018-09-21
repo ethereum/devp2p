@@ -17,5 +17,6 @@ devp2p is part of most Ethereum clients. Implementations include:
 - [ruby-devp2p (Ruby)](https://github.com/cryptape/ruby-devp2p)
 - [Exthereum (Elixir)](https://github.com/exthereum/ex_wire)
 - [eth_p2p (Nim)](https://github.com/status-im/nim-eth-p2p)
+- [Nethermind (.NET)](https://github.com/tkstanczak/nethermind)
 
 WireShark dissectors are [available here](https://github.com/ConsenSys/ethereum-dissectors).
