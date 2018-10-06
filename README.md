@@ -19,5 +19,6 @@ devp2p is part of most Ethereum clients. Implementations include:
 - [eth_p2p (Nim)](https://github.com/status-im/nim-eth-p2p)
 - [Nethermind (.NET)](https://github.com/tkstanczak/nethermind)
 - [Ciri (Ruby)](https://github.com/ciri-ethereum/ciri)
+- [Breadwallet (C)](https://github.com/breadwallet/breadwallet-core)
 
 WireShark dissectors are [available here](https://github.com/ConsenSys/ethereum-dissectors).
