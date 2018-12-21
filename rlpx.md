@@ -45,7 +45,7 @@ the authenticity of the message by checking whether
 ## Handshake
 
 The 'handshake' establishes key material to be used for the duration of the session. It is
-carried out between the initiator (the node which opened the TCP connection) recipient
+carried out between the initiator (the node which opened the TCP connection) and recipient
 (the node which accepted it).
 
 Handshake protocol:
