@@ -10,7 +10,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 
 - [go-ethereum (Go)](https://github.com/ethereum/go-ethereum/)
 - [Parity Ethereum (Rust)](https://github.com/paritytech/parity-ethereum)
-- [Trinity (Python)](https://github.com/ethereum/py-evm)
+- [Trinity (Python)](https://github.com/ethereum/trinity)
 - [Aleth (C++)](https://github.com/ethereum/aleth)
 - [EthereumJ (Java)](https://github.com/ethereum/ethereumj)
 - [EthereumJS (JavaScript)](https://github.com/ethereumjs/ethereumjs-devp2p)
