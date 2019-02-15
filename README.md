@@ -21,5 +21,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 - [Ciri (Ruby)](https://github.com/ciri-ethereum/ciri)
 - [Breadwallet (C)](https://github.com/breadwallet/breadwallet-core)
 - [Pantheon (Java)](https://github.com/PegaSysEng/pantheon)
+- [Cava (Kotlin) Discovery library](https://github.com/consensys/cava/tree/master/devp2p)
+- [Cava (Java) RLPx library](https://github.com/consensys/cava/tree/master/rlpx)
 
 WireShark dissectors are [available here](https://github.com/ConsenSys/ethereum-dissectors).
