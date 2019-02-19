@@ -1,58 +1,9 @@
-Discovery Wire Protocol
-=======================
+Node Discovery Protocol v5
+===============================
 
-Jan 2019
+Draft version, January 2019
 
-Contents
-========
-
-
-
-
-[Wire Protocol Message
-Specification](#wire-protocol-message-specification)
-
-> [UDP transmission strategy](#udp-transmission-strategy)
->
-> [General message format](#general-message-format)
->
-> [Obfuscation](#obfuscation)
->
-> [Conversation Nonce](#conversation-nonce)
->
-> [Recipient node id](#recipient-node-id)
->
-> [Streaming](#streaming)
->
-> [PING](#ping)
->
-> [PONG](#pong)
->
-> [FINDNODE](#findnode)
->
-> [NEIGHBOURS](#neighbours)
->
-> [WHOAREYOU](#whoareyou)
->
-> [IAM](#iam)
->
-> [REQUESTTICKET](#requestticket)
->
-> [TICKET](#ticket)
->
-> [REGTOPIC](#regtopic)
->
-> [REGCONFIRMATION](#regconfirmation)
->
-> [TOPICQUERY](#topicquery)
->
-> [TOPICNODES](#topicnodes)
->
-> [ENR FORMAT](#enr-format)
-
-
-Wire Protocol Message Specification
-===================================
+### Message Serialization
 
 This section addresses the actual serialization formats for the
 messages. (**TBD: Include the various specs like Topic Discovery here)**
@@ -78,7 +29,7 @@ However, UDP poses some challenges when it comes to avoiding
 fragmentation and transmitting large messages of a lossy transport,
 which are considered next.
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+) UDP transmission strategy
+### UDP transmission strategy
 
 So that the message types and their exchange patterns are not tied to a
 transport (eg: UDP), we should avoid introdcuing packet types that only
@@ -86,80 +37,73 @@ deal with UDP fragmentation and reliability of larger packets. In other
 words, it would be best to avoid "ACK" type packets, as these become
 redundant on TCP or other future transports.
 
-FindNode needs to be able to return up to *k* ENR records, plus other
-data, and TopicQuery in the form proposed in this document may also
-distribute a significant list of ENRs. As per specification (referenced
-via the Discovery wiki page), the maximum size of an ENR is 300 bytes.
-Because *k* is typically 16 in Ethereum, a message will be at least 4800
-bytes, not including additional data such as the header.
+`FINDNODE` needs to be able to return up to `k` ENR records, plus other
+data, and `TOPICQUERY` in the form proposed in this document may also
+distribute a significant list of ENRs. As per specification the maximum
+size of an ENR is 300 bytes. Because `k` is typically 16 in Ethereum,
+a message will be at least 4800 bytes, not including additional data such
+as the header.
 
 This will cause packet fragmentation or packet loss as it exceeds the
-typical MTU of 1500 at the time of writing. \*\* We will assume a
-'healthy' MTU of 1280, conforming with v4 expectations.
+typical MTU of 1500 at the time of writing. We will assume a 'healthy' MTU of 1280,
+conforming with v4 expectations.
 
 With the above rationale, the proposal for a transport agnostic way of
 responding with large messages is as follows:
 
--   Potentially large response messages (eg: TopicQuery and FindNodes
-    responses) can be sent as *multiple messages*.
+- Potentially large response messages (eg: `TOPICQUERY` and `FINDNODE`
+  responses) can be sent as *multiple messages*.
+- These are complete messages with their own header.
+- Individual messages in a multi-message response of length `t`, will
+  have a message counter `n`, and each response message will have a
+  message conveying the information that this one is `n` of `t`.
+- While `n` is not (at the time of writing) necessary information, it
+  may be a useful forward compatibility feature in the case that
+  ordering of the response stream is important.
+- The recipient of a multi-message response must expect that some
+  messages will be lost over UDP. Implementations must receive with a
+  timeout.
+- The *conversation nonce* determines the conversation and is used on
+  each message.
+- The precise same message format may be used over TCP, except that
+  the message may include a message "1 of 1" descriptor, include all
+  data in the response stream, and rely on length information
 
--   These are complete messages with their own header.
-
--   Individual messages in a multi-message response of length *t*, will
-    have a message counter *n,* and each response message will have a
-    message conveying the information that this one is *n* of *t.*
-
--   While *n* is not (at the time of writing) necessary information, it
-    may be a useful forward compatibility feature in the case that
-    ordering of the response stream is important.
-
--   The recipient of a multi-message response must expect that some
-    messages will be lost over UDP. Implementations must receive with a
-    timeout.
-
--   The *conversation nonce* determines the conversation and is used on
-    each message.
-
--   The precise same message format may be used over TCP, except that
-    the message may include a message "1 of 1" descriptor, include all
-    data in the response stream, and rely on length information
-
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  General message format
+### General Message Format
 
 **TBD: At the time of writing general consensus seems to be around RLP.
 Still waiting for serious proposals for alternatives.**
 
 Symbols
 
-\[ .. , .. , .. \] means an RLP list
-
-\|\| means concatenate
+`[ .. , .. , .. ]` means an RLP list
+`a || b` means concatenation of `a` and `b`
 
 As with v4 messages, a message is:
 
-message = message-header \|\| message-data
+```text
+message = message-header || message-data
+```
 
 where
 
-message-header = hash \|\| signature \|\| message-type
+```text
+message-header = hash || signature || message-type
+hash = keccak256(signature || message-type || message-data)
+signature = sign(message-type || message-data)
+```
 
-hash = keccak256(signature \|\| message-type \|\| message-data)
-
-signature = sign(message-type \|\| message-data)
-
-and
-
-> every message is signed by the node\'s identity key (ECDSA). The
-> signature is encoded as a byte array of length 65 as the concatenation
-> of the signature values r, s and the \'recovery id\' v. The recovery
-> id 'v' is out of scope for this document **TBD:** Add info and refs
-> about recovery id and how here the Ethereum chain id offset does not
-> apply.
+Every message is signed by the node\'s identity key (ECDSA). The
+signature is encoded as a byte array of length 65 as the concatenation
+of the signature values r, s and the \'recovery id\' v. The recovery
+id 'v' is out of scope for this document **TBD:** Add info and refs
+about recovery id and how here the Ethereum chain id offset does not
+apply.
 
 Message-type is a single byte where the *lower 5 bits* describe the
 message type, corresponding to the message formats below.
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+) Obfuscation 
+### Obfuscation
 
 Message-type's *top 3 bits* describe the *obfuscation type*. Any
 parameters to the obfuscation type are supplied ***before*** the RLP
@@ -174,13 +118,15 @@ a stream.
 
 So,
 
-message-data = obfuscation-parameter \|\| rlp(message)
+```text
+message-data = obfuscation-parameter || rlp(message)
+```
 
-'rlp' is the RLP encoding format used in v4.
+'rlp' is the RLP encoding function.
 
 Currently, *obfuscation type* may be
 
-0 -- No obfuscation (also compatible with v4)
+`0` -- No obfuscation (also compatible with v4)
 
 1 -- XOR with the *obfuscation parameter* *and* the public key of the
 sender. (The EC recover operation is expensive enough that it should act
@@ -190,15 +136,12 @@ as a deterrent. )
 
 Examples of alternatives include:
 
--   Have the ENR of the recipient include one or more key values (eg:
-    obf1, obf2, etc), and make the *obfuscation parameter* a randomly
-    selected *reference* to one of those.
+- Have the ENR of the recipient include one or more key values (eg:
+  obf1, obf2, etc), and make the *obfuscation parameter* a randomly
+  selected *reference* to one of those.
+- Support for a fully encrypted channel option.
 
--   Support for a fully encrypted channel option.
-
-### 
-
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+) Conversation Nonce
+### Conversation Nonce
 
 A mandatory component of all messages is the conversation-nonce.
 
@@ -226,131 +169,117 @@ replaying previous occurrences. To prevent this, a single byte in the
 conversation nonce will be reserved for future message counting. The top
 4 bytes are the conversation correlator.
 
-> conversation-nonce= conversation-correlator\|\|reserved-byte
->
+```text
+> conversation-nonce= conversation-correlator || reserved-byte
 > conversation-correlator = 4-byte conversation identifier
->
-> reserved-byte = currently ignored, reserved as a message counter for
-> future versions
+> reserved-byte = currently ignored, reserved as a message counter for future versions
+```
 
 The value selected must
 
--   allow for concurrent conversations (using a timestamp can result in
-    parallel conversations with the same id, so this should be avoided)
+- allow for concurrent conversations (using a timestamp can result in
+  parallel conversations with the same id, so this should be avoided)
 
--   prevent replay - so using a simple counter would be fine if the
-    implementation could ensure that restarts or even re-installs would
-    increment the counter based on previously saved state in all
-    circumstances. The easiest to implement would be a random number.
+- prevent replay - so using a simple counter would be fine if the
+  implementation could ensure that restarts or even re-installs would
+  increment the counter based on previously saved state in all
+  circumstances. The easiest to implement would be a random number.
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  Recipient node id
+### Recipient node ID
 
 This is a 32 byte sha256 hash of the designated public key for the
-target node ('secp256k1' key in the ENR).
+target node ('secp256k1' key in the ENR). This is used in request messages below.
 
-This is used in request messages below.
+### Streaming
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+) Streaming
-
-A note on streaming transports. Implementations should not assume that
-this will always be a UDP-only protocol, using fixed byte arra. Should
-the underlying transport becoming a streaming one, the RLP
-\[de\]serializers should be implemented over a stream, rather than a
-fixed byte array, or provide some way of signalling to other components
-that the amount of data supplied needs to be extended.
+A note on streaming transports. Implementations should not assume that this will
+always be a UDP-only protocol, using fixed byte arra. Should the underlying
+transport becoming a streaming one, the RLP (de)serializers should be
+implemented over a stream, rather than a fixed byte array, or provide some way
+of signalling to other components that the amount of data supplied needs to be
+extended.
 
 **TBD: Consider ENR sequence numbers:**
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  PING
+### PING
 
 Message id: 0x01
 
-> packet-data = \[version, conversation-nonce, recipient-node-id,
-> recipient-ip, recipient-port\]
->
-> version = 5
->
-> conversation-nonce = 4-byte conversation identifier
->
-> recipient-node-id = 32 byte id hash
->
-> recipient-ip = 16 or 4 byte ip address of the intended recipient
->
-> recipient-port = uint16 port
+```text
+packet-data = [version, conversation-nonce, recipient-node-id, recipient-ip, recipient-port]
+version = 5
+conversation-nonce = 4-byte conversation identifier
+recipient-node-id = 32 byte id hash
+recipient-ip = 16 or 4 byte ip address of the intended recipient
+recipient-port = uint16 port
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  PONG
+### PONG
 
 Message id: 0x02
 
-> packet-data = \[conversation-nonce,recipient-ip, recipient-port\]
->
-> conversation-nonce = 4-byte conversation identifier sent in PING
->
-> recipient-ip = 16 or 4 byte ip address of the intended recipient
->
-> recipient-port = uint16 port
+```text
+packet-data = [conversation-nonce,recipient-ip, recipient-port]
+conversation-nonce = 4-byte conversation identifier sent in PING
+recipient-ip = 16 or 4 byte ip address of the intended recipient
+recipient-port = uint16 port
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  FINDNODE
+### FINDNODE
 
 Message id: 0x03
 
-> packet-data = \[conversation-nonce, recipient-node-id, k-bucket\]
->
-> version = 4
->
+```text
+> packet-data = [conversation-nonce, recipient-node-id, k-bucket]
 > conversation-nonce = 4-byte conversation identifier
->
 > recipient-node-id = 32-byte id hash
->
 > k-bucket = a positive scalar, the desired k-bucket with bit 1 being
-> the 'closest' bucket, up to 32
+>            the 'closest' bucket, up to 32
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  NEIGHBOURS
+## NEIGHBOURS
 
 Message id: 0x04
 
 One or messages of the following format
 
-> packet-data = \[conversation-nonce, n-of-t, enrs, \[ENR, ...\]\]
->
-> conversation-nonce = 4-byte conversation identifier
->
-> n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
->
-> ENR = see ENR specification
+```text
+packet-data = [conversation-nonce, n-of-t, enrs, [ENR, ...]]
+conversation-nonce = 4-byte conversation identifier
+n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
+ENR = see ENR specification
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  WHOAREYOU
+### WHOAREYOU
 
 Message id: 0x05
 
-> packet-data = \[conversation-nonce, recipient-node-id\]
->
-> conversation-nonce = 4-byte conversation identifier
->
-> recipient-node-id = 32-byte id hash
+```text
+packet-data = [conversation-nonce, recipient-node-id]
+conversation-nonce = 4-byte conversation identifier
+recipient-node-id = 32-byte id hash
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  IAM
+### IAM
 
 Message id: 0x06
 
-> packet-data = \[conversation-nonce, ENR\]
->
-> conversation-nonce = 4-byte conversation identifier obtained in
-> WHOAREYOU
->
-> ENR = see ENR specification
+```text
+packet-data = [conversation-nonce, ENR]
+conversation-nonce = 4-byte conversation identifier obtained in WHOAREYOU
+ENR = see ENR specification
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  REQUESTTICKET
+### REQUESTTICKET
 
 Message id: 0x07
 
-> packet-data = \[conversation-nonce, recipient-node-id, topic\]
->
+```text
+> packet-data = [conversation-nonce, recipient-node-id, topic]
 > conversation-nonce = 4-byte conversation identifier
->
 > recipient-node-id = 32-byte id hash
->
 > topic = the rlp encoding of a UTF-8 encoded 32-character string
+```
 
 Implementation note: The least requested topics will be evicted from the
 global space. This means that an attacker attempting to pollute the
@@ -359,26 +288,21 @@ result in their own topic queues being evicted. Implementers should be
 cautious of the attacker attempting to promote their own queues by
 requesting their own adverts.
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  TICKET
+### TICKET
 
 Message id: 0x08
 
-> packet-data = \[conversation-nonce, ticket\]
->
-> conversation-nonce = 4-byte conversation identifier
->
-> ticket = \[source-node-id, topic, wait-until, expiration\]
->
-> topic = the rlp encoding of a UTF-8 encoded 32-character string
->
-> wait-until = the earliest absolute UNIX time before the ticket can be
-> used
->
-> expiration = the absolute UNIX time when this ticket expires
->
-> source-node-id = who requested the ticket
->
-> **TBD: Expiration does not really help here...**
+```text
+packet-data = [conversation-nonce, ticket]
+conversation-nonce = 4-byte conversation identifier
+ticket = [source-node-id, topic, wait-until, expiration]
+topic = the rlp encoding of a UTF-8 encoded 32-character string
+wait-until = the earliest absolute UNIX time before the ticket can be used
+expiration = the absolute UNIX time when this ticket expires
+source-node-id = who requested the ticket
+```
+
+**TBD: Expiration does not really help here...**
 
 **TBD: Consider the following :**
 
@@ -397,36 +321,37 @@ those to flood the topic queue. **
 **5. Optionally, the attacker can request ads (from separate nodes even)
 to bump the importance of its own spam ads.**
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  REGTOPIC
+### REGTOPIC
 
 Message id: 0x09
 
-> packet-data = \[conversation-nonce, recipient-node-id, ticket\]
->
-> recipient-node-id = 64-byte public key of the called node
->
-> conversation-nonce = 4-byte conversation identifier
->
-> ticket = supplied by TICKET response
+```text
+packet-data = [conversation-nonce, recipient-node-id, ticket]
+recipient-node-id = 64-byte public key of the called node
+conversation-nonce = 4-byte conversation identifier
+ticket = supplied by TICKET response
+```
 
 **TBD:** If the REGTOPIC must be part of the same conversation as the
 original REQUESTTICKET, then the ticket source-node-id is redundant?
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  REGCONFIRMATION
+### REGCONFIRMATION
 
 Message id: 0x0A
 
-> packet-data = \[conversation-nonce\]
+```text
+packet-data = [conversation-nonce]
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  TOPICQUERY
+### TOPICQUERY
 
 Message id: 0x0B
 
-> packet-data = \[conversation-nonce, recipient-node-id, topic\]
->
-> conversation-nonce = 4-byte conversation identifier
->
-> topic = the rlp encoding of a UTF-8 encoded 32-character string
+```text
+packet-data = [conversation-nonce, recipient-node-id, topic]
+conversation-nonce = 4-byte conversation identifier
+topic = the rlp encoding of a UTF-8 encoded 32-character string
+```
 
 **N.B.:** One of the aims of **1.1.2** is to make it *expensive* to
 correlate IDs with an IP address. By having nodes return ENRs directly,
@@ -434,34 +359,30 @@ it might appear as though it would be easy to search for advertising
 nodes and simply query as many as possible for their node records. \*\*
 Some arguments against that are that
 
--   Not all nodes will advertise -- mobile clients and light clients
-    whose usage will be much more to do with end-user application
-    scenarios, and most desirable as a target for correlation with user
-    metadata, will not advertise.
+- Not all nodes will advertise -- mobile clients and light clients
+  whose usage will be much more to do with end-user application
+  scenarios, and most desirable as a target for correlation with user
+  metadata, will not advertise.
+- The task of finding random advertising nodes and scraping their
+  results is itself non-trivial and cannot easily be used to target a
+  specific IP address.
+- The topic queues at each advertising node are limited in length and
+  the TOPICQUERY response (TOPICNODES) may be yet further limited \*\*
 
--   The task of finding random advertising nodes and scraping their
-    results is itself non-trivial and cannot easily be used to target a
-    specific IP address.
-
--   The topic queues at each advertising node are limited in length and
-    the TOPICQUERY response (TOPICNODES) may be yet further limited \*\*
-
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  TOPICNODES
+### TOPICNODES
 
 Message id: 0x0C
 
-> packet-data = \[conversation-nonce, n-of-t, enrs, \[ENR, ...\]\]
->
-> conversation-nonce = 4-byte conversation identifier
->
-> n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
->
-> ENR = see ENR specification
+```text
+packet-data = [conversation-nonce, n-of-t, enrs, [ENR, ...]]
+conversation-nonce = 4-byte conversation identifier
+n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
+ENR = see ENR specification
+```
 
-### ![#00f015](https://placehold.it/15/00f015/000000?text=+)  *ENR FORMAT*
+### ENR Format
 
-For the current ENR spec, please see
-[[https://eips.ethereum.org/EIPS/eip-778]](https://eips.ethereum.org/EIPS/eip-778)
+For the current ENR spec, please see [[https://eips.ethereum.org/EIPS/eip-778]](https://eips.ethereum.org/EIPS/eip-778)
 
 According to the proposals in this document, this would need to be
 extended to include some information that the ENR is an encapsulation of
