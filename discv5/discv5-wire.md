@@ -1,7 +1,10 @@
 Node Discovery Protocol v5
 ===============================
 
-Draft version, January 2019
+**Draft of January 2019**
+
+Note that this specification is a work in progress and may change incompatibly
+without prior notice.
 
 ### Message Serialization
 

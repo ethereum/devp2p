@@ -1,7 +1,10 @@
 Discovery Wire Protocol
 =======================
 
-Jan 2019
+**Draft of January 2019**
+
+Note that this specification is a work in progress and may change incompatibly
+without prior notice.
 
 Contents
 ========
