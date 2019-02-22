@@ -377,7 +377,7 @@ Some arguments against that are that
 Message id: 0x0C
 
 ```text
-packet-data = [conversation-nonce, n-of-t, enrs, [ENR, ...]]
+packet-data = [conversation-nonce, n-of-t,  [ENR, ...]]
 conversation-nonce = 4-byte conversation identifier
 n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
 ENR = see ENR specification
