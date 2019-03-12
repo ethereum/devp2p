@@ -1,4 +1,4 @@
-# The eth/63 protocol
+# Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx](../rlpx.md) transport that facilitates exchange of
 Ethereum blockchain information between peers. The current protocol version is **eth/63**.
@@ -25,7 +25,6 @@ is sent to a small fraction of connected peers (usually sqrt(peers)). All other 
 sent a NewBlockHashes message containing just the hash of the new block. Those peers may
 request the full block later if they fail to receive it from anyone within reasonable
 time.
-
 
 ### Basic Chain Synchronization
 
