@@ -4,7 +4,7 @@
 Ethereum blockchain information between peers. The current protocol version is **eth/63**.
 See end of document for a list of changes in past protocol versions.
 
-### Protocol Semantics
+### Basic Operation
 
 Once a connection is established, a [Status] message must be sent. Following the reception
 of the peer's Status message, the Ethereum session is active and any other messages may be
@@ -26,7 +26,7 @@ total number of peers). All other peers are sent a [NewBlockHashes] message cont
 just the hash of the new block. Those peers may request the full block later if they fail
 to receive it from anyone within reasonable time.
 
-### Basic Chain Synchronization
+### Chain Synchronization
 
 Two peers get connected and send their [Status] message. Status includes the Total
 Difficulty (TD) and hash of their best block.
@@ -45,7 +45,7 @@ eth/63 also allows synchronizing transaction execution results ("state"). This m
 faster than re-executing all transactions but comes at the expense of some security.
 
 State synchronization typically proceeds by downloading the chain of block headers,
-verifying their proof-of-work values. Block bodies are requested as in the Basic Chain
+verifying their proof-of-work values. Block bodies are requested as in the Chain
 Synchronization section but block transactions aren't executed. Instead, the client picks
 a block near the head of the chain and downloads merkle tree nodes and contract code
 incrementally by requesting the root node, it's children, grandchildren, ... using
