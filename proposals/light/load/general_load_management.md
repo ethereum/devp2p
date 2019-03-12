@@ -1,4 +1,4 @@
-# Light Client Load Management Counter-Proposal
+# Light Client Load-Management Review and Proposal
 
 ## Proposal Summary
 
