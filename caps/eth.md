@@ -185,7 +185,7 @@ implementation-defined limits.
 Provide a set of receipts which correspond to block hashes in a previous GetReceipts
 message.
 
-## Changelog
+## Change Log
 
 ### eth/63 (2016)
 
