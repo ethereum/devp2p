@@ -1,35 +1,36 @@
 # The eth/63 protocol
 
-'eth' is protocol on the [RLPx](../rlpx.md) transport that facilitates exchange of
+'eth' is a protocol on the [RLPx](../rlpx.md) transport that facilitates exchange of
 Ethereum blockchain information between peers. The current protocol version is **eth/63**.
 See end of document for a list of changes in past protocol versions.
 
 ### Protocol Semantics
 
-Upon an active session, a Status message must be sent. Following the reception of the
-peer's Status message, the Ethereum session is active and any other messages may be sent.
+Once a connection is established, a Status message must be sent. Following the reception
+of the peer's Status message, the Ethereum session is active and any other messages may be
+sent.
 
 All known transactions should be sent following the Status exchange with one or more
 Transactions messages.
 
 Transactions messages should also be sent periodically as the node has new transactions to
-disseminate. A node should never send a transaction back to the peer that it can determine
+disseminate. A node should never send a transaction back to a peer that it can determine
 already knows of it (either because it was previously sent or because it was informed from
 this peer originally).
 
-New blocks are propagated using the NewBlock and NewBlockHashes messages. The NewBlock
-message includes the full block and is sent to a small fraction of connected peers
-(usually sqrt(peers)). All other peers are sent a NewBlockHashes message containing just
-the hash of the new block. Those peers may request the full block later if they fail to
-receive it from anyone within reasonable time.
-
 Blocks are typically re-propagated to all connected peers as soon as basic validity of the
-announcement has been established (e.g. after the proof-of-work check).
+announcement has been established (e.g. after the proof-of-work check). Propagation uses
+the NewBlock and NewBlockHashes messages. The NewBlock message includes the full block and
+is sent to a small fraction of connected peers (usually sqrt(peers)). All other peers are
+sent a NewBlockHashes message containing just the hash of the new block. Those peers may
+request the full block later if they fail to receive it from anyone within reasonable
+time.
+
 
 ### Basic Chain Synchronization
 
-Two peers connect and send their Status message. Status includes the Total Difficulty(TD)
-and hash of their best block.
+Two peers get connected and send their Status message. Status includes the Total
+Difficulty (TD) and hash of their best block.
 
 The client with the worst TD then proceeds to download block headers using the
 BlockHeadersFromNumber message. It verifies proof-of-work values in received headers and
@@ -57,8 +58,8 @@ entire tree is synchronized.
 
 `[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32, number: P]`
 
-Inform a peer of its current ethereum state. This message should be sent _after_ the
-initial handshake and _prior_ to any **ethereum** related messages.
+Inform a peer of its current ethereum state. This message should be sent just after the
+connection is established and prior to any other eth protocol messages.
 
 * `protocolVersion`: the current protocol version, 63
 * `networkId`: Integer identifying the blockchain, see table below
@@ -69,7 +70,8 @@ initial handshake and _prior_ to any **ethereum** related messages.
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
-used.
+used. Note that the Network ID may or may not correspond with the EIP-155 Chain ID used
+for transaction replay prevention.
 
 | ID | chain                              |
 |----|------------------------------------|
@@ -96,11 +98,15 @@ of the sending node.
 
 `[[nonce: P, receivingAddress: B_20, value: P, ...], ...]`
 
-Specify (a) transaction(s) that the peer should make sure is included on its transaction
-queue. The items in the list (following the first item `0x12`) are transactions in the
-format described in the main Ethereum specification. Nodes must not resend the same
-transaction to a peer in the same session. This packet must contain at least one (new)
-transaction.
+Specify transactions that the peer should make sure is included on its transaction queue.
+The items in the list are transactions in the format described in the main Ethereum
+specification. Transactions messages must contain at least one (new) transaction, empty
+Transactions messages are discouraged and may lead to disconnection.
+
+Nodes must not resend the same transaction to a peer in the same session and must not
+relay transactions to a peer they received that transaction from. In practice this is
+often implemented by keeping a per-peer bloom filter or set of transaction hashes which
+have already been sent or received.
 
 ### GetBlockHeaders (0x03)
 
@@ -118,14 +124,16 @@ with at most `maxHeaders` items.
 Reply to GetBlockHeaders. The items in the list (following the message ID) are block
 headers in the format described in the main Ethereum specification, previously asked for
 in a GetBlockHeaders message. This may validly contain no block headers if no block
-headers were able to be returned for the GetBlockHeaders query.
+headers were able to be returned for the GetBlockHeaders query. The number of headers that
+can be requested in a single message may be subject to implementation-defined limits.
 
 ### GetBlockBodies (0x05)
 
 `[hash_0: B_32, hash_1: B_32, ...]`
 
 Require peer to return a BlockBodies message. Specify the set of blocks that we're
-interested in with the hashes.
+interested in with the hashes. The number of blocks that can be requested in a single
+message may be subject to implementation-defined limits.
 
 ### BlockBodies (0x06)
 
@@ -133,8 +141,8 @@ interested in with the hashes.
 
 Reply to GetBlockBodies. The items in the list are some of the blocks, minus the header,
 in the format described in the main Ethereum specification, previously asked for in a
-GetBlockBodies message. This may validly contain no items if no blocks were able to be
-returned for the GetBlockBodies query.
+GetBlockBodies message. This may be empty if no blocks were available for the last
+GetBlockBodies query.
 
 ### NewBlock (0x07)
 
@@ -146,42 +154,37 @@ specification.
 
 - `totalDifficulty` is the total difficulty of the block (aka score).
 
-### BlockHashesFromNumber (0x08)
-
-`[number: P, maxBlocks: P]`
-
-Requires peer to reply with a BlockHashes message. Message should contain block with
-that of number `number` on the canonical chain. Should also be followed by subsequent
-blocks, on the same chain, detailing a number of the first block hash and a total of
-hashes to be sent. Returned hash list must be ordered by block number in ascending order.
-
 ### GetNodeData (0x0d)
 
 `[hash_0: B_32, hash_1: B_32, ...]`
 
-Require peer to return a NodeData message containing state trie nodes or contract code
+Require peer to return a NodeData message containing state tree nodes or contract code
 matching the requested hashes.
 
 ### NodeData (0x0e)
 
 `[value_0: B, value_1: B, ...]`
 
-Provide a set of state trie nodes or contract code blobs which correspond to previously
-asked hashes from GetNodeData. Does not need to contain all; best effort is fine. If it
-contains none, then has no information for previous GetNodeData hashes.
+Provide a set of state tree nodes or contract code blobs which correspond to previously
+requested hashes from GetNodeData. Does not need to contain all; best effort is fine. This
+message may be an empty list if the peer doesn't know about any of the previously
+requested hashes. The number of items that can be requested in a single message may be
+subject to implementation-defined limits.
 
 ### GetReceipts (0x0f)
 
 `[blockHash_0: B_32, blockHash_1: B_32, ...]`
 
 Require peer to return a Receipts message containing the receipts of the given block
-hashes.
+hashes. The number of receipts that can be requested in a single message may be subject to
+implementation-defined limits.
 
 ### Receipts (0x10)
 
 `[[receipt_0, receipt_1], ...]`
 
-Provide a set of receipts which correspond to previously asked in GetReceipts.
+Provide a set of receipts which correspond to block hashes in a previous GetReceipts
+message.
 
 ## Changelog
 
@@ -195,7 +198,7 @@ Version 63 added the GetNodeData (0x0d), NodeData (0x0e), GetReceipts (0x0f) and
 In version 62, the NewBlockHashes (0x01) message was extended to include block numbers
 alongside the announced hashes. Messages GetBlockHashes (0x03), BlockHashes (0x04),
 GetBlocks (0x05) and Blocks (0x06) were replaced by messages that fetch block headers and
-bodies.
+bodies. The BlockHashesFromNumber (0x08) message was removed.
 
 Previous encodings of the reassigned message codes were:
 
