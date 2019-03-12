@@ -8,7 +8,7 @@ also support the 'les' protocol besides 'eth' in order to be able to serve light
 
 The current protocol version is **les/2**. See end of document for a list of changes in
 past protocol versions. Some of the les protocol messages are similar to of the [Ethereum
-Wire Protocol](./eth.md), with the addition of a few new fields.
+Wire Protocol], with the addition of a few new fields.
 
 ## Canonical Hash Trie
 
@@ -420,7 +420,6 @@ Version 2 is fully backwards compatible with les/1 and added a few new messages.
 * The [GetHeaderProofs], [HeaderProofs], [GetProofs], [Proofs] and [SendTx] messages from
   les/1 are deprecated but still supported in les/2.
 
-[Merkle Patricia Trie]: https://github.com/ethereum/wiki/wiki/Patricia-Tree
 [Client Side Flow Control]: #client-side-flow-control
 [Canonical Hash Trie]: #canonical-hash-trie
 [CHT]: #canonical-hash-trie
@@ -447,3 +446,5 @@ Version 2 is fully backwards compatible with les/1 and added a few new messages.
 [SendTxV2]: #sendtxv2-0x13
 [GetTxStatus]: #gettxstatus-0x14
 [TxStatus]: #txstatus-0x15
+[Ethereum Wire Protocol]: ./eth.md
+[Merkle Patricia Trie]: https://github.com/ethereum/wiki/wiki/Patricia-Tree
