@@ -1,4 +1,4 @@
-# DEVP2P PROPOSALS
+# DEVP2P Proposals
 
 This folder is where drafts and proposals may be submitted.
 
