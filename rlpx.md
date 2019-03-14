@@ -327,13 +327,13 @@ Reply to the peer's [Ping] packet.
 
 ### Version 5 (EIP-706, September 2017)
 
-EIP-706 added Snappy message compression.
+[EIP-706] added Snappy message compression.
 
 ### Version 4 (EIP-8, December 2015)
 
-EIP-8 changed the encoding of `auth-body` and `ack-body` in the initial handshake to RLP,
-added a version number to the handshake and mandated that implementations should ignore
-additional list elements in handshake messages and [Hello].
+[EIP-8] changed the encoding of `auth-body` and `ack-body` in the initial handshake to
+RLP, added a version number to the handshake and mandated that implementations should
+ignore additional list elements in handshake messages and [Hello].
 
 # References
 
@@ -360,3 +360,5 @@ Copyright &copy; 2014 Alex Leverington.
 [Ping]: #ping-0x02
 [Pong]: #pong-0x04
 [Capability Messaging]: #capability-messaging
+[EIP-8]: https://eips.ethereum.org/EIPS/eip-8
+[EIP-706]: https://eips.ethereum.org/EIPS/eip-706
