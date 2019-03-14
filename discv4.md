@@ -1,8 +1,12 @@
-# Node Discovery Protocol v4
+# Node Discovery Protocol
 
 This specification defines the Node Discovery protocol version 4, a Kademlia-like DHT that
-stores information about Ethereum nodes. The Kademlia structure was chosen because it
-yields a topology of low diameter.
+stores information about Ethereum nodes. The Kademlia structure was chosen because it is
+an efficient way to organize a distributed index of nodes and yields a topology of low
+diameter.
+
+The current protocol version is **4**. You can find a list of changes in past protocol
+versions at the end of this document.
 
 ## Node Identities
 
@@ -45,12 +49,12 @@ hours.
 A 'lookup' locates the `k` closest nodes to a node ID.
 
 The lookup initiator starts by picking `α` closest nodes to the target it knows of. The
-initiator then sends concurrent FindNode packets to those nodes. `α` is a system-wide
+initiator then sends concurrent [FindNode] packets to those nodes. `α` is a system-wide
 concurrency parameter, such as 3. In the recursive step, the initiator resends FindNode to
 nodes it has learned about from previous queries. Of the `k` nodes the initiator has heard
-of closest to the target, it picks `α` that it has not yet queried and resends FindNode to
-them. Nodes that fail to respond quickly are removed from consideration until and unless
-they do respond.
+of closest to the target, it picks `α` that it has not yet queried and resends [FindNode]
+to them. Nodes that fail to respond quickly are removed from consideration until and
+unless they do respond.
 
 If a round of FindNode queries fails to return a node any closer than the closest already
 seen, the initiator resends the find node to all of the `k` closest nodes it has not
@@ -83,13 +87,13 @@ id' `v`.
 
 The `packet-type` is a single byte defining the type of message. Valid packet types are
 listed below. Data after the header is specific to the packet type and is encoded as an
-RLP list. As per EIP-8, implementations should ignore any additional elements in the list
+RLP list. Implementations should ignore any additional elements in the `packet-data` list
 as well as any extra data after the list.
 
 ### Ping Packet (0x01)
 
 ```text
-packet-data = [version, from, to, expiration]
+packet-data = [version, from, to, expiration, ...]
 version = 4
 from = [sender-ip, sender-udp-port, sender-tcp-port]
 to = [recipient-ip, recipient-udp-port, 0]
@@ -98,8 +102,9 @@ to = [recipient-ip, recipient-udp-port, 0]
 The `expiration` field is an absolute UNIX time stamp. Packets containing a time stamp
 that lies in the past are expired may not be processed.
 
-When a ping packet is received, the recipient should reply with a pong packet. It may also
-consider the sender for addition into the node table.
+When a ping packet is received, the recipient should reply with a [Pong] packet. It may
+also consider the sender for addition into the node table. Implementations should ignore
+any mismatches in version.
 
 If no communication with the sender has occurred within the last 12h, a ping should be
 sent in addition to pong in order to receive an endpoint proof.
@@ -107,7 +112,7 @@ sent in addition to pong in order to receive an endpoint proof.
 ### Pong Packet (0x02)
 
 ```text
-packet-data = [to, ping-hash, expiration]
+packet-data = [to, ping-hash, expiration, ...]
 ```
 
 Pong is the reply to ping.
@@ -119,12 +124,12 @@ ping packet.
 ### FindNode Packet (0x03)
 
 ```text
-packet-data = [target, expiration]
+packet-data = [target, expiration, ...]
 ```
 
 A FindNode packet requests information about nodes close to `target`. The `target` is a
 65-byte secp256k1 public key. When FindNode is received, the recipient should reply with
-neighbors packets containing the closest 16 nodes to target found in its local table.
+[Neighbors] packets containing the closest 16 nodes to target found in its local table.
 
 To guard against traffic amplification attacks, Neighbors replies should only be sent if
 the sender of FindNode has been verified by the endpoint proof procedure.
@@ -132,13 +137,15 @@ the sender of FindNode has been verified by the endpoint proof procedure.
 ### Neighbors Packet (0x04)
 
 ```text
-packet-data = [nodes, expiration]
-nodes = [[ip, udp-port, tcp-port, node-id], ... ]
+packet-data = [nodes, expiration, ...]
+nodes = [[ip, udp-port, tcp-port, node-id], ...]
 ```
 
-Neighbors is the reply to FindNode.
+Neighbors is the reply to [FindNode].
 
-## Known Issues & Implementation Advice
+# Change Log
+
+## Known Issues in the current version
 
 The `expiration` field present in all packets is supposed to prevent packet replay. Since
 it is an absolute time stamp, the node's clock must be accurate to verify it correctly.
@@ -150,3 +157,14 @@ the recipient has seen a recent enough pong. Geth handles it as follows: If no
 communication with the recipient has occurred within the last 12h, initiate the procedure
 by sending a ping. Wait for a ping from the other side, reply to it and then send
 FindNode.
+
+## EIP-8 (December 2017)
+
+[EIP-8] mandated that implementations ignore mismatches in Ping version and any additional
+list elements in `packet-data`.
+
+[Ping]: #ping-0x01
+[Pong]: #pong-0x02
+[FindNode]: #findnode-0x03
+[Neighbors]: #neighbors-0x04
+[EIP-8]: https://eips.ethereum.org/EIPS/eip-8
