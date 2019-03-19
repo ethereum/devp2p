@@ -1,15 +1,34 @@
 # The RLPx Transport Protocol
 
 This specification defines the RLPx transport protocol, a TCP-based transport protocol
-used for communication among Ethereum nodes. The protocol works with encrypted frames of
-arbitrary content, though it is typically used to carry the devp2p application protocol.
+used for communication among Ethereum nodes. The protocol carries encrypted messages
+belonging to one or more 'capabilities' which are negotiated during connection
+establishment. RLPx is named after the [RLP] serialization format. The name is not an
+acronym and has no particular meaning.
 
-## Node Identity
+The current protocol version is **5**. You can find a list of changes in past versions at
+the end of this document.
 
-All cryptographic operations are based on the secp256k1 elliptic curve. Each node is
-expected to maintain a static private key which is saved and restored between sessions. It
-is recommended that the private key can only be reset manually, for example, by deleting a
-file or database entry.
+## Notation
+
+```text
+X || Y
+    denotes concatenation of X and Y.
+X ^ Y
+    is byte-wise XOR of X and Y.
+X[:N]
+    denotes an N-byte prefix of X.
+[X, Y, Z, ...]
+    denotes recursive encoding of [X, Y, Z, ...] as an RLP list.
+keccak256(MESSAGE)
+    is the Keccak256 hash function as used by Ethereum.
+ecies.encrypt(PUBKEY, MESSAGE, AUTHDATA)
+    is the asymmetric authenticated encryption function as used by RLPx.
+    AUTHDATA is authenticated data which is not part of the resulting ciphertext,
+    but written to HMAC-256 before generating the message tag.
+ecdh.agree(PRIVKEY, PUBKEY)
+    is elliptic curve Diffie-Hellman key agreement between PRIVKEY and PUBKEY.
+```
 
 ## ECIES Encryption
 
@@ -42,118 +61,304 @@ the authenticity of the message by checking whether
 <code>d == MAC(k<sub>M</sub>, iv || c)</code> then obtains the plaintext as
 <code>m = AES(k<sub>E</sub>, iv || c)</code>.
 
-## Handshake
+## Node Identity
 
-The 'handshake' establishes key material to be used for the duration of the session. It is
-carried out between the initiator (the node which opened the TCP connection) and recipient
-(the node which accepted it).
+All cryptographic operations are based on the secp256k1 elliptic curve. Each node is
+expected to maintain a static secp256k1 private key which is saved and restored between
+sessions. It is recommended that the private key can only be reset manually, for example,
+by deleting a file or database entry.
 
-Handshake protocol:
+## Initial Handshake
 
-`E` is the ECIES asymmetric encryption function defined above.
+An RLPx connection is established by creating a TCP connection and agreeing on ephemeral
+key material for further encrypted and authenticated communication. The process of
+creating those session keys is the 'handshake' and is carried out between the 'initiator'
+(the node which opened the TCP connection) and the 'recipient' (the node which accepted it).
 
-```text
-
-auth -> E(remote-pubk, S(ephemeral-privk, static-shared-secret ^ nonce) || H(ephemeral-pubk) || pubk || nonce || 0x0)
-auth-ack -> E(remote-pubk, remote-ephemeral-pubk || nonce || 0x0)
-
-static-shared-secret = ecdh.agree(privkey, remote-pubk)
-```
-
-Values generated following the handshake (see below for steps):
-
-```text
-ephemeral-shared-secret = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
-shared-secret = keccak256(ephemeral-shared-secret || keccak256(nonce || initiator-nonce))
-aes-secret = keccak256(ephemeral-shared-secret || shared-secret)
-# destroy shared-secret
-mac-secret = keccak256(ephemeral-shared-secret || aes-secret)
-# destroy ephemeral-shared-secret
-
-Initiator:
-egress-mac = keccak256.update(mac-secret ^ recipient-nonce || auth-sent-init)
-# destroy nonce
-ingress-mac = keccak256.update(mac-secret ^ initiator-nonce || auth-recvd-ack)
-# destroy remote-nonce
-
-Recipient:
-egress-mac = keccak256.update(mac-secret ^ initiator-nonce || auth-sent-ack)
-# destroy nonce
-ingress-mac = keccak256.update(mac-secret ^ recipient-nonce || auth-recvd-init)
-# destroy remote-nonce
-```
-
-Creating authenticated connection:
-
-1. initiator connects to recipient and sends `auth` message
+1. initiator connects to recipient and sends its `auth` message
 2. recipient accepts, decrypts and verifies `auth` (checks that recovery of signature ==
    `keccak256(ephemeral-pubk)`)
-3.  recipient generates `auth-ack` message from `remote-ephemeral-pubk` and `nonce`
-4.  recipient derives secrets and sends the first payload frame
-5.  initiator receives `auth-ack` and derives secrets
-6.  initiator sends first payload frame
-7.  recipient receives and authenticates first payload frame
-8.  initiator receives and authenticates first payload frame
-9.  cryptographic handshake is complete if MAC of first payload frame is valid on both sides
+3. recipient generates `auth-ack` message from `remote-ephemeral-pubk` and `nonce`
+4. recipient derives secrets and sends the first encrypted frame containing the [Hello] message
+5. initiator receives `auth-ack` and derives secrets
+6. initiator sends its first encrypted frame containing initiator [Hello] message
+7. recipient receives and authenticates first encrypted frame
+8. initiator receives and authenticates first encrypted frame
+9. cryptographic handshake is complete if MAC of first encrypted frame is valid on both sides
 
-# Framing
+Either side may disconnect if authentication of the first framed packet fails.
 
-All packets following `auth` are framed. Either side may disconnect if authentication of
-the first framed packet fails.
-
-The primary purpose behind framing packets is in order to robustly support multiplexing
-multiple protocols over a single connection. Secondarily, as framed packets yield
-reasonable demarcation points for message authentication codes, supporting an encrypted
-stream becomes straight-forward. Frames are authenticated via key material which is
-generated during the handshake.
-
-The frame header provides information about the size of the packet and the packet's source
-protocol.
+Handshake messages:
 
 ```text
-frame = header || header-mac || frame-data || frame-mac
-header = frame-size || header-data || padding
-frame-size = size of frame excluding padding, integer < 2**24, big endian
-header-data = rlp.list(protocol-type[, context-id])
-protocol-type = integer < 2**16, big endian
-context-id = integer < 2**16, big endian
-padding = zero-fill to 16-byte boundary
-frame-content = any binary data
-
-header-mac = left16(egress-mac.update(aes(mac-secret,egress-mac)) ^ header-ciphertext).digest
-frame-mac = left16(egress-mac.update(aes(mac-secret,egress-mac)) ^ left16(egress-mac.update(frame-ciphertext).digest))
-egress-mac = keccak256 state, continuously updated with egress bytes
-ingress-mac = keccak256 state, continuously updated with ingress bytes
-
-left16(x) is the first 16 bytes of x
-|| is concatenate
-^ is xor
+auth = auth-size || enc-auth-body
+auth-size = size of enc-auth-body, encoded as a big-endian 16-bit integer
+auth-vsn = 4
+auth-body = [sig, initiator-pubk, initiator-nonce, auth-vsn, ...]
+enc-auth-body = ecies.encrypt(recipient-pubk, auth-body || auth-padding, auth-size)
+auth-padding = arbitrary data
 ```
 
-Message authentication is achieved by continuously updating `egress-mac` or `ingress-mac`
-with the ciphertext of bytes sent (egress) or received (ingress); for headers the update
-is performed by xoring the header with the encrypted output of it's corresponding mac (see
-header-mac above for example). This is done to ensure uniform operations are performed for
-both plaintext mac and ciphertext. All macs are sent cleartext.
+```
+ack = ack-size || enc-ack-body
+ack-size = size of enc-ack-body, encoded as a big-endian 16-bit integer
+ack-vsn = 4
+ack-body = [recipient-ephemeral-pubk, recipient-nonce, ack-vsn, ...]
+enc-ack-body = ecies.encrypt(initiator-pubk, ack-body || ack-padding, ack-size)
+ack-padding = arbitrary data
+```
 
-Padding is used to prevent buffer starvation, such that frame components are byte-aligned
-to block size of cipher.
+Implementations must ignore any mismatches in `auth-vsn` and `ack-vsn`. Implementations
+must also ignore any additional list elements in `auth-body` and `ack-body`.
 
-## Known Issues
+Secrets generated following the exchange of handshake messages:
 
-- The RLPx handshake is considered 'broken crypto' because `aes-secret` and `mac-secret`
-  are reused for both reading and writing. The two sides of a RLPx connection generate two
-  CTR streams from the same key, nonce and IV. If an attacker knows one plaintext, they can
-  decrypt unknown plaintexts of the reused keystream.
-- The frame encoding provides a `protocol-type` field for multiplexing purposes, but this
-  field is unused by devp2p.
+```text
+static-shared-secret = ecdh.agree(privkey, remote-pubk)
+ephemeral-key = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
+shared-secret = keccak256(ephemeral-key || keccak256(nonce || initiator-nonce))
+aes-secret = keccak256(ephemeral-key || shared-secret)
+mac-secret = keccak256(ephemeral-key || aes-secret)
+```
 
-## References
-- Petar Maymounkov and David Mazieres. Kademlia: A Peer-to-peer Information System Based on the XOR Metric. 2002. URL { https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf }
-- Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001. URL { http://www.shoup.net/papers/iso-2_1.pdf }
-- Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014. URL { http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3 }
+## Framing
+
+All messages following the initial handshake are framed. A frame carries a single
+encrypted message belonging to a capability.
+
+The purpose of framing is multiplexing multiple capabilites over a single connection.
+Secondarily, as framed messages yield reasonable demarcation points for message
+authentication codes, supporting an encrypted and authenticated stream becomes
+straight-forward. Frames are encrypted and authenticated via key material generated during
+the handshake.
+
+The frame header provides information about the size of the message and the message's
+source capability. Padding is used to prevent buffer starvation, such that frame
+components are byte-aligned to block size of cipher.
+
+```text
+frame = header-ciphertext || header-mac || frame-ciphertext || frame-mac
+header-ciphertext = aes(aes-secret, header)
+header = frame-size || header-data || header-padding
+header-data = [capability-id, context-id]
+capability-id = integer, always zero
+context-id = integer, always zero
+header-padding = zero-fill header to 16-byte boundary
+frame-ciphertext = aes(aes-secret, frame-data || frame-padding)
+frame-padding = zero-fill frame-data to 16-byte boundary
+```
+
+See the [Capability Messaging] section for definitions of `frame-data` and `frame-size.`
+
+### MAC
+
+Message authentication in RLPx uses two keccak256 states, one for each direction of
+communication. The `egress-mac` and `ingress-mac` keccak states are continuously updated
+with the ciphertext of bytes sent (egress) or received (ingress). Following the initial
+handshake, the MAC states are initialized as follows:
+
+Initiator:
+
+```
+egress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
+ingress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
+```
+
+Recipient:
+
+```
+egress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
+ingress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
+```
+
+When a frame is sent, the corresponding MAC values are computed by updating the
+`egress-mac` state with the data to be sent. The update is performed by XORing the header
+with the encrypted output of it's corresponding MAC. This is done to ensure uniform
+operations are performed for both plaintext MAC and ciphertext. All MACs are sent
+cleartext.
+
+```text
+header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16] ^ header-ciphertext)
+egress-mac = keccak256.update(egress-mac, header-mac-seed)
+header-mac = keccak256.digest(egress-mac)[:16]
+```
+
+Computing `frame-mac`:
+
+```text
+egress-mac = keccak256.update(egress-mac, frame-ciphertext)
+frame-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ keccak256.digest(egress-mac)[:16]
+egress-mac = keccak256.update(egress-mac, frame-mac-seed)
+frame-mac = keccak256.digest(egress-mac)[:16]
+```
+
+Verifying the MAC on ingress frames is done by updating the `ingress-mac` state in the
+same way as `egress-mac` and comparing to the values of `header-mac` and `frame-mac` in
+the ingress frame. This should be done before decrypting `header-ciphertext` and
+`frame-ciphertext`.
+
+# Capability Messaging
+
+All messages following the initial handshake are associated with a 'capability'. Any
+number of capabilities can be used concurrently on a single RLPx connection.
+
+A capability is identified by a short ASCII name and version number. The capabilities
+supported on either side of the connection are exchanged in the [Hello] message belonging
+to the 'p2p' capability which is required to be available on all connections.
+
+## Message Encoding
+
+The initial [Hello] message is encoded as follows:
+
+```text
+frame-data = msg-id || msg-data
+frame-size = length of frame-data, encoded as a 24bit big-endian integer
+```
+
+where `msg-id` is an RLP-encoded integer identifying the message and `msg-data` is an RLP
+list containing the message data.
+
+All messages following Hello are compressed using the Snappy algorithm. Note that the
+`frame-size` of compressed messages refers to the uncompressed size of `msg-data`. The
+compressed encoding of messages is:
+
+```text
+frame-data = msg-id || snappyCompress(msg-data)
+frame-size = length of (msg-id || msg-data) encoded as a 24bit big-endian integer
+```
+
+### Message ID-based Multiplexing
+
+While the framing layer supports a `capability-id`, the current version of RLPx doesn't
+use that field for multiplexing between different capabilities. Instead, multiplexing
+relies purely on the message ID.
+
+Each capability is given as much of the message-ID space as it needs. All such
+capabilities must statically specify how many message IDs they require. On connection and
+reception of the [Hello] message, both peers have equivalent information about what
+capabilities they share (including versions) and are able to form consensus over the
+composition of message ID space.
+
+Message IDs are assumed to be compact from ID 0x11 onwards (0x00-0x10 is reserved for the
+"p2p" capability) and given to each shared (equal-version, equal-name) capability in
+alphabetic order. Capability names are case-sensitive. Capabilities which are not shared
+are ignored. If multiple versions are shared of the same (equal name) capability, the
+numerically highest wins, others are ignored.
+
+## "p2p" Capability
+
+The "p2p" capability is present on all connections. After the initial handshake, both
+sides of the connection must send a [Hello] message. Upon receiving the [Hello] message a
+session is active and any other message may be sent. Implementations must ignore any
+difference in protocol version for forward-compatibility reasons. When communicating with
+a peer of lower version, implementations should try to mimic that version.
+
+At any time, a [Disconnect] message may be sent.
+
+### Hello (0x00)
+
+`[protocolVersion: P, clientId: B, capabilities, listenPort: P, nodeKey: B_64, ...]`
+
+First packet sent over the connection, and sent once by both sides. No other messages may
+be sent until a Hello is received. Implementations must ignore any additional list elements
+in Hello because they may be used by a future version.
+
+* `protocolVersion` the version of the "p2p" capability, **5**.
+* `clientId` Specifies the client software identity, as a human-readable string (e.g.
+  "Ethereum(++)/1.0.0").
+* `capabilities` is the list of supported capabilities and their versions:
+   `[[cap1, capVersion1], [cap2, capVersion2], ...]`.
+* `listenPort` specifies the port that the client is listening on (on the interface that
+  the present connection traverses). If 0 it indicates the client is not listening.
+* `nodeId` is the secp256k1 public key corresponding to the node's private key.
+
+### Disconnect (0x01)
+
+`[reason: P]`
+
+Inform the peer that a disconnection is imminent; if received, a peer should disconnect
+immediately. When sending, well-behaved hosts give their peers a fighting chance (read:
+wait 2 seconds) to disconnect to before disconnecting themselves.
+
+* `reason` is an optional integer specifying one of a number of reasons for disconnect:
+  * `0x00` Disconnect requested;
+  * `0x01` TCP sub-system error;
+  * `0x02` Breach of protocol, e.g. a malformed message, bad RLP, incorrect magic number
+    &c.;
+  * `0x03` Useless peer;
+  * `0x04` Too many peers;
+  * `0x05` Already connected;
+  * `0x06` Incompatible P2P protocol version;
+  * `0x07` Null node identity received - this is automatically invalid;
+  * `0x08` Client quitting;
+  * `0x09` Unexpected identity (i.e. a different identity to a previous connection/what a
+    trusted peer told us).
+  * `0x0a` Identity is the same as this node (i.e. connected to itself);
+  * `0x0b` Timeout on receiving a message (i.e. nothing received since sending last ping);
+  * `0x10` Some other reason specific to a subprotocol.
+
+### Ping (0x02)
+
+`[]`
+
+Requests an immediate reply of [Pong] from the peer.
+
+### Pong (0x03)
+
+`[]`
+
+Reply to the peer's [Ping] packet.
+
+
+# Change Log
+
+### Known Issues in the current version
+
+- The frame encryption/MAC scheme is considered 'broken' because `aes-secret` and
+  `mac-secret` are reused for both reading and writing. The two sides of a RLPx connection
+  generate two CTR streams from the same key, nonce and IV. If an attacker knows one
+  plaintext, they can decrypt unknown plaintexts of the reused keystream.
+- General feedback from reviewers has been that the use of a keccak256 state as a MAC
+  accumulator and the use of AES in the MAC algorithm is an uncommon and overly complex
+  way to perform message authentication but can be considered safe.
+- The frame encoding provides `capability-id` and `context-id` fields for multiplexing
+  purposes, but these fields are unused.
+
+### Version 5 (EIP-706, September 2017)
+
+[EIP-706] added Snappy message compression.
+
+### Version 4 (EIP-8, December 2015)
+
+[EIP-8] changed the encoding of `auth-body` and `ack-body` in the initial handshake to
+RLP, added a version number to the handshake and mandated that implementations should
+ignore additional list elements in handshake messages and [Hello].
+
+# References
+
+- Elaine Barker, Don Johnson, and Miles Smid. NIST Special Publication 800-56A Section 5.8.1,
+  Concatenation Key Derivation Function. 2017.<br>
+  URL https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-56ar.pdf
+
+- Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001.<br>
+  URL http://www.shoup.net/papers/iso-2_1.pdf
+
+- Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014.<br>
+  URL http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3
+
+- Snappy compressed format description. 2011.<br>
+  URL https://github.com/google/snappy/blob/master/format_description.txt
 
 Copyright &copy; 2014 Alex Leverington.
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">This work is licensed under a
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike
 4.0 International License</a>.
+
+[Hello]: #hello-0x00
+[Disconnect]: #disconnect-0x01
+[Ping]: #ping-0x02
+[Pong]: #pong-0x04
+[Capability Messaging]: #capability-messaging
+[EIP-8]: https://eips.ethereum.org/EIPS/eip-8
+[EIP-706]: https://eips.ethereum.org/EIPS/eip-706
+[RLP]: https://github.com/ethereum/wiki/wiki/RLP
