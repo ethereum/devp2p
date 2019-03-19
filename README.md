@@ -3,6 +3,11 @@
 This repository contains specifications for the peer-to-peer networking protocols used by
 Ethereum.
 
+* The [Node Discovery Protocol] (version 4)
+* The [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
+  * [Ethereum Wire Protocol] (version 63)
+  * [Light Ethereum Subprotocol] (version 2)
+
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
 
@@ -63,7 +68,10 @@ devp2p is part of most Ethereum clients. Implementations include:
 
 WireShark dissectors are available here: https://github.com/ConsenSys/ethereum-dissectors
 
-
+[Node Discovery Protocol]: ./discv4.md
+[RLPx transport protocol]: ./RLPx.md
+[Ethereum Wire Protocol]: ./caps/eth.md
+[Light Ethereum Subprotocol]: ./caps/les.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [libp2p]: https://libp2p.org
