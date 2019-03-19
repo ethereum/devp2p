@@ -3,10 +3,11 @@
 This specification defines the RLPx transport protocol, a TCP-based transport protocol
 used for communication among Ethereum nodes. The protocol carries encrypted messages
 belonging to one or more 'capabilities' which are negotiated during connection
-establishment.
+establishment. RLPx is named after the [RLP] serialization format. The name is not an
+acronym and has no particular meaning.
 
-The current protocol version is **5**. You can find a list of changes at the end of this
-document.
+The current protocol version is **5**. You can find a list of changes in past versions at
+the end of this document.
 
 ## Notation
 
@@ -139,9 +140,9 @@ components are byte-aligned to block size of cipher.
 frame = header-ciphertext || header-mac || frame-ciphertext || frame-mac
 header-ciphertext = aes(aes-secret, header)
 header = frame-size || header-data || header-padding
-header-data = [protocol-type, context-id]
-capability-id = integer < 2**16, big endian
-context-id = integer < 2**16, big endian
+header-data = [capability-id, context-id]
+capability-id = integer, always zero
+context-id = integer, always zero
 header-padding = zero-fill header to 16-byte boundary
 frame-ciphertext = aes(aes-secret, frame-data || frame-padding)
 frame-padding = zero-fill frame-data to 16-byte boundary
@@ -201,13 +202,13 @@ the ingress frame. This should be done before decrypting `header-ciphertext` and
 All messages following the initial handshake are associated with a 'capability'. Any
 number of capabilities can be used concurrently on a single RLPx connection.
 
-A capability is identified by an ASCII string and version number. The capabilities
+A capability is identified by a short ASCII name and version number. The capabilities
 supported on either side of the connection are exchanged in the [Hello] message belonging
 to the 'p2p' capability which is required to be available on all connections.
 
 ## Message Encoding
 
-Messages are encoded as follows:
+The initial [Hello] message is encoded as follows:
 
 ```text
 frame-data = msg-id || msg-data
@@ -217,11 +218,9 @@ frame-size = length of frame-data, encoded as a 24bit big-endian integer
 where `msg-id` is an RLP-encoded integer identifying the message and `msg-data` is an RLP
 list containing the message data.
 
-### Snappy Compression
-
-All messages following [Hello] are compressed using the Snappy algorithm. Note that the
-`frame-size` of compressed messages refers to the uncompressed size of `msg-`. The
-compressed encoding of messages is as follows:
+All messages following Hello are compressed using the Snappy algorithm. Note that the
+`frame-size` of compressed messages refers to the uncompressed size of `msg-data`. The
+compressed encoding of messages is:
 
 ```text
 frame-data = msg-id || snappyCompress(msg-data)
@@ -240,11 +239,11 @@ reception of the [Hello] message, both peers have equivalent information about w
 capabilities they share (including versions) and are able to form consensus over the
 composition of message ID space.
 
-Message IDs are assumed to be compact from ID 0x10 onwards (0x00-0x10 is reserved for the
-"p2p" capability) and given to each shared (equal-version, equal name) capability in
-alphabetic order. Capabilities which are not shared are ignored. If multiple versions are
-shared of the same (equal name) capability, the numerically highest wins, others are
-ignored.
+Message IDs are assumed to be compact from ID 0x11 onwards (0x00-0x10 is reserved for the
+"p2p" capability) and given to each shared (equal-version, equal-name) capability in
+alphabetic order. Capability names are case-sensitive. Capabilities which are not shared
+are ignored. If multiple versions are shared of the same (equal name) capability, the
+numerically highest wins, others are ignored.
 
 ## "p2p" Capability
 
@@ -322,8 +321,8 @@ Reply to the peer's [Ping] packet.
 - General feedback from reviewers has been that the use of a keccak256 state as a MAC
   accumulator and the use of AES in the MAC algorithm is an uncommon and overly complex
   way to perform message authentication but can be considered safe.
-- The frame encoding provides a `capability-id` field for multiplexing purposes, but this
-  field is unused.
+- The frame encoding provides `capability-id` and `context-id` fields for multiplexing
+  purposes, but these fields are unused.
 
 ### Version 5 (EIP-706, September 2017)
 
@@ -362,3 +361,4 @@ Copyright &copy; 2014 Alex Leverington.
 [Capability Messaging]: #capability-messaging
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
 [EIP-706]: https://eips.ethereum.org/EIPS/eip-706
+[RLP]: https://github.com/ethereum/wiki/wiki/RLP
