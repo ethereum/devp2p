@@ -48,7 +48,7 @@ State synchronization typically proceeds by downloading the chain of block heade
 verifying their proof-of-work values. Block bodies are requested as in the Chain
 Synchronization section but block transactions aren't executed. Instead, the client picks
 a block near the head of the chain and downloads merkle tree nodes and contract code
-incrementally by requesting the root node, it's children, grandchildren, ... using
+incrementally by requesting the root node, its children, grandchildren, ... using
 [GetNodeData] until the entire tree is synchronized.
 
 ## Protocol Messages
