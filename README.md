@@ -69,7 +69,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 WireShark dissectors are available here: https://github.com/ConsenSys/ethereum-dissectors
 
 [Node Discovery Protocol]: ./discv4.md
-[RLPx transport protocol]: ./RLPx.md
+[RLPx transport protocol]: ./rlpx.md
 [Ethereum Wire Protocol]: ./caps/eth.md
 [Light Ethereum Subprotocol]: ./caps/les.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
