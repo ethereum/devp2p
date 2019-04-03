@@ -90,7 +90,7 @@ Example:
 - Number of advertisers of topic T: 100
 - Registration frequency: 3 per minute
 - Average registration lifetime: 10 minutes
-- Average number of registrations of topic T at any moment: 3*10*100=3000
+- Average number of registrations of topic T at any moment: `3 * 10 * 100 = 3000`
 - Expected number of registrations of T found at a randomly selected node (topic density)
   assuming a topic radius of 1: 0.3
 
