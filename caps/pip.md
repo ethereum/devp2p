@@ -4,15 +4,15 @@ The Parity Light Protocol is a variation of LES designed and implemented by Pari
 
 Please refer to the LES specification for information on the purpose of light clients and protocols.
 
-PIP adopts a flow-control mechanism closely analogous to a [token-bucket rate limiter](https://en.wikipedia.org/wiki/Token_bucket) where the client is expected to mirror the server token-bucket state (as exceeding the 'burstiness' depth is a violation that results in disconnection). This is also explained in more detail in the [LES](LES) documentation.
+PIP adopts a flow-control mechanism closely analogous to a [token-bucket rate limiter](https://en.wikipedia.org/wiki/Token_bucket) where the client is expected to mirror the server token-bucket state (as exceeding the 'burstiness' depth is a violation that results in disconnection). This is also explained in more detail in the [LES][LES] documentation.
 
-PIP utilises `Canonical Hash Tries` (CHTs), which are also described in the [LES](LES) documentation.
+PIP utilises `Canonical Hash Tries` (CHTs), which are also described in the [LES][LES] documentation.
 
 Unlike LES, a PIP CHT is generated once every 2048 blocks. One 32-byte trie root is stored for every range of 2048 blocks.
 
 The current version is **pip/1**.
 
-The original proposal and some information on design rationale is at [Parity Light Protocol](PIPDraft)
+The original proposal and some information on design rationale is at [Parity Light Protocol][PIPDraft]
 
 ## Symbols
 
@@ -179,7 +179,7 @@ tx1, tx2 = RLP encoded transactions as per ETH documentation
 
 The [PIP request message batch](#request-message) contains individual messages of the types described below.
 
-Each type specifies its corresponding response message (referred to as _outputs_ in the [original rationale](PIPDraft)).
+Each type specifies its corresponding response message (referred to as _outputs_ in the [original rationale][PIPDraft]).
 
 As described in the batch message details, each individual request message in a batch may specify that an input field should be populated with a field from the future response message of a request earlier in the batch.
 
