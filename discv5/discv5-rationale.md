@@ -1,4 +1,5 @@
-# Discovery v5 Requirements
+Node Discovery Protocol v5 - Rationale
+======================================
 
 **Draft of January 2019**
 
