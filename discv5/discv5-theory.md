@@ -32,9 +32,8 @@ used in place of the actual distance.
 
 Participants should update their record, increase the sequence number and sign a new
 version of the record whenever their information changes. This especially important for
-changes to the node's IP address and port. To detect changes in endpoint, the mirrored IP
-and port found in the [PONG] message can be used to predict whether the local IP address
-has changed.
+changes to the node's IP address and port. The mirrored UDP enveloper IP and port found in
+the [PONG] message can be used to predict whether the local IP address has changed.
 
 Node Table
 ----------
