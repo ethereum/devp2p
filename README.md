@@ -5,7 +5,7 @@ Ethereum.
 
 * [Node Discovery Protocol v4]
 * [Node Discovery Protocol v5] **(Draft Specification)**
-* The [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
+* [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
   * [Ethereum Wire Protocol] (version 63)
   * [Light Ethereum Subprotocol] (version 2)
 
