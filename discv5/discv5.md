@@ -3,10 +3,10 @@ Node Discovery Protocol v5
 
 **Draft of April 2019**
 
+Welcome to the Node Discovery Protocol v5 specification!
+
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
-
-Welcome to the Node Discovery Protocol v5 specification!
 
 Node Discovery is a system for finding other participants in a peer-to-peer network. The
 system can be used by any node, for any purpose, at no cost other than running the network
@@ -19,8 +19,8 @@ which are signed documents providing information about nodes in the network. Nod
 Discovery acts as a database of all live nodes in the network and performs three basic
 functions:
 
-- Sampling the set of all live participants at random: by walking the DHT at random the
-  network can be enumerated.
+- Sampling the set of all live participants: by walking the DHT, the network can be
+  enumerated.
 - Searching for participants providing a certain service: Node Discovery v5 includes a
   scalable facility for registering 'topic advertisements'. These advertisements can be
   queried and nodes advertising a topic found.
@@ -63,6 +63,7 @@ Comparison With Node Discovery v4
 
 - Topic advertisement was added.
 - Arbitrary node metadata can be stored/relayed.
+- Node identity crypto is extensible, use of secp256k1 keys isn't strictly required.
 - The protocol no longer relies on the system clock.
 - Communication is encrypted, protecting topic searches and record lookups against passive
   observers.

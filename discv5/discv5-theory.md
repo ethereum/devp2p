@@ -11,8 +11,8 @@ Nodes, Records and Distances
 
 A participant in the Node Discovery Protocol is represented by a 'node record' as defined
 in [EIP-778]. The node record keeps arbitrary information about the node. For the purposes
-of this protocol, the node must at least provide an IP address and a UDP port in order to
-participate.
+of this protocol, the node must at least provide an IP address (`"ip"` or `"ip6"` key) and
+UDP port (`"udp"` key) in order to have it's record relayed in the DHT.
 
 Node records are signed according to an 'identity scheme'. Any scheme can be used with
 Node Discovery Protocol, and nodes using different schemes can communicate.
@@ -32,26 +32,34 @@ used in place of the actual distance.
 
 Participants should update their record, increase the sequence number and sign a new
 version of the record whenever their information changes. This especially important for
-changes to the node's IP address and port. The mirrored UDP enveloper IP and port found in
-the [PONG] message can be used to predict whether the local IP address has changed.
+changes to the node's IP address and port. Implementations should determine the external
+endpoint (the Internet-facing IP address and port on which the node can be reached) and
+include it in their record.
+
+If communication flows through a NAT device, the UPnP/NAT-PMP protocols or the mirrored
+UDP envelope IP and port found in the [PONG] message can be used to determine the external
+IP address and port.
+
+If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
+translation), implementation should omit IP address and UDP port from the record.
 
 Node Table
 ----------
 
-Nodes in the keep information about other nodes in their neighborhood. Neighbor nodes are
-stored in a routing table consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node
-keeps a k-bucket for nodes of distance between <code>2<sup>i</sup></code> and
-<code>2<sup>i+1<sup></code> from itself.
-
-The Node Discovery Protocol uses `k = 16`, i.e. every k-bucket contains up to 16 node
-entries. The entries are sorted by time last seen — least-recently seen node at the head,
-most-recently seen at the tail.
+Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored
+in a routing table consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a
+k-bucket for nodes of `logdistance(self, n) == i`. The Node Discovery Protocol uses `k =
+16`, i.e. every k-bucket contains up to 16 node entries. The entries are sorted by time
+last seen — least-recently seen node at the head, most-recently seen at the tail.
 
 Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket.
 If the bucket contains less than `k` entries N₁ can simply be added as the first entry. If
 the bucket already contains `k` entries, the liveness of the least recently seen node in
 the bucket, N₂, needs to be revalidated. If no reply is received from N₂ it is considered
 dead, removed and N₁ added to the front of the bucket.
+
+Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
+buckets for low distances.
 
 ### Liveness Checks In Practice
 
