@@ -31,7 +31,7 @@ used in place of the actual distance.
 ### Maintaining the local record
 
 Participants should update their record, increase the sequence number and sign a new
-version of the record whenever their information changes. This especially important for
+version of the record whenever their information changes. This is especially important for
 changes to the node's IP address and port. Implementations should determine the external
 endpoint (the Internet-facing IP address and port on which the node can be reached) and
 include it in their record.
