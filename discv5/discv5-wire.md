@@ -1,395 +1,307 @@
-Node Discovery Protocol v5
-===============================
-
-**Draft of January 2019**
-
-Note that this specification is a work in progress and may change incompatibly
-without prior notice.
-
-### Message Serialization
-
-This section addresses the actual serialization formats for the
-messages. (**TBD: Include the various specs like Topic Discovery here)**
-
-As described earlier, this V5 Discovery proposal differentiates the
-message formats based on a knowledge of another node's Discovery
-version. For example, an incoming Ping from an unknown V4 node includes
-the version number, 4, allowing the V5 node to record an internal ENR
-for a v4 node. This provides the opportunity to avoid the existing
-forward compatibility mechanism, which involves tacking new fields onto
-the end of existing message formats, and fully replace redundant fields.
-This Discovery version represents a change in the message format that is
-not backward compatible.
-
-Another key difference from Discovery V4 is that here we begin to
-introduce a level of abstraction above UDP. Discovery V5 should not be
-restricted to UDP. In this specification *packet* and *message* are not
-necessarily synonymous.
-
-**TBD: Decide if to permit future streamed transports or not.**
-
-However, UDP poses some challenges when it comes to avoiding
-fragmentation and transmitting large messages of a lossy transport,
-which are considered next.
-
-### UDP transmission strategy
-
-So that the message types and their exchange patterns are not tied to a
-transport (eg: UDP), we should avoid introdcuing packet types that only
-deal with UDP fragmentation and reliability of larger packets. In other
-words, it would be best to avoid "ACK" type packets, as these become
-redundant on TCP or other future transports.
-
-`FINDNODE` needs to be able to return up to `k` ENR records, plus other
-data, and `TOPICQUERY` in the form proposed in this document may also
-distribute a significant list of ENRs. As per specification the maximum
-size of an ENR is 300 bytes. Because `k` is typically 16 in Ethereum,
-a message will be at least 4800 bytes, not including additional data such
-as the header.
+Node Discovery Protocol v5 - Wire Protocol
+==========================================
+
+**Draft of April 2019**
 
-This will cause packet fragmentation or packet loss as it exceeds the
-typical MTU of 1500 at the time of writing. We will assume a 'healthy' MTU of 1280,
-conforming with v4 expectations.
+This document specifies the wire protocol of Node Discovery v5. Note that this
+specification is a work in progress and may change incompatibly without prior notice.
 
-With the above rationale, the proposal for a transport agnostic way of
-responding with large messages is as follows:
+UDP Communication
+-----------------
 
-- Potentially large response messages (eg: `TOPICQUERY` and `FINDNODE`
-  responses) can be sent as *multiple messages*.
-- These are complete messages with their own header.
-- Individual messages in a multi-message response of length `t`, will
-  have a message counter `n`, and each response message will have a
-  message conveying the information that this one is `n` of `t`.
-- While `n` is not (at the time of writing) necessary information, it
-  may be a useful forward compatibility feature in the case that
-  ordering of the response stream is important.
-- The recipient of a multi-message response must expect that some
-  messages will be lost over UDP. Implementations must receive with a
-  timeout.
-- The *conversation nonce* determines the conversation and is used on
-  each message.
-- The precise same message format may be used over TCP, except that
-  the message may include a message "1 of 1" descriptor, include all
-  data in the response stream, and rely on length information
-
-### General Message Format
-
-**TBD: At the time of writing general consensus seems to be around RLP.
-Still waiting for serious proposals for alternatives.**
-
-Symbols
-
-`[ .. , .. , .. ]` means an RLP list
-`a || b` means concatenation of `a` and `b`
-
-As with v4 messages, a message is:
-
-```text
-message = message-header || message-data
-```
-
-where
-
-```text
-message-header = hash || signature || message-type
-hash = keccak256(signature || message-type || message-data)
-signature = sign(message-type || message-data)
-```
+Node discovery messages are sent as UDP datagrams. Since UDP is a lossy transport, packets
+may be received in any order or not at all. Implementations should not re-send packets if
+the recipient doesn't respond, though there are exceptions to this general rule. If
+multiple requests are pending while performing the handshake, the requests may be re-sent
+with new keys (see [handshake section]). If a node's liveness has been verified many
+times, implementations may consider occasional non-responsiveness permissible and assume
+the node is live.
+
+The maximum size of any packet is 1280 bytes. Implementations should not generate or
+process packets larger than this size. Most messages are smaller than this limit by
+definition, the exception being the NODES message. FINDNODE returns up to 16 records, plus
+other data, and TOPICQUERY may also distribute a significantly long list of ENRs. As per
+specification the maximum size of an ENR is 300 bytes. A NODES message containing all
+FINDNODE response records would be at least 4800 bytes, not including additional data such
+as the header. To stay below the size limit, NODES responses are sent as multiple messages
+and specify the total number of responses in the message.
 
-Every message is signed by the node\'s identity key (ECDSA). The
-signature is encoded as a byte array of length 65 as the concatenation
-of the signature values r, s and the \'recovery id\' v. The recovery
-id 'v' is out of scope for this document **TBD:** Add info and refs
-about recovery id and how here the Ethereum chain id offset does not
-apply.
+Since low-latency communication is expected, implementations should place short timeouts
+on request/response interactions. Good timeout values are 500ms for a single
+request/response and 1s for the handshake.
 
-Message-type is a single byte where the *lower 5 bits* describe the
-message type, corresponding to the message formats below.
+When responding to a request, the response should be sent to the UDP envelope address of
+the request.
+
+Handshake
+---------
+
+Discovery communication is encrypted and authenticated using session keys, established in
+the handshake. Since every node participating in the network acts as both client and
+server, a handshake can be initiated by either side of communication at any time. In the
+following definitions, we assume that node A wishes to communicate with node B, e.g. to
+send a FINDNODE query.
+
+Node A must have a node record for node B and know B's node ID to communicate with it. If
+node A has session keys from prior communication, it encrypts its request with those keys.
+If no keys are known, it initiates the handshake by sending a packet with random content.
+
+    A -> B   FINDNODE (encrypted with unknown key) or random-packet
+
+Node B receives the initial packet, extracts the source node ID from the packet's `tag`
+(see [encoding section]) and continues the handshake by responding with WHOAREYOU. The
+WHOAREYOU packet contains a nonce value to be signed by A as well as the highest known ENR
+sequence number of node A's record.
+
+    A <- B   WHOAREYOU (including id-nonce, enr-seq)
+
+Node A now knows that node B is alive and can send it's initial packet again. Alongside
+the encrypted packet, node A includes an ephemeral public key in the cryptosystem used by
+B's identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the
+"v4" scheme).
+
+The ephemeral key is used to perform Diffie-Hellman key agreement with B's static public
+key and the session keys are derived from it using the HKDF key derivation function.
 
-### Obfuscation
+    ephemeral-key    = random private key
+    ephemeral-pubkey = public key corresponding to ephemeral-key
+    dest-pubkey      = public key of B
+    secret           = agree(ephemeral-key, dest-pubkey)
+    info             = "discovery v5 key agreement" || node-id-A || node-id-B
+    prk              = HKDF-Extract(secret, id-nonce)
 
-Message-type's *top 3 bits* describe the *obfuscation type*. Any
-parameters to the obfuscation type are supplied ***before*** the RLP
-encoded message. *This position is required* because streaming
-transports like TCP will not be able to determine the length of the
-message to obtain the obfuscation parameter. The obfuscation parameter
-must be provided first, so the remainder of the data can be read,
-decoded for length or ENR count, so the end of the transmission can be
-determined. While EIP-8 allows for the parameter to be supplied *after*
-the RLP data, there is no way of knowing where to find the parameter in
-a stream.
+    initiator-key, recipient-key, auth-resp-key = HKDF-Expand(prk, info)
+
+The authentication header also contains an encrypted signature over `id-nonce` (preventing
+replay of the handshake) as well as node A's node record if the local sequence number is
+higher than `enr-seq`.
+
+    A -> B   FINDNODE (with authentication header, encrypted with new initiator-write-key)
+
+Node B receives the packet and performs key agreement/derivation with its static private
+key and the `ephemeral-key`. It can now decrypt the header values and verify that the
+signature over `id-nonce` was created by node A's public key. To verify the signature it
+looks at node A's record which it either already has a copy of or which was received in
+the header.
+
+If the `id-nonce` signature is valid, Node B considers the new session keys valid,
+decrypts the message contained in the packet and responds to it. In our example case, the
+response is a `NODES` message:
+
+    A <- B   NODES (encrypted with new recipient-write-key)
+
+Node A receives the response and authenticates/decrypts it with the new session keys. If
+decryption succeeds node B's identity is verified, A considers the new session keys valid
+and uses them for all further communication.
+
+### Handshake Implementation Considerations
+
+Since a handshake may happen at any time, implementations should keep a reference to all
+sent request packets until the request either times out, is answered by the corresponding
+response packet or answered by WHOAREYOU. If WHOAREYOU is received as the answer to a
+request, the request must be re-sent with an authentication header containing new keys.
+
+Multiple responses may be pending when WHOAREYOU is received, as in the following example:
 
-So,
+    A -> B   FINDNODE
+    A -> B   PING
+    A -> B   TOPICQUERY
+    A <- B   WHOAREYOU (token references PING)
+
+In those cases, pending requests can be considered invalid (the remote end cannot decrypt
+them) and the packet referenced by WHOAREYOU (example: PING) must be re-sent with an
+authentication header. When the response to the re-sent request (example: PONG) is
+received, the new session is established and other pending requests (example: FINDNODE,
+TOPICQUERY) may be re-sent.
+
+Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
+WHOAREYOU is received but no requests are pending, the handshake attempt can be ignored.
+
+Implementations should be careful about AES-GCM nonces because encrypting two messages
+with the same nonce compromises the key. Session keys should be kept in memory for a
+limited amount of time, ensuring that nodes occasionally perform a handshake to establish
+new keys.
 
-```text
-message-data = obfuscation-parameter || rlp(message)
-```
+**TBD: concurrent handshake tie-breaker rule**
 
-'rlp' is the RLP encoding function.
+### Notation
 
-Currently, *obfuscation type* may be
+`[ .. , .. , .. ]`\
+    is recursive encoding as an RLP list\
+`rlp_bytes(x)`\
+    is the RLP encoding of the byte array `x`\
+`a || b`\
+    means binary concatenation of `a` and `b`\
+`xor(a, b)`\
+    means binary XOR of `a` and `b`\
+`sha256(x)`\
+    is the SHA256 digest of `x`\
+`sign(key, x)`\
+    creates a signature of `x` using the given key\
+`aesgcm_encrypt(key, nonce, pt, ad)`\
+    is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
+    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
-`0` -- No obfuscation (also compatible with v4)
+### Packet Encoding
 
-1 -- XOR with the *obfuscation parameter* *and* the public key of the
-sender. (The EC recover operation is expensive enough that it should act
-as a deterrent. )
+All packets start with a fixed-size `tag`. For a packet sent by node A to node B:
 
-2 - 7 Reserved
+    tag              = xor(sha256(dest-node-id), src-node-id)
+    dest-node-id     = 32-byte node ID of B
+    src-node-id      = 32-byte node ID of A
 
-Examples of alternatives include:
+The recipient can recover the sender's ID by performing the same calculation in
+reverse.
 
-- Have the ENR of the recipient include one or more key values (eg:
-  obf1, obf2, etc), and make the *obfuscation parameter* a randomly
-  selected *reference* to one of those.
-- Support for a fully encrypted channel option.
+    src-node-id      = xor(sha256(dest-node-id), tag)
 
-### Conversation Nonce
+The encoding of the 'random packet', sent if no session keys are available, is:
 
-A mandatory component of all messages is the conversation-nonce.
+    random-packet    = tag || random-data
+    random-data      = at least 44 bytes of random data
 
-A *conversation* is set of message exchanges involving two or more
-participants. A request-reply is a simple conversation. A request for
-nodes or topics followed immediately by a WhoAreYou/IAm is an exchange
-of messages that is also one conversation.
+The WHOAREYOU packet, used during the handshake, is encoded as follows:
 
-When a request is sent to a node, the signed, hashed response must
-include some unique code to make sure that the requester can know that
-this is not a replayed message. Another way of viewing this is that a
-correlator must uniquely relate the response with the request.
+    whoareyou-packet = tag || magic || [token, id-nonce, enr-seq]
+    magic            = sha256(dest-node-id || "WHOAREYOU")
+    token            = auth-tag of request
+    enr-seq          = highest ENR sequence number of node A known on node B's side
 
-This correlator can also serve the purpose of identifying which
-responses correspond to which request if for some reason multiple
-request/replies are happening concurrently.
+The first encrypted message sent in response to WHOAREYOU contains an authentication
+header. Note that the `auth-response` is encrypted with a separate key and uses an
+all-zero nonce. This is safe because only one message is ever encrypted with
+`auth-response-key`.
 
-More generally, the conversation nonce groups messages into a unique
-conversation, allowing concurrent conversations to be separated, and
-guaranteeing that replayed messages are ignored.
+    message-packet   = tag || auth-header || message
+    auth-header      = [auth-tag, auth-scheme-name, ephemeral-pubkey, auth-response]
+    auth-scheme-name = "gcm"
+    auth-response-pt = [id-nonce-sig, node-record]
+    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, tag)
+    zero-nonce       = 12 zero bytes
+    id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
+    static-node-key  = the private key used for record identity
+    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag || auth-header)
+    message-pt       = message-type || message-data
+    auth-tag         = AES-GCM nonce, 12 random bytes unique to message
 
-In future, conversations may involve multiple occurrences of a single
-type of message. An eavesdropper could confuse the conversation by
-replaying previous occurrences. To prevent this, a single byte in the
-conversation nonce will be reserved for future message counting. The top
-4 bytes are the conversation correlator.
+All messages following the handshake are encoded as follows:
 
-```text
-> conversation-nonce= conversation-correlator || reserved-byte
-> conversation-correlator = 4-byte conversation identifier
-> reserved-byte = currently ignored, reserved as a message counter for future versions
-```
+    message-packet   = tag || rlp_bytes(auth-tag) || message
+    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag)
 
-The value selected must
+Implementations can distinguish the two `message-packet` encodings by checking whether the
+value at offset 32 after the fixed-size `tag` is an RLP list (`auth-header`) or byte array
+(`auth-tag`).
 
-- allow for concurrent conversations (using a timestamp can result in
-  parallel conversations with the same id, so this should be avoided)
+Node records are encoded and verified as specified in [EIP-778].
 
-- prevent replay - so using a simple counter would be fine if the
-  implementation could ensure that restarts or even re-installs would
-  increment the counter based on previously saved state in all
-  circumstances. The easiest to implement would be a random number.
+Protocol Messages
+-----------------
 
-### Recipient node ID
+This section lists all defined messages which can be sent and received. The hexadecimal
+value in brackets is the `message-type`.
 
-This is a 32 byte sha256 hash of the designated public key for the
-target node ('secp256k1' key in the ENR). This is used in request messages below.
+The first element of every `message-data` list is the request ID. For requests, this value
+is assigned by the requester. The recipient of a message must mirror the value in the
+request ID element of the response.
 
-### Streaming
+The value selected as request ID must allow for concurrent conversations. Using a
+timestamp can result in parallel conversations with the same id, so this should be
+avoided. Request IDs also prevent replay of responses. Using a simple counter would be
+fine if the implementation could ensure that restarts or even re-installs would increment
+the counter based on previously saved state in all circumstances. The easiest to implement
+is a random number.
 
-A note on streaming transports. Implementations should not assume that this will
-always be a UDP-only protocol, using fixed byte arra. Should the underlying
-transport becoming a streaming one, the RLP (de)serializers should be
-implemented over a stream, rather than a fixed byte array, or provide some way
-of signalling to other components that the amount of data supplied needs to be
-extended.
+### PING Request (0x01)
 
-**TBD: Consider ENR sequence numbers:**
+    message-data = [request-id, enr-seq]
+    enr-seq      = ENR sequence number of sender
 
-### PING
+PING checks whether the recipient is alive and informs it about the sender's ENR sequence
+number.
 
-Message id: 0x01
+### PONG Response (0x02)
 
-```text
-packet-data = [version, conversation-nonce, recipient-node-id, recipient-ip, recipient-port]
-version = 5
-conversation-nonce = 4-byte conversation identifier
-recipient-node-id = 32 byte id hash
-recipient-ip = 16 or 4 byte ip address of the intended recipient
-recipient-port = uint16 port
-```
+    message-data = [request-id, enr-seq, recipient-ip, recipient-port]
+    enr-seq      = ENR sequence number of sender
+    packet-ip    = 16 or 4 byte IP address of the intended recipient
+    packet-port  = recipient UDP port, a 16-bit integer
 
-### PONG
+PONG is the reply to PING.
 
-Message id: 0x02
+### FINDNODE Request (0x03)
 
-```text
-packet-data = [conversation-nonce,recipient-ip, recipient-port]
-conversation-nonce = 4-byte conversation identifier sent in PING
-recipient-ip = 16 or 4 byte ip address of the intended recipient
-recipient-port = uint16 port
-```
+    message-data = [request-id, distance]
+    distance     = the requested log2 distance, a positive integer
 
-### FINDNODE
+FINDNODE queries for nodes at the given logarithmic distance from the recipient's node ID.
+The node IDs of all nodes in the response must have a shared prefix length of `distance`
+with the recipient's node ID.
 
-Message id: 0x03
+### NODES Response (0x04)
 
-```text
-> packet-data = [conversation-nonce, recipient-node-id, k-bucket]
-> conversation-nonce = 4-byte conversation identifier
-> recipient-node-id = 32-byte id hash
-> k-bucket = a positive scalar, the desired k-bucket with bit 1 being
->            the 'closest' bucket, up to 32
-```
+    message-data = [request-id, total, [ENR, ...]]
+    total        = total number of responses to the request
 
-## NEIGHBOURS
+NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
+sent as responses to a single query.
 
-Message id: 0x04
+### REQTICKET Request (0x05)
 
-One or messages of the following format
+    message-data = [request-id, topic]
+    topic        = a 32-byte topic hash
 
-```text
-packet-data = [conversation-nonce, n-of-t, enrs, [ENR, ...]]
-conversation-nonce = 4-byte conversation identifier
-n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
-ENR = see ENR specification
-```
-
-### WHOAREYOU
-
-Message id: 0x05
-
-```text
-packet-data = [conversation-nonce, recipient-node-id]
-conversation-nonce = 4-byte conversation identifier
-recipient-node-id = 32-byte id hash
-```
-
-### IAM
-
-Message id: 0x06
-
-```text
-packet-data = [conversation-nonce, ENR]
-conversation-nonce = 4-byte conversation identifier obtained in WHOAREYOU
-ENR = see ENR specification
-```
-
-### REQUESTTICKET
-
-Message id: 0x07
-
-```text
-> packet-data = [conversation-nonce, recipient-node-id, topic]
-> conversation-nonce = 4-byte conversation identifier
-> recipient-node-id = 32-byte id hash
-> topic = the rlp encoding of a UTF-8 encoded 32-character string
-```
-
-Implementation note: The least requested topics will be evicted from the
-global space. This means that an attacker attempting to pollute the
-global space by requesting creation of many *new* topic queues will only
-result in their own topic queues being evicted. Implementers should be
-cautious of the attacker attempting to promote their own queues by
+Implementation note: The least requested topics will be evicted from the global space.
+This means that an attacker attempting to pollute the global space by requesting creation
+of many *new* topic queues will only result in their own topic queues being evicted.
+Implementers should be cautious of the attacker attempting to promote their own queues by
 requesting their own adverts.
 
-### TICKET
+### TICKET Response (0x06)
 
-Message id: 0x08
+    message-data = [request-id, ticket, wait-time]
+    ticket       = an opaque byte array representing the ticket
+    wait-time    = time to wait before registering, in seconds
 
-```text
-packet-data = [conversation-nonce, ticket]
-conversation-nonce = 4-byte conversation identifier
-ticket = [source-node-id, topic, wait-until, expiration]
-topic = the rlp encoding of a UTF-8 encoded 32-character string
-wait-until = the earliest absolute UNIX time before the ticket can be used
-expiration = the absolute UNIX time when this ticket expires
-source-node-id = who requested the ticket
-```
+TICKET is the response to REQTICKET. It contains a ticket which can be used to register
+for the requested topic after `wait-time` has elapsed.
 
-**TBD: Expiration does not really help here...**
+Note that `ticket` is opaque for the caller and shouldn't be interpreted in any way.
+Implementations may choose any internal representation. A practical way to handle tickets
+is to encrypt and authenticate them with a separate key.
 
-**TBD: Consider the following :**
+    ticket       = aesgcm_encrypt(ticket-key, ticket-nonce, ticket-pt, '')
+    ticket-pt    = [src-node-id, topic, req-time, wait-time, serial]
+    src-node-id  = node ID that requested the ticket
+    topic        = the topic that ticket is valid for
+    req-time     = absolute time of REQTICKET request
+    wait-time    = waiting time assigned when ticket was created
+    serial       = serial number of ticket
 
-**The scenario is that an attacker can do the following:**
+### REGTOPIC Request (0x07)
 
-**1. Request ticket**
+    message-data = [request-id, ticket]
+    ticket       = supplied by TICKET response
 
-**2. Place Ad (bumping up waitperiod)**
+REGTOPIC registers the sender for the given topic with a ticket. The ticket must be valid
+and its waiting time must have elapsed before using the ticket.
 
-**3. Repeat 1 & 2 until waitperiod is high (in case tickets expire in a
-timeout after waitperiod)**
+### REGCONFIRMATION Response (0x08)
 
-**4. Then call Request ticket multiple times or concurrently and use
-those to flood the topic queue. **
+    message-data = [request-id, registered]
+    registered   = boolean, 1 if ticket was valid and node is registered, 0 if not
 
-**5. Optionally, the attacker can request ads (from separate nodes even)
-to bump the importance of its own spam ads.**
+REGCONFIRMATION is the response to REGTOPIC.
 
-### REGTOPIC
+### TOPICQUERY Request (0x09)
 
-Message id: 0x09
+    message-data = [request-id, topic]
+    topic        = 32-byte topic hash
 
-```text
-packet-data = [conversation-nonce, recipient-node-id, ticket]
-recipient-node-id = 64-byte public key of the called node
-conversation-nonce = 4-byte conversation identifier
-ticket = supplied by TICKET response
-```
+TOPICQUERY requests nodes in the [topic queue] of the given topic. The response is a NODES
+message containing node records registered for the topic.
 
-**TBD:** If the REGTOPIC must be part of the same conversation as the
-original REQUESTTICKET, then the ticket source-node-id is redundant?
-
-### REGCONFIRMATION
-
-Message id: 0x0A
-
-```text
-packet-data = [conversation-nonce]
-```
-
-### TOPICQUERY
-
-Message id: 0x0B
-
-```text
-packet-data = [conversation-nonce, recipient-node-id, topic]
-conversation-nonce = 4-byte conversation identifier
-topic = the rlp encoding of a UTF-8 encoded 32-character string
-```
-
-**N.B.:** One of the aims of **1.1.2** is to make it *expensive* to
-correlate IDs with an IP address. By having nodes return ENRs directly,
-it might appear as though it would be easy to search for advertising
-nodes and simply query as many as possible for their node records. \*\*
-Some arguments against that are that
-
-- Not all nodes will advertise -- mobile clients and light clients
-  whose usage will be much more to do with end-user application
-  scenarios, and most desirable as a target for correlation with user
-  metadata, will not advertise.
-- The task of finding random advertising nodes and scraping their
-  results is itself non-trivial and cannot easily be used to target a
-  specific IP address.
-- The topic queues at each advertising node are limited in length and
-  the TOPICQUERY response (TOPICNODES) may be yet further limited \*\*
-
-### TOPICNODES
-
-Message id: 0x0C
-
-```text
-packet-data = [conversation-nonce, n-of-t,  [ENR, ...]]
-conversation-nonce = 4-byte conversation identifier
-n-of-t = two bytes corresponding to n and t (eg: message 2 of 6)
-ENR = see ENR specification
-```
-
-### ENR Format
-
-For the current ENR spec, please see [[https://eips.ethereum.org/EIPS/eip-778]](https://eips.ethereum.org/EIPS/eip-778)
-
-According to the proposals in this document, this would need to be
-extended to include some information that the ENR is an encapsulation of
-unsigned v4 tuples, for temporary interoperability with the existing
-network.
-
-This can be achieved by including a *v4* true/false/empty key-value.
+[handshake section]: #handshake
+[encoding section]: #packet-encoding
+[topic queue]: ./discv5-theory.md#advertisement-storage
+[EIP-778]: https://eips.ethereum.org/EIPS/eip-778

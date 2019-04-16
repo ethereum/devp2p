@@ -1,16 +1,103 @@
-# Topic Advertisement in Discovery v5
+Node Discovery Protocol v5 - Theory
+===================================
+
+**Draft of April 2019**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
 
-The Topic Advertisement system is a part of Node Discovery v5. A node's provided services
-are identified by arbitrary strings called *topics*. Depending on the needs of the
-application, a node can advertise multiple topics or no topics at all. Every node
-participating in the discovery DHT acts as an advertisement medium, meaning that it
-accepts topic registrations from advertising nodes and later returns them to nodes
-searching for the same topic.
+Nodes, Records and Distances
+----------------------------
 
-## Motivation
+A participant in the Node Discovery Protocol is represented by a 'node record' as defined
+in [EIP-778]. The node record keeps arbitrary information about the node. For the purposes
+of this protocol, the node must at least provide an IP address (`"ip"` or `"ip6"` key) and
+UDP port (`"udp"` key) in order to have it's record relayed in the DHT.
+
+Node records are signed according to an 'identity scheme'. Any scheme can be used with
+Node Discovery Protocol, and nodes using different schemes can communicate.
+
+The identity scheme of a node record defines how a 32-byte 'node ID' is derived from the
+information contained in the record. The 'distance' between two node IDs is the bitwise
+XOR of the IDs, taken as the number.
+
+    distance(n₁, n₂) = n₁ XOR n₂
+
+In many situations, the logarithmic distance (i.e. length of common prefix in bits) is
+used in place of the actual distance.
+
+    logdistance(n₁, n₂) = log2(distance(n₁, n₂))
+
+### Maintaining the local record
+
+Participants should update their record, increase the sequence number and sign a new
+version of the record whenever their information changes. This is especially important for
+changes to the node's IP address and port. Implementations should determine the external
+endpoint (the Internet-facing IP address and port on which the node can be reached) and
+include it in their record.
+
+If communication flows through a NAT device, the UPnP/NAT-PMP protocols or the mirrored
+UDP envelope IP and port found in the [PONG] message can be used to determine the external
+IP address and port.
+
+If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
+translation), implementation should omit IP address and UDP port from the record.
+
+Node Table
+----------
+
+Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored
+in a routing table consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a
+k-bucket for nodes of `logdistance(self, n) == i`. The Node Discovery Protocol uses `k =
+16`, i.e. every k-bucket contains up to 16 node entries. The entries are sorted by time
+last seen — least-recently seen node at the head, most-recently seen at the tail.
+
+Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket.
+If the bucket contains less than `k` entries N₁ can simply be added as the first entry. If
+the bucket already contains `k` entries, the liveness of the least recently seen node in
+the bucket, N₂, needs to be revalidated. If no reply is received from N₂ it is considered
+dead, removed and N₁ added to the front of the bucket.
+
+Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
+buckets for low distances.
+
+### Liveness Checks In Practice
+
+Checking node liveness whenever a node is to be added to a bucket is impractical and
+creates a DoS vector. Implementations can perform liveness checks asynchronously with
+bucket addition and occasionally verify that a random node in a random bucket is live.
+
+### Recursive Lookup
+
+A 'lookup' locates the `k` closest nodes to a node ID.
+
+The lookup initiator starts by picking `α` closest nodes to the target it knows of. The
+initiator then sends concurrent [FINDNODE] packets to those nodes. `α` is an
+implementation-defined concurrency parameter, typically `3`. In the recursive step, the
+initiator resends FINDNODE to nodes it has learned about from previous queries. Of the `k`
+nodes the initiator has heard of closest to the target, it picks `α` that it has not yet
+queried and sends FINDNODE to them. Nodes that fail to respond quickly are removed from
+consideration until and unless they do respond.
+
+If a round of FINDNODE queries fails to return a node any closer than the closest already
+seen, the initiator resends the find node to all of the `k` closest nodes it has not
+already queried. The lookup terminates when the initiator has queried and gotten responses
+from the `k` closest nodes it has seen.
+
+### Bucket Maintenance
+
+Nodes are expected to keep track of their close neighbors and regularly refresh their
+information. To do so, a lookup targeting the least recently refreshed bucket should be
+performed at regular intervals.
+
+Topic Advertisement
+-------------------
+
+A node's provided services are identified by arbitrary strings called *topics*. Depending
+on the needs of the application, a node can advertise multiple topics or no topics at all.
+Every node participating in the discovery DHT acts as an advertisement medium, meaning
+that it accepts topic registrations from advertising nodes and later returns them to nodes
+searching for the same topic.
 
 The reason topic discovery is proposed in addition to application-specific networks is to
 solve bootstrapping issues and improve downward scalability of subnetworks. Scalable
@@ -23,9 +110,7 @@ find useful and honest peers, it makes complete isolation a lot harder because i
 prevent the nodes of a small subnet from finding each other, the entire discovery network
 would have to be overpowered.
 
-## Specification
-
-### Topic Advertisement Storage
+### Advertisement Storage
 
 Each node participating in the protocol stores ads for any number of topics and a limited
 number of ads for each topic. The list of ads for a particular topic is called the *topic
@@ -63,14 +148,27 @@ Let us assume that node `A` advertises itself under topic `T`. It selects node `
 advertisement medium and wants to register an ad, so that when node `B` (who is searching
 for topic `T`) asks `C`, `C` can return the registration entry of `A` to `B`.
 
-Node `A` first tells `C` that it wishes to register by requesting a ticket for topic `T`.
+Node `A` first tells `C` that it wishes to register by requesting a ticket for topic `T`,
+using the [REQTICKET] message.
+
+    A -> C  REQTICKET
+
 `C` replies with a ticket. The ticket contains the node identifier of `A`, the topic, a
 serial number and wait period assigned by `C`.
+
+    A <- C  TICKET
 
 Node `A` now waits for the duration of the wait period. When the wait is over, `A` sends a
 registration request including the ticket. `C` does not need to remember its issued
 tickets, just the serial number of the latest ticket accepted from `A` (after which it
 will not accept any tickets issued earlier).
+
+    A -> C  REGTOPIC
+
+If the ticket was valid, Node `C` places `A` into the topic queue for `T`. The
+[REGCONFIRMATION] response message signals whether `A` is registered.
+
+    A <- C  REGCONFIRMATION
 
 ### Ad Placement And Topic Radius Detection
 
@@ -119,8 +217,6 @@ To find nodes, the searcher generates random node IDs inside the topic radius an
 recursive Kademlia lookups on them. All (intermediate) nodes encountered during lookup are
 asked for topic queue enties using the [TOPICQUERY] packet.
 
-# Rationale
-
 Topic search is not meant to be the only mechanism used for selecting peers. A persistent
 database of useful peers is also recommended, where the meaning of "useful" is
 protocol-specific. Like any DHT algorithm, topic advertisement is based on the law of
@@ -130,9 +226,9 @@ disrupting operation, removing incentives to waste resources on trying to do so.
 protocol-level recommendation-based trust system can be useful, the protocol may even have
 its own network topology.
 
-## Security considerations
+### Security considerations
 
-### Spamming with useless registrations
+#### Spamming with useless registrations
 
 Our model is based on the following assumptions:
 
@@ -157,7 +253,7 @@ increase proportionally both with increased honest registration and search effor
 both are increased in response to an attack, the required factor of increased efforts from
 honest actors is proportional to the square root of the attacker's efforts.
 
-### Detecting a useless registration attack
+#### Detecting a useless registration attack
 
 In the case of a symmetrical protocol (where nodes are both searching and advertising
 under the same topic) it is easy to detect when most of the queried registrations turn out
@@ -169,12 +265,14 @@ for servers to also act as clients just to test the server capabilities of other
 advertisers. It is also possible to implement a feedback system between trusted clients
 and servers.
 
-### Amplifying network traffic by returning fake registrations
+#### Amplifying network traffic by returning fake registrations
 
-An attacker might wish to direct discovery traffic to a chosen address. This is prevented
-by not returning endpoint details in the [TOPICNODES] message.
+An attacker might wish to direct discovery traffic to a chosen address by returning
+records pointing to that address.
 
-### Not registering/returning valid registrations
+**TBD: this is not solved**
+
+#### Not registering/returning valid registrations
 
 Although the limited registration frequency ensures that the resource requirements of
 acting as a proper advertisement medium are sufficiently low, such selfish behavior is
@@ -185,5 +283,13 @@ registrations are not returned so it is probably possible to implement a mechani
 out selfish nodes if necessary, but the design of such a mechanism is outside the scope of
 this document.
 
-[TOPICQUERY]: ./discv5-wire.md#TOPICQUERY
-[TOPICNODES]: ./discv5-wire.md#TOPICNODES
+[EIP-778]: https://eips.ethereum.org/EIPS/eip-778
+[PING]: ./discv5-wire.md#ping-request-0x01
+[PONG]: ./discv5-wire.md#pong-response-0x02
+[FINDNODE]: ./discv5-wire.md#findnode-request-0x03
+[NODES]: ./discv5-wire.md#nodes-response-0x04
+[REQTICKET]: ./discv5-wire#reqticket-request-0x05
+[TICKET]: ./discv5-wire#ticket-response-0x06
+[REGTOPIC]: ./discv5-wire#regtopic-request-0x07
+[REGCONFIRMATION]: ./discv5-wire#regconfirmation-response-0x08
+[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
