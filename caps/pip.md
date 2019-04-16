@@ -4,15 +4,15 @@ The Parity Light Protocol is a variation of LES designed and implemented by Pari
 
 Please refer to the LES specification for information on the purpose of light clients and protocols.
 
-PIP adopts a flow-control mechanism closely analogous to a [token-bucket rate limiter](https://en.wikipedia.org/wiki/Token_bucket) where the client is expected to mirror the server token-bucket state (as exceeding the 'burstiness' depth is a violation that results in disconnection). This is also explained in more detail in the [LES][LES] documentation.
+PIP adopts a flow-control mechanism closely analogous to a [token-bucket rate limiter](https://en.wikipedia.org/wiki/Token_bucket) where the client is expected to mirror the server token-bucket state (as exceeding the 'burstiness' depth is a violation that results in disconnection). This is also explained in more detail in the [LES] documentation.
 
-PIP utilises `Canonical Hash Tries` (CHTs), which are also described in the [LES][LES] documentation.
+PIP utilises [Canonical Hash Tries] (CHTs), which are also described in the [LES] documentation.
 
 Unlike LES, a PIP CHT is generated once every 2048 blocks. One 32-byte trie root is stored for every range of 2048 blocks.
 
 The current version is **pip/1**.
 
-The original proposal and some information on design rationale is at [Parity Light Protocol][PIPDraft]
+The original proposal and some information on design rationale is at [Parity Light Protocol]
 
 ## Symbols
 
@@ -106,7 +106,7 @@ PIP request and response messages are batched and cannot be sent individually. U
 
 PIP tries to further optimise client-server round trips by allowing the individual requests in the batch to include references to what their responses would contain if processed sequentially. For clarification, an exampple PIP batch request could contain two request messages in order, where the second message specifies that an input is a specific 'output' of the first message, where 'output' means the server response to that request.
 
-### Request message
+### Request message (0x02)
 
 `message-id: 0x02`
 
@@ -117,7 +117,7 @@ request-id = a unique scalar request identifier for request-reply correlation
 [req1, ...] = an rlp list of requests, each request being the rlp encoding of a request as specified below
 ```
 
-### Response message
+### Response message (0x03)
 
 `message-id: 0x03`
 
@@ -142,7 +142,7 @@ These updates are sent to clients as `UpdateCreditParameters` messages. Received
 `message-id: 0x04`
 
 ```text
-message-data = message-id || [max, recharge, cost_table]
+message-id || [max, recharge, cost_table]
 
 max = positive integer, the new maximum credit depth for the token bucket
 recharge = positive integer, the new recharge rate in credits per second
@@ -156,7 +156,7 @@ The cost_table is explained in more detail [here](#cost-table)
 `message-id: 0x05`
 
 ```text
-message-data = message-id
+message-id
 
 This message has no payload.
 ```
@@ -170,7 +170,7 @@ Standard Ethereum transactions may be sent by a light client to the server for r
 `message-id: 0x06`
 
 ```text
-message-data = message-id || [tx1, tx2, ...]
+message-id || [tx1, tx2, ...]
 
 tx1, tx2 = RLP encoded transactions as per ETH documentation
 ```
@@ -179,7 +179,7 @@ tx1, tx2 = RLP encoded transactions as per ETH documentation
 
 The [PIP request message batch](#request-message) contains individual messages of the types described below.
 
-Each type specifies its corresponding response message (referred to as _outputs_ in the [original rationale][PIPDraft]).
+Each type specifies its corresponding response message (referred to as _outputs_ in the [original rationale][Parity Light Protocol]).
 
 As described in the batch message details, each individual request message in a batch may specify that an input field should be populated with a field from the future response message of a request earlier in the batch.
 
@@ -202,7 +202,7 @@ reusable_output = the unsigned integer identifying the corresponding response me
 
 The following are the individual messages, paired as requests and their responses.
 
-### Headers
+### Headers (0x00)
 
 Request and retrieve block headers from the server.
 
@@ -211,7 +211,7 @@ Request and retrieve block headers from the server.
 `message-id: 0x00`
 
 ```text
-message-data = [message-id , [start, skip, max, reverse]]
+[message-id , [start, skip, max, reverse]]
 
 start = Loose, of type either 32byte hash (block hash), or unsigned integer block number
 skip = unsigned integer N, specifying the server should return every Nth block
@@ -222,12 +222,12 @@ reverse = 0 if the block numbers should be increasing, 1 to return in reverse or
 #### Response
 
 ```text
-message-data = [message-id ,[header1, header2, ...]]
+[message-id ,[header1, header2, ...]]
 
 header1, header2, ... = the rlp encoded headers
 ```
 
-### HeaderProof
+### HeaderProof (0x01)
 
 Request for a header proof.
 
@@ -236,7 +236,7 @@ Request for a header proof.
 `message-id: 0x01`
 
 ```text
-message-data = [message-id, [block]]
+[message-id, [block]]
 
 block = Loose, of type unsigned integer, referring to the block number
 ```
@@ -244,7 +244,7 @@ block = Loose, of type unsigned integer, referring to the block number
 #### Response
 
 ```text
-message-data = [message-id, [cht_inclusion_proof, block_hash, total_difficulty]]
+[message-id, [cht_inclusion_proof, block_hash, total_difficulty]]
 
 cht_inclusion_proof = [[node1, node2, ...], ...]
 node1 = merkle tree node as byte array
@@ -252,7 +252,7 @@ block_hash = hash of the requested block ***reusable as 0***
 total_difficulty = unsigned integer, the requested block total difficulty
 ```
 
-### TransactionIndex
+### TransactionIndex (0x02)
 
 Request for a transaction index based on hash.
 
@@ -261,7 +261,7 @@ Request for a transaction index based on hash.
 `message-id: 0x02`
 
 ```text
-message-data = [message-id , [hash]]
+[message-id , [hash]]
 
 hash = Loose, of type 32 byte hash, referring to the transaction hash
 ```
@@ -269,14 +269,14 @@ hash = Loose, of type 32 byte hash, referring to the transaction hash
 #### Response
 
 ```text
-message-data = [message-id, [block_number, block_hash, index]]
+[message-id, [block_number, block_hash, index]]
 
 block_number = the block number of the block containing the transaction ***reusable as 0***
 block_hash = hash of the requested block ***reusable as 1***
 index = index in the block
 ```
 
-### BlockReceipts
+### BlockReceipts (0x03)
 
 Request for a block's receipts.
 
@@ -285,7 +285,7 @@ Request for a block's receipts.
 `message-id: 0x03`
 
 ```text
-message-data = [message-id , [hash]]
+[message-id , [hash]]
 
 hash = Loose, of type 32 byte hash, referring to the transaction hash
 ```
@@ -293,13 +293,13 @@ hash = Loose, of type 32 byte hash, referring to the transaction hash
 #### Response
 
 ```text
-message-data = [message-id, [receipts]]
+[message-id, [receipts]]
 
 receipts = [receipt1, receipt2, ...]
 receipt1 = an rlp encoded receipt, as per ETH spec
 ```
 
-### BlockBody
+### BlockBody (0x04)
 
 Request for a block's transactions.
 
@@ -308,7 +308,7 @@ Request for a block's transactions.
 `message-id: 0x04`
 
 ```text
-message-data = [message-id , [hash]]
+[message-id , [hash]]
 
 hash = Loose, of type 32 byte hash, referring to the transaction hash
 ```
@@ -316,7 +316,7 @@ hash = Loose, of type 32 byte hash, referring to the transaction hash
 #### Response
 
 ```text
-message-data = [message-id, [transactions,uncles]]
+[message-id, [transactions,uncles]]
 
 transactions = [tx1, tx2, ...]
 tx1 = an rlp encoded transaction, as per ETH spec
@@ -324,7 +324,7 @@ uncles = [header1,header2,...]
 header1 = an rlp encoded uncle block header as per ETH spec
 ```
 
-### Account
+### Account (0x05)
 
 Request for proof of specific account in the state.
 
@@ -333,7 +333,7 @@ Request for proof of specific account in the state.
 `message-id: 0x05`
 
 ```text
-message-data = [message-id , [block_hash, address_hash]]
+[message-id , [block_hash, address_hash]]
 
 block_hash = Loose, of type 32 byte hash, referring to the block hash
 address_hash = Loose, of type 32 byte hash, referring to the account address hash
@@ -342,7 +342,7 @@ address_hash = Loose, of type 32 byte hash, referring to the account address has
 #### Response
 
 ```text
-message-data = [message-id, [cht_inclusion_proof,nonce, balance, code_hash, storage_root]]
+[message-id, [cht_inclusion_proof,nonce, balance, code_hash, storage_root]]
 
 cht_inclusion_proof = [[node1, node2, ...], ...]
 node1 = merkle tree node as byte array
@@ -352,7 +352,7 @@ code_hash = 32 byte hash ***reusable as 0***
 storage_root = 32 byte storage root hash ***reusable as 1***
 ```
 
-### Storage
+### Storage (0x06)
 
 Request for a proof of contract storage.
 
@@ -361,7 +361,7 @@ Request for a proof of contract storage.
 `message-id: 0x06`
 
 ```text
-message-data = [message-id , [block_hash, address_hash, storage_key_hash]]
+[message-id , [block_hash, address_hash, storage_key_hash]]
 
 block_hash = Loose, of type 32 byte hash, referring to the block hash
 address_hash = Loose, of type 32 byte hash, referring to the account address hash
@@ -371,7 +371,7 @@ storage_key_hash = Loose, of type 32 byte hash, referring to the storage key
 #### Response
 
 ```text
-message-data = [message-id, [cht_inclusion_proof, storage_value]]
+[message-id, [cht_inclusion_proof, storage_value]]
 
 cht_inclusion_proof = [[node1, node2, ...], ...]
 node1 = merkle tree node as byte array
@@ -379,7 +379,7 @@ storage_value = 32 byte hash ***reusable as 0***
 
 ```
 
-### Code
+### Code (0x07)
 
 Request for a contract code
 
@@ -388,7 +388,7 @@ Request for a contract code
 `message-id: 0x07`
 
 ```text
-message-data = [message-id , [block_hash, code_hash]]
+[message-id , [block_hash, code_hash]]
 
 block_hash = Loose, of type 32 byte hash, indentifying the block 
 code_hash = Loose, of type 32 byte hash, identifying the code
@@ -397,35 +397,42 @@ code_hash = Loose, of type 32 byte hash, identifying the code
 #### Response
 
 ```text
-message-data = [message-id, [bytecode]]
+[message-id, [bytecode]]
 
 bytecode = rlp byte array of the bytecode
 ```
 
-### Execution
+### Execution (0x08)
 
-Request for proof of execution 
-
-*Transcription from original documentation is TBD*
+Request for Merkle proofs of a contract execution.
 
 `message-id: 0x08`
 
+#### Request
+
 ```text
-// Request for proof of execution
-Request::Execution {
-    ID: 8
-    Inputs:
-        Loose(H256) // block hash
-        Address // address from
-        Address | () // action: call if address, create if empty.
-        U256 // gas to prove
-        U256 // gas price
-        U256 // value to transfer
-        [U8] // call data
-    Outputs:
-        [U8](U8) // state items necessary to prove execution
-}
+
+message-data = [message-id , [block_hash, from_address, call_or_create_address,gas_to_prove, gas_price, value, data]]
+
+block_hash = Loose, of type 32 byte hash, identifying the block 
+from_address =  Type 32 byte hash, referring to the caller account address hash
+call_or_create_address = 32 byte hash, call contract if address, otherwise create contract if empty
+gas_to_prove = 32 byte unsigned integer of gas to prove
+gas_price = 32 byte unsigned integer of gas price
+value = 32 byte unsigned integer of value to transfer
+data = byte array of relevant data 
+```
+
+
+#### Response
+
+```text
+[message-id, [proof]]
+
+proof = [[node1, node2, ...], ...] the necessary execution proof
+node1 = merkle tree node as byte array
 ```
 
 [LES]: ./les.md
-[PIPDraft]: https://wiki.parity.io/The-Parity-Light-Protocol-(PIP)
+[Parity Light Protocol]: https://wiki.parity.io/The-Parity-Light-Protocol-(PIP)
+[Canonical Hash Tries]: ./les.md#canonical-hash-tries
