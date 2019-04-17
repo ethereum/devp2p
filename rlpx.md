@@ -173,7 +173,7 @@ ingress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
 
 When a frame is sent, the corresponding MAC values are computed by updating the
 `egress-mac` state with the data to be sent. The update is performed by XORing the header
-with the encrypted output of it's corresponding MAC. This is done to ensure uniform
+with the encrypted output of its corresponding MAC. This is done to ensure uniform
 operations are performed for both plaintext MAC and ciphertext. All MACs are sent
 cleartext.
 
