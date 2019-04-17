@@ -8,6 +8,7 @@ Ethereum.
 * [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
   * [Ethereum Wire Protocol] (version 63)
   * [Light Ethereum Subprotocol] (version 2)
+  * [Parity Light Protocol] (version 1)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
@@ -74,6 +75,7 @@ WireShark dissectors are available here: https://github.com/ConsenSys/ethereum-d
 [RLPx transport protocol]: ./rlpx.md
 [Ethereum Wire Protocol]: ./caps/eth.md
 [Light Ethereum Subprotocol]: ./caps/les.md
+[Parity Light Protocol]: ./caps/pip.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [libp2p]: https://libp2p.org
