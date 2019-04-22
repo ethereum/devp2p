@@ -80,6 +80,8 @@ for transaction replay prevention.
 | 3  | Ropsten (current PoW testnet) |
 | 4  | [Rinkeby]                     |
 
+For a community curated list of chain IDs, see https://chainid.network.
+
 ### NewBlockHashes (0x01)
 
 `[[hash_0: B_32, number_0: P], [hash_1: B_32, number_1: P], ...]`
