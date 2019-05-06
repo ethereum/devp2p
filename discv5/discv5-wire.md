@@ -157,7 +157,8 @@ reverse.
 
 The encoding of the 'random packet', sent if no session keys are available, is:
 
-    random-packet    = tag || random-data
+    random-packet    = tag || rlp_bytes(auth-tag) || random-data
+    auth-tag         = 12 random bytes unique to message
     random-data      = at least 44 bytes of random data
 
 The WHOAREYOU packet, used during the handshake, is encoded as follows:
@@ -175,8 +176,8 @@ all-zero nonce. This is safe because only one message is ever encrypted with
     message-packet   = tag || auth-header || message
     auth-header      = [auth-tag, auth-scheme-name, ephemeral-pubkey, auth-response]
     auth-scheme-name = "gcm"
-    auth-response-pt = [id-nonce-sig, node-record]
     auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, tag)
+    auth-response-pt = [id-nonce-sig, node-record]
     zero-nonce       = 12 zero bytes
     id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
     static-node-key  = the private key used for record identity
