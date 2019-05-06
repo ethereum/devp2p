@@ -157,8 +157,9 @@ reverse.
 
 The encoding of the 'random packet', sent if no session keys are available, is:
 
-    random-packet    = tag || random-data
-    random-data      = at least 44 bytes of random data
+    random-packet    = tag || rlp_bytes(token) || random-data
+    random-data      = at least 64 bytes of random data
+    token            = 12 bytes of random data
 
 The WHOAREYOU packet, used during the handshake, is encoded as follows:
 
