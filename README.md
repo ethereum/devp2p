@@ -78,7 +78,7 @@ WireShark dissectors are available here: https://github.com/ConsenSys/ethereum-d
 [Parity Light Protocol]: ./caps/pip.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
-[libp2p]: https://libp2p.org
+[libp2p]: https://libp2p.io
 [go-ethereum]: https://github.com/ethereum/go-ethereum/
 [Parity Ethereum]: https://github.com/paritytech/parity-ethereum
 [Trinity]: https://github.com/ethereum/trinity
