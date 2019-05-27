@@ -215,7 +215,7 @@ BlockHashesFromNumber (0x08) `[number: P, maxBlocks: P]`
 ### eth/61 (2015)
 
 Version 61 added the BlockHashesFromNumber (0x08) message which could be used to request
-blocks in ascending order. It also added the latest block number to Status message.
+blocks in ascending order. It also added the latest block number to the [Status] message.
 
 ### eth/60 and below
 
