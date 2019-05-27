@@ -51,14 +51,14 @@ material for encryption and authentication as
 <code>k<sub>E</sub> || k<sub>M</sub> = KDF(S, 32)</code> as well as a random
 initialization vector `iv`. Alice sends the encrypted message `R || iv || c || d` where
 <code>c = AES(k<sub>E</sub>, iv , m)</code> and
-<code>d = MAC(keccak256(k<sub>M</sub>), iv || c)</code> to Bob.
+<code>d = MAC(sha256(k<sub>M</sub>), iv || c)</code> to Bob.
 
 For Bob to decrypt the message `R || iv || c || d`, he derives the shared secret
 <code>S = P<sub>x</sub></code> where
 <code>(P<sub>x</sub>, P<sub>y</sub>) = k<sub>B</sub> * R</code> as well as the encryption and
 authentication keys <code>k<sub>E</sub> || k<sub>M</sub> = KDF(S, 32)</code>. Bob verifies
 the authenticity of the message by checking whether
-<code>d == MAC(keccak256(k<sub>M</sub>), iv || c)</code> then obtains the plaintext as
+<code>d == MAC(sha256(k<sub>M</sub>), iv || c)</code> then obtains the plaintext as
 <code>m = AES(k<sub>E</sub>, iv || c)</code>.
 
 ## Node Identity
