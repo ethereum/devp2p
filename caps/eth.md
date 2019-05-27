@@ -32,7 +32,7 @@ Two peers get connected and send their [Status] message. Status includes the Tot
 Difficulty (TD) and hash of their best block.
 
 The client with the worst TD then proceeds to download block headers using the
-[BlockHeadersFromNumber] message. It verifies proof-of-work values in received headers and
+[GetBlockHeaders] message. It verifies proof-of-work values in received headers and
 fetches block bodies using the [GetBlockBodies] message. Received blocks are executed
 using the Ethereum Virtual Machine, recreating the state tree.
 
@@ -55,7 +55,7 @@ incrementally by requesting the root node, its children, grandchildren, ... usin
 
 ### Status (0x00)
 
-`[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32, number: P]`
+`[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32]`
 
 Inform a peer of its current state. This message should be sent just after the connection
 is established and prior to any other eth protocol messages.
@@ -197,9 +197,10 @@ which allow synchronizing transaction execution results.
 ### eth/62 (2015)
 
 In version 62, the [NewBlockHashes] message was extended to include block numbers
-alongside the announced hashes. Messages GetBlockHashes (0x03), BlockHashes (0x04),
-GetBlocks (0x05) and Blocks (0x06) were replaced by messages that fetch block headers and
-bodies. The BlockHashesFromNumber (0x08) message was removed.
+alongside the announced hashes. The block number in [Status] was removed. Messages
+GetBlockHashes (0x03), BlockHashes (0x04), GetBlocks (0x05) and Blocks (0x06) were
+replaced by messages that fetch block headers and bodies. The BlockHashesFromNumber (0x08)
+message was removed.
 
 Previous encodings of the reassigned/removed message codes were:
 
@@ -216,7 +217,7 @@ BlockHashesFromNumber (0x08) `[number: P, maxBlocks: P]`
 ### eth/61 (2015)
 
 Version 61 added the BlockHashesFromNumber (0x08) message which could be used to request
-blocks in ascending order.
+blocks in ascending order. It also added the latest block number to the [Status] message.
 
 ### eth/60 and below
 
