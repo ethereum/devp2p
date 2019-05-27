@@ -51,14 +51,14 @@ material for encryption and authentication as
 <code>k<sub>E</sub> || k<sub>M</sub> = KDF(S, 32)</code> as well as a random
 initialization vector `iv`. Alice sends the encrypted message `R || iv || c || d` where
 <code>c = AES(k<sub>E</sub>, iv , m)</code> and
-<code>d = MAC(k<sub>M</sub>, iv || c)</code> to Bob.
+<code>d = MAC(sha256(k<sub>M</sub>), iv || c)</code> to Bob.
 
 For Bob to decrypt the message `R || iv || c || d`, he derives the shared secret
 <code>S = P<sub>x</sub></code> where
 <code>(P<sub>x</sub>, P<sub>y</sub>) = k<sub>B</sub> * R</code> as well as the encryption and
 authentication keys <code>k<sub>E</sub> || k<sub>M</sub> = KDF(S, 32)</code>. Bob verifies
 the authenticity of the message by checking whether
-<code>d == MAC(k<sub>M</sub>, iv || c)</code> then obtains the plaintext as
+<code>d == MAC(sha256(k<sub>M</sub>), iv || c)</code> then obtains the plaintext as
 <code>m = AES(k<sub>E</sub>, iv || c)</code>.
 
 ## Node Identity
@@ -178,7 +178,7 @@ operations are performed for both plaintext MAC and ciphertext. All MACs are sen
 cleartext.
 
 ```text
-header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16] ^ header-ciphertext)
+header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ header-ciphertext
 egress-mac = keccak256.update(egress-mac, header-mac-seed)
 header-mac = keccak256.digest(egress-mac)[:16]
 ```
