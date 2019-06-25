@@ -6,7 +6,7 @@ They provide full functionality in terms of safely accessing the blockchain, but
 mine and therefore do not take part in the consensus process. Full and archive nodes can
 also support the 'les' protocol besides 'eth' in order to be able to serve light nodes.
 
-The current protocol version is **les/2**. See end of document for a list of changes in
+The current protocol version is **les/3**. See end of document for a list of changes in
 past protocol versions. Some of the les protocol messages are similar to of the [Ethereum
 Wire Protocol], with the addition of a few new fields.
 
@@ -94,8 +94,8 @@ some sort of flow control feedback to the clients. This way, clients could (and 
 incentive to) behave nicely and not send requests too quickly in the first place (and then
 possibly timeout and resend while the server is still working on them). They could also
 distribute requests better between multiple servers they are connected to. And if clients
-can do this, servers can expect them to do this and drop them instantly if they break the
-flow control rules.
+can do this, servers can expect them to do this and throttle or drop them if they break
+the flow control rules.
 
 ### The Model
 
@@ -106,7 +106,7 @@ is deduced. The buffer has an upper limit (the "buffer limit") and a recharge ra
 per second). The server can decide to recharge it more quickly at any time if it has more
 free resources, but there is a guaranteed minimum recharge rate. If a request is received
 that would drain the client's buffer below zero, the client has broken the flow control
-rules and is disconnected.
+rules and is throttled or disconnected.
 
 ### The Protocol
 
@@ -128,8 +128,8 @@ the request), then deducts it from `BV`. If `BV` goes negative, drops the peer, 
 starts serving the request. The reply message contains a `BV` value that is the previously
 calculated `BV` plus the amount recharged during the time spent serving. Note that since
 the server can always determine any cost up to `MaxCost` for a request (and a client
-should not assume otherwise), it can drop a client without even processing the message if
-it receives a message while `BV < MaxCost` because that's already a protocol breach.
+should not assume otherwise), it can reject a message without processing it if received
+while `BV < MaxCost` because that's already a flow control breach.
 
 On the client side:
 
@@ -143,6 +143,14 @@ The client always has a lowest estimate for its current `BV`, called `BLE`. It
 When a reply message with a new `BV` value is received, it sets `BLE` to `BV -
 Sum(MaxCost)`, summing the `MaxCost` values of requests sent after the one belonging to
 this reply.
+
+#### Buffer underrun
+
+Before **les/3** buffer underruns always resulted in immediate disconnection. Now it is
+possible and recommended to send a [StopMsg] instead and then a [ResumeMsg] when the
+buffer has been at least partially recharged. This allows clients to treat the buffer
+feedback as an optional performance optimization hint instead of a mandatory mechanism
+and allows simple implementations that do not care about the buffer at all.
 
 ## Request ID
 
@@ -173,15 +181,23 @@ There are several optional key/value pairs which can be set:
   server. Allowed integer values are:
    * none (`0`): no [Announce] messages are sent, i.e. the client is not interested in
      announcements.
-   * simple (`1`): Default. [Announce] messages use the les/1 format.
+   * simple (`1`): Default. [Announce] messages use the **les/1** format.
    * signed (`2`): there is a `"sign"` key in the key/value list of [Announce] messages. The
      associated value is a signature of an RLP encoded `[headHash: B_32, headNumber: P, headTd: P]`
      structure by the server's node key.
 * `"serveHeaders"` (empty value): present if the peer can serve header chain downloads.
 * `"serveChainSince"` `P`: present if the peer can serve Body/Receipts ODR requests
   starting from the given block number.
+* `"serveRecentChain"` `P`: if present then the availability of chain data is only guaranteed
+  for the given number of recent blocks. If the node serves chain data then `"serveChainSince"`
+  should always be present while `"serveRecentChain"` is optional. Chain availability can
+  be assumed for blocks with `blockNumber >= MAX(serveChainSince, headNumber-serveRecentChain+1)`.
 * `"serveStateSince"` `P`: present if the peer can serve Proof/Code ODR requests starting
   from the given block number.
+* `"serveRecentState"` `P`: if present then the availability of state data is only guaranteed
+  for the given number of recent blocks. If the node serves state data then `"serveStateSince"`
+  should always be present while `"serveRecentState"` is optional. State availability can
+  be assumed for blocks with `blockNumber >= MAX(serveStateSince, headNumber-serveRecentState+1)`.
 * `"txRelay"` (no value): present if the peer can relay transactions to the ETH network.
 * `"flowControl/BL"`, `"flowControl/MRC"`, `"flowControl/MRR"`: see [Client Side Flow Control]
 
@@ -265,7 +281,7 @@ empty), or the storage value of index `key2` from the storage trie referenced in
 account at `key`. If `fromLevel` is greater than zero, the given number of trie nodes
 closest to the root can be omitted from the proof.
 
-This message was deprecated in les/2, use [GetProofsV2] instead.
+This message was deprecated in **les/2**, use [GetProofsV2] instead.
 
 ### Proofs (0x09)
 
@@ -297,7 +313,7 @@ headers (of block number `blockNumber`) and corresponding Merkle proofs of the [
 (Canonical Hash Trie) identified by `chtNumber`. If `fromLevel` is greater than zero, the
 given number of trie nodes closest to the root can be omitted from the proof.
 
-This message was deprecated in les/2, use [GetHelperTrieProofs] instead.
+This message was deprecated in **les/2**, use [GetHelperTrieProofs] instead.
 
 ### HeaderProofs (0x0e)
 
@@ -313,7 +329,7 @@ header hash and belonging TD against a given CHT requested in [GetHeaderProofs].
 Require peer to add a set of transactions into its transaction pool and relay them to the
 ETH network.
 
-This message was deprecated in les/2, use [SendTxV2] instead.
+This message was deprecated in **les/2**, use [SendTxV2] instead.
 
 ### GetProofsV2 (0x0f)
 
@@ -341,7 +357,7 @@ requested proofs. The list shouldn't contain duplicate nodes.
 Require peer to return a [HelperTrieProofs] message, containing a *proof set* and optional
 auxiliary data for each request.
 
-Note: this request is a generalization of the les/1 [GetHeaderProofs] message. It
+Note: this request is a generalization of the **les/1** [GetHeaderProofs] message. It
 retrieves Merkle proofs from different types of "helper tries" which are generated for
 every fixed-length section of the canonical chain. `subType` identifies the helper trie
 that is being requested for the section marked by `sectionIdx`. `key` and `fromLevel` are
@@ -353,13 +369,13 @@ nodes are added to the proof set. This special request will be required for trus
 validation of helper tries. The interpretation of `auxReq` values greater than 1 is
 subject to `subType`.
 
-The following `subType` integer values are allowed in les/2:
+The following `subType` integer values are allowed in **les/2**:
 
 * CHT (`0`): request a key from the [Canonical Hash Trie]. If `auxReq` is 2 then the
   belonging header is returned as `auxData`. `key` is the block number encoded as an
   8-byte big endian. Note that the section size for CHTs has been raised to 32k instead of
   4k blocks so for example a `sectionIdx` of 100 equals a `chtNumber` of 807 in case of
-  the les/1 [GetHeaderProofs] message.
+  the **les/1** [GetHeaderProofs] message.
 * BloomBits (`1`): request a key from the [BloomBits Trie]. In this trie `key` is 10 bytes
   long, it consists of the bloom bit index encoded as a 2-byte big endian, followed by the
   section index encoded as an 8-byte big endian. The returned value is the corresponding
@@ -402,15 +418,31 @@ Return the current status of the sent/queried transactions. Possible `status` va
   an RLP-encoded `[blockHash: B_32, blockNumber: P, txIndex: P]` structure.
 * Error (`4`): transaction sending failed. `data` contains a text error message.
 
+### StopMsg (0x16)
+
+Instruct the client to temporarily stop sending requests and to not expect responses to those requests it did not already receive a reply for.
+
+Implementer's note: this message can be used to handle transient server overloads or individual client flow control buffer underruns. The server should avoid sending [StopMsg] too often though if the client also avoids buffer underruns. It should try to regulate its own utilization (and thereby also the frequency of transient overload occurences) with the flow control feedback. Receiving [StopMsg] more than once every few minutes in long term average or not receiving [ResumeMsg] in a few seconds can be considered bad service quality by the clients.
+
+### ResumeMsg (0x17)
+
+`[BV: P]`
+
+Update flow control buffer and allow sending requests again. Note that the requests not answered before [StopMsg] were permanently canceled and will not be answered after [ResumeMsg]. If a [ResumeMsg] is received without a preceding [StopMsg] then it should be treated as a simple flow control buffer update (assuming that the server has already deducted the cost of the previously answered messages).
+
 ## Change Log
+
+### les/3 (May 2019)
+
+* Keys `"serveRecentChain"` and `"serveRecentState"` were added to the [Status] message.
+* Messages [StopMsg] and [ResumeMsg] were added to improve handling transient overloads
+  and flow control buffer underruns.
 
 ### les/2 (November 2017)
 
-Version 2 is fully backwards compatible with les/1 and added a few new messages.
-
 * The `"announceType"` key was added to the [Status] message.
 * The BloomBits Trie and associated messages [GetHelperTrieProofs], [HelperTrieProofs]
-  were added to facilitate server-assisted log search. les/1 clients would frequently
+  were added to facilitate server-assisted log search. **les/1** clients would frequently
   download large ranges of receipts to search for specific logs.
 * Messages [GetProofsV2], [ProofsV2] were added to de-duplicate result nodes when
   requesting multiple proofs at the same time.
@@ -418,7 +450,8 @@ Version 2 is fully backwards compatible with les/1 and added a few new messages.
   transactions and to enable user-lever error reporting for non-includable transactions at
   the time of submission.
 * The [GetHeaderProofs], [HeaderProofs], [GetProofs], [Proofs] and [SendTx] messages from
-  les/1 are deprecated but still supported in les/2.
+  **les/1** are no longer supported in **les/2**.
+
 
 [Client Side Flow Control]: #client-side-flow-control
 [Canonical Hash Trie]: #canonical-hash-trie
@@ -446,5 +479,7 @@ Version 2 is fully backwards compatible with les/1 and added a few new messages.
 [SendTxV2]: #sendtxv2-0x13
 [GetTxStatus]: #gettxstatus-0x14
 [TxStatus]: #txstatus-0x15
+[StopMsg]: #stopmsg-0x16
+[ResumeMsg]: #resumemsg-0x17
 [Ethereum Wire Protocol]: ./eth.md
 [Merkle Patricia Trie]: https://github.com/ethereum/wiki/wiki/Patricia-Tree
