@@ -432,6 +432,12 @@ Update flow control buffer and allow sending requests again. Note that the reque
 
 ## Change Log
 
+### les/3 (May 2019)
+
+* Keys `"serveRecentChain"` and `"serveRecentState"` were added to the [Status] message.
+* Messages [StopMsg] and [ResumeMsg] were added to improve handling transient overloads
+  and flow control buffer underruns.
+
 ### les/2 (November 2017)
 
 * The `"announceType"` key was added to the [Status] message.
@@ -445,11 +451,6 @@ Update flow control buffer and allow sending requests again. Note that the reque
   the time of submission.
 * The [GetHeaderProofs], [HeaderProofs], [GetProofs], [Proofs] and [SendTx] messages from
   **les/1** are no longer supported in **les/2**.
-
-### les/3 (May 2019)
-
-* Keys `"serveRecentChain"` and `"serveRecentState"` were added to the [Status] message.
-* Messages [StopMsg] and [ResumeMsg] were added to improve handling transient overloads and flow control buffer underruns.
 
 
 [Client Side Flow Control]: #client-side-flow-control
