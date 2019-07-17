@@ -216,7 +216,9 @@ is a random number.
 ### PING Request (0x01)
 
     message-data = [request-id, enr-seq]
+    message-type = 0x01
     enr-seq      = ENR sequence number of sender
+   
 
 PING checks whether the recipient is alive and informs it about the sender's ENR sequence
 number.
@@ -224,6 +226,7 @@ number.
 ### PONG Response (0x02)
 
     message-data = [request-id, enr-seq, recipient-ip, recipient-port]
+    message-type = 0x02
     enr-seq      = ENR sequence number of sender
     packet-ip    = 16 or 4 byte IP address of the intended recipient
     packet-port  = recipient UDP port, a 16-bit integer
@@ -233,6 +236,7 @@ PONG is the reply to PING.
 ### FINDNODE Request (0x03)
 
     message-data = [request-id, distance]
+    message-type = 0x03
     distance     = the requested log2 distance, a positive integer
 
 FINDNODE queries for nodes at the given logarithmic distance from the recipient's node ID.
@@ -242,6 +246,7 @@ with the recipient's node ID.
 ### NODES Response (0x04)
 
     message-data = [request-id, total, [ENR, ...]]
+    message-type = 0x04
     total        = total number of responses to the request
 
 NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
@@ -250,6 +255,7 @@ sent as responses to a single query.
 ### REQTICKET Request (0x05)
 
     message-data = [request-id, topic]
+    message-type = 0x05
     topic        = a 32-byte topic hash
 
 Implementation note: The least requested topics will be evicted from the global space.
@@ -261,6 +267,7 @@ requesting their own adverts.
 ### TICKET Response (0x06)
 
     message-data = [request-id, ticket, wait-time]
+    message-type = 0x06
     ticket       = an opaque byte array representing the ticket
     wait-time    = time to wait before registering, in seconds
 
@@ -282,6 +289,7 @@ is to encrypt and authenticate them with a separate key.
 ### REGTOPIC Request (0x07)
 
     message-data = [request-id, ticket]
+    message-type = 0x07
     ticket       = supplied by TICKET response
 
 REGTOPIC registers the sender for the given topic with a ticket. The ticket must be valid
@@ -290,6 +298,7 @@ and its waiting time must have elapsed before using the ticket.
 ### REGCONFIRMATION Response (0x08)
 
     message-data = [request-id, registered]
+    message-type = 0x07
     registered   = boolean, 1 if ticket was valid and node is registered, 0 if not
 
 REGCONFIRMATION is the response to REGTOPIC.
@@ -297,6 +306,7 @@ REGCONFIRMATION is the response to REGTOPIC.
 ### TOPICQUERY Request (0x09)
 
     message-data = [request-id, topic]
+    message-type = 0x07
     topic        = 32-byte topic hash
 
 TOPICQUERY requests nodes in the [topic queue] of the given topic. The response is a NODES
