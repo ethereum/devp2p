@@ -225,8 +225,8 @@ number.
 
     message-data = [request-id, enr-seq, recipient-ip, recipient-port]
     enr-seq      = ENR sequence number of sender
-    packet-ip    = 16 or 4 byte IP address of the intended recipient
-    packet-port  = recipient UDP port, a 16-bit integer
+    recipient-ip    = 16 or 4 byte IP address of the intended recipient
+    recipient-port  = recipient UDP port, a 16-bit integer
 
 PONG is the reply to PING.
 
