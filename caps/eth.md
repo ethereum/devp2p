@@ -1,6 +1,6 @@
 # Ethereum Wire Protocol (ETH)
 
-'eth' is a protocol on the [RLPx](../rlpx.md) transport that facilitates exchange of
+'eth' is a protocol on the [RLPx] transport that facilitates exchange of
 Ethereum blockchain information between peers. The current protocol version is **eth/63**.
 See end of document for a list of changes in past protocol versions.
 
@@ -13,10 +13,10 @@ sent.
 All known transactions should be sent following the Status exchange with one or more
 [Transactions] messages.
 
-[Transactions] messages should also be sent periodically as the node has new transactions to
-disseminate. A node should never send a transaction back to a peer that it can determine
-already knows of it (either because it was previously sent or because it was informed from
-this peer originally).
+[Transactions] messages should also be sent periodically as the node has new transactions
+to disseminate. A node should never send a transaction back to a peer that it can
+determine already knows of it (either because it was previously sent or because it was
+informed from this peer originally).
 
 Blocks are typically re-propagated to all connected peers as soon as basic validity of the
 announcement has been established (e.g. after the proof-of-work check). Propagation uses
@@ -60,12 +60,12 @@ incrementally by requesting the root node, its children, grandchildren, ... usin
 Inform a peer of its current state. This message should be sent just after the connection
 is established and prior to any other eth protocol messages.
 
-* `protocolVersion`: the current protocol version, 63
-* `networkId`: Integer identifying the blockchain, see table below
-* `td`: total difficulty of the best chain. Integer, as found in block header.
-* `bestHash`: The hash of the best (i.e. highest TD) known block.
-* `genesisHash`: The hash of the Genesis block.
-* `number`: The block number of the latest block in the chain.
+- `protocolVersion`: the current protocol version, 63
+- `networkId`: Integer identifying the blockchain, see table below
+- `td`: total difficulty of the best chain. Integer, as found in block header.
+- `bestHash`: The hash of the best (i.e. highest TD) known block.
+- `genesisHash`: The hash of the Genesis block.
+- `number`: The block number of the latest block in the chain.
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
@@ -80,7 +80,7 @@ for transaction replay prevention.
 | 3  | Ropsten (current PoW testnet) |
 | 4  | [Rinkeby]                     |
 
-For a community curated list of chain IDs, see https://chainid.network.
+For a community curated list of chain IDs, see <https://chainid.network>.
 
 ### NewBlockHashes (0x01)
 
@@ -204,15 +204,11 @@ message was removed.
 
 Previous encodings of the reassigned/removed message codes were:
 
-GetBlockHashes (0x03) `[hash: B_32, maxBlocks: P]`
-
-BlockHashes (0x04) `[hash_0: B_32, hash_1: B_32, ...]`
-
-GetBlocks (0x05) `[hash_0: B_32, hash_1: B_32, ...]`
-
-Blocks (0x06) `[[blockHeader, transactionList, uncleList], ...]`
-
-BlockHashesFromNumber (0x08) `[number: P, maxBlocks: P]`
+- GetBlockHashes (0x03): `[hash: B_32, maxBlocks: P]`
+- BlockHashes (0x04): `[hash_0: B_32, hash_1: B_32, ...]`
+- GetBlocks (0x05): `[hash_0: B_32, hash_1: B_32, ...]`
+- Blocks (0x06): `[[blockHeader, transactionList, uncleList], ...]`
+- BlockHashesFromNumber (0x08): `[number: P, maxBlocks: P]`
 
 ### eth/61 (2015)
 
@@ -230,6 +226,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 - `0x17` for PoC-5
 - `0x1c` for PoC-6
 
+[RLPx]: ../rlpx.md
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
 [Transactions]: #transactions-0x02
