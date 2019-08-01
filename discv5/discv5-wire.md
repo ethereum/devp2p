@@ -6,6 +6,27 @@ Node Discovery Protocol v5 - Wire Protocol
 This document specifies the wire protocol of Node Discovery v5. Note that this
 specification is a work in progress and may change incompatibly without prior notice.
 
+Notation
+--------
+
+Here we present the notation that is used throughout this document.
+
+`[ .. , .. , .. ]`\
+    is recursive encoding as an RLP list\
+`rlp_bytes(x)`\
+    is the RLP encoding of the byte array `x`\
+`a || b`\
+    means binary concatenation of `a` and `b`\
+`xor(a, b)`\
+    means binary XOR of `a` and `b`\
+`sha256(x)`\
+    is the SHA256 digest of `x`\
+`sign(key, x)`\
+    creates a signature of `x` using the given key\
+`aesgcm_encrypt(key, nonce, pt, ad)`\
+    is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
+    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
+
 UDP Communication
 -----------------
 
@@ -123,24 +144,6 @@ limited amount of time, ensuring that nodes occasionally perform a handshake to 
 new keys.
 
 **TBD: concurrent handshake tie-breaker rule**
-
-### Notation
-
-`[ .. , .. , .. ]`\
-    is recursive encoding as an RLP list\
-`rlp_bytes(x)`\
-    is the RLP encoding of the byte array `x`\
-`a || b`\
-    means binary concatenation of `a` and `b`\
-`xor(a, b)`\
-    means binary XOR of `a` and `b`\
-`sha256(x)`\
-    is the SHA256 digest of `x`\
-`sign(key, x)`\
-    creates a signature of `x` using the given key\
-`aesgcm_encrypt(key, nonce, pt, ad)`\
-    is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
-    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
 ### Packet Encoding
 
