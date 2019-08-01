@@ -16,9 +16,7 @@ key of the node serves as its identifier or 'node ID'.
 The 'distance' between two node IDs is the bitwise exclusive or on the hashes of the
 public keys, taken as the number.
 
-```text
-distance(n₁, n₂) = keccak256(n₁) XOR keccak256(n₂)
-```
+    distance(n₁, n₂) = keccak256(n₁) XOR keccak256(n₂)
 
 ## Node Table
 
@@ -34,14 +32,14 @@ most-recently seen at the tail.
 Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket.
 If the bucket contains less than `k` entries N₁ can simply be added as the first entry. If
 the bucket already contains `k` entries, the least recently seen node in the bucket, N₂,
-needs to be revalidated by sending a ping packet. If no reply is received from N₂ it is
+needs to be revalidated by sending a [Ping] packet. If no reply is received from N₂ it is
 considered dead, removed and N₁ added to the front of the bucket.
 
 ## Endpoint Proof
 
 To prevent traffic amplification attacks, implementations must verify that the sender of a
 query participates in the discovery protocol. The sender of a packet is considered
-verified if it has sent a valid pong response with matching ping hash within the last 12
+verified if it has sent a valid [Pong] response with matching ping hash within the last 12
 hours.
 
 ## Recursive Lookup
@@ -66,17 +64,13 @@ from the `k` closest nodes it has seen.
 Node discovery messages are sent as UDP datagrams. The maximum size of any packet is 1280
 bytes.
 
-```text
-packet = packet-header || packet-data
-```
+    packet = packet-header || packet-data
 
 Every packet starts with a header:
 
-```text
-packet-header = hash || signature || packet-type
-hash = keccak256(signature || packet-type || packet-data)
-signature = sign(packet-type || packet-data)
-```
+    packet-header = hash || signature || packet-type
+    hash = keccak256(signature || packet-type || packet-data)
+    signature = sign(packet-type || packet-data)
 
 The `hash` exists to make the packet format recognizable when running multiple protocols
 on the same UDP port. It serves no other purpose.
@@ -92,12 +86,10 @@ as well as any extra data after the list.
 
 ### Ping Packet (0x01)
 
-```text
-packet-data = [version, from, to, expiration, ...]
-version = 4
-from = [sender-ip, sender-udp-port, sender-tcp-port]
-to = [recipient-ip, recipient-udp-port, 0]
-```
+    packet-data = [version, from, to, expiration, ...]
+    version = 4
+    from = [sender-ip, sender-udp-port, sender-tcp-port]
+    to = [recipient-ip, recipient-udp-port, 0]
 
 The `expiration` field is an absolute UNIX time stamp. Packets containing a time stamp
 that lies in the past are expired may not be processed.
@@ -111,9 +103,7 @@ sent in addition to pong in order to receive an endpoint proof.
 
 ### Pong Packet (0x02)
 
-```text
-packet-data = [to, ping-hash, expiration, ...]
-```
+    packet-data = [to, ping-hash, expiration, ...]
 
 Pong is the reply to ping.
 
@@ -123,9 +113,7 @@ ping packet.
 
 ### FindNode Packet (0x03)
 
-```text
-packet-data = [target, expiration, ...]
-```
+    packet-data = [target, expiration, ...]
 
 A FindNode packet requests information about nodes close to `target`. The `target` is a
 65-byte secp256k1 public key. When FindNode is received, the recipient should reply with
@@ -136,10 +124,8 @@ the sender of FindNode has been verified by the endpoint proof procedure.
 
 ### Neighbors Packet (0x04)
 
-```text
-packet-data = [nodes, expiration, ...]
-nodes = [[ip, udp-port, tcp-port, node-id], ...]
-```
+    packet-data = [nodes, expiration, ...]
+    nodes = [[ip, udp-port, tcp-port, node-id], ...]
 
 Neighbors is the reply to [FindNode].
 
@@ -163,8 +149,8 @@ FindNode.
 [EIP-8] mandated that implementations ignore mismatches in Ping version and any additional
 list elements in `packet-data`.
 
-[Ping]: #ping-0x01
-[Pong]: #pong-0x02
-[FindNode]: #findnode-0x03
-[Neighbors]: #neighbors-0x04
+[Ping]: #ping-packet-0x01
+[Pong]: #pong-packet-0x02
+[FindNode]: #findnode-packet-0x03
+[Neighbors]: #neighbors-packet-0x04
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
