@@ -57,19 +57,17 @@ the decompressed data length.
 
 The algorithm can be described with this pseudo-code:
 
-```text
-if data only contains zeroes,
-    CompressBytes(data) == nil
-otherwise if len(data) <= 1,
-    CompressBytes(data) == data
-otherwise:
-    CompressBytes(data) == append(CompressBytes(nonZeroBitset(data)), nonZeroBytes(data)...)
-    where
-      nonZeroBitset(data) is a bit vector with len(data) bits (MSB first):
-          nonZeroBitset(data)[i/8] && (1 << (7-i%8)) != 0  if data[i] != 0
-          len(nonZeroBitset(data)) == (len(data)+7)/8
-      nonZeroBytes(data) contains the non-zero bytes of data in the same order
-```
+    if data only contains zeroes,
+        CompressBytes(data) == nil
+    otherwise if len(data) <= 1,
+        CompressBytes(data) == data
+    otherwise:
+        CompressBytes(data) == append(CompressBytes(nonZeroBitset(data)), nonZeroBytes(data)...)
+        where
+          nonZeroBitset(data) is a bit vector with len(data) bits (MSB first):
+              nonZeroBitset(data)[i/8] && (1 << (7-i%8)) != 0  if data[i] != 0
+              len(nonZeroBitset(data)) == (len(data)+7)/8
+          nonZeroBytes(data) contains the non-zero bytes of data in the same order
 
 ### BloomBits Trie
 
@@ -112,9 +110,9 @@ rules and is throttled or disconnected.
 
 The server announces three parameters in the [Status] message:
 
-* `"flowControl/BL"`: Buffer Limit, an integer value
-* `"flowControl/MRR"`: Minimum Rate of Recharge, an integer value
-* `"flowControl/MRC"`: Maximum Request Cost table. The value of this parameter is a
+- `"flowControl/BL"`: Buffer Limit, an integer value
+- `"flowControl/MRR"`: Minimum Rate of Recharge, an integer value
+- `"flowControl/MRC"`: Maximum Request Cost table. The value of this parameter is a
   table assigning cost values to every on-demand retrieval message in the LES protocol.
   The table is encoded as a list of integer triples: `[[MsgCode, BaseCost, ReqCost], ...]`
 
@@ -135,10 +133,10 @@ On the client side:
 
 The client always has a lowest estimate for its current `BV`, called `BLE`. It
 
-* sets `BLE` to `BL` received in [Status]
-* doesn't send any request to the server when `BLE < MaxCost`
-* deduces `MaxCost` when sending a request
-* recharges `BLE` at the rate of `MRR` when less than `BL`
+- sets `BLE` to `BL` received in [Status]
+- doesn't send any request to the server when `BLE < MaxCost`
+- deduces `MaxCost` when sending a request
+- recharges `BLE` at the rate of `MRR` when less than `BL`
 
 When a reply message with a new `BV` value is received, it sets `BLE` to `BV -
 Sum(MaxCost)`, summing the `MaxCost` values of requests sent after the one belonging to
@@ -168,38 +166,45 @@ Inform a peer of the sender's current LES state. This message should be sent jus
 the connection is established and prior to any other LES messages. The following keys
 are required (value types are noted after the key string):
 
-* `"protocolVersion"` `P`: is 1 for protocol version one.
-* `"networkId"` `P`: should be 0 for testnet, 1 for mainnet.
-* `"headTd"` `P`: Total Difficulty of the best chain. Integer, as found in block header.
-* `"headHash"` `B_32`: the hash of the best (i.e. highest TD) known block.
-* `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
-* `"genesisHash"` `B_32`: the hash of the Genesis block.
+- `"protocolVersion"` `P`: is 1 for protocol version one.
+- `"networkId"` `P`: should be 0 for testnet, 1 for mainnet.
+- `"headTd"` `P`: Total Difficulty of the best chain. Integer, as found in block header.
+- `"headHash"` `B_32`: the hash of the best (i.e. highest TD) known block.
+- `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
+- `"genesisHash"` `B_32`: the hash of the Genesis block.
 
 There are several optional key/value pairs which can be set:
 
-* `"announceType"` `P`: set by clients, this field affects the [Announce] messages of the
+- `"announceType"` `P`: set by clients, this field affects the [Announce] messages of the
   server. Allowed integer values are:
-   * none (`0`): no [Announce] messages are sent, i.e. the client is not interested in
-     announcements.
-   * simple (`1`): Default. [Announce] messages use the **les/1** format.
-   * signed (`2`): there is a `"sign"` key in the key/value list of [Announce] messages. The
-     associated value is a signature of an RLP encoded `[headHash: B_32, headNumber: P, headTd: P]`
-     structure by the server's node key.
-* `"serveHeaders"` (empty value): present if the peer can serve header chain downloads.
-* `"serveChainSince"` `P`: present if the peer can serve Body/Receipts ODR requests
+
+  - none (`0`): no [Announce] messages are sent, i.e. the client is not interested in announcements.
+  - simple (`1`): Default. [Announce] messages use the **les/1** format.
+  - signed (`2`): there is a `"sign"` key in the key/value list of [Announce] messages. The
+    associated value is a signature of an RLP encoded `[headHash: B_32, headNumber: P, headTd: P]`
+    structure by the server's node key.
+
+- `"serveHeaders"` (empty value): present if the peer can serve header chain downloads.
+
+- `"serveChainSince"` `P`: present if the peer can serve Body/Receipts ODR requests
   starting from the given block number.
-* `"serveRecentChain"` `P`: if present then the availability of chain data is only guaranteed
+
+- `"serveRecentChain"` `P`: if present then the availability of chain data is only guaranteed
   for the given number of recent blocks. If the node serves chain data then `"serveChainSince"`
   should always be present while `"serveRecentChain"` is optional. Chain availability can
   be assumed for blocks with `blockNumber >= MAX(serveChainSince, headNumber-serveRecentChain+1)`.
-* `"serveStateSince"` `P`: present if the peer can serve Proof/Code ODR requests starting
+
+- `"serveStateSince"` `P`: present if the peer can serve Proof/Code ODR requests starting
   from the given block number.
-* `"serveRecentState"` `P`: if present then the availability of state data is only guaranteed
+
+- `"serveRecentState"` `P`: if present then the availability of state data is only guaranteed
   for the given number of recent blocks. If the node serves state data then `"serveStateSince"`
   should always be present while `"serveRecentState"` is optional. State availability can
   be assumed for blocks with `blockNumber >= MAX(serveStateSince, headNumber-serveRecentState+1)`.
-* `"txRelay"` (no value): present if the peer can relay transactions to the ETH network.
-* `"flowControl/BL"`, `"flowControl/MRC"`, `"flowControl/MRR"`: see [Client Side Flow Control]
+
+- `"txRelay"` (no value): present if the peer can relay transactions to the ETH network.
+
+- `"flowControl/BL"`, `"flowControl/MRC"`, `"flowControl/MRR"`: see [Client Side Flow Control]
 
 Unknown keys should be ignored by both sides. This allows announcing additional
 capabilities while staying compatible with past protocol versions.
@@ -371,12 +376,12 @@ subject to `subType`.
 
 The following `subType` integer values are allowed in **les/2**:
 
-* CHT (`0`): request a key from the [Canonical Hash Trie]. If `auxReq` is 2 then the
+- CHT (`0`): request a key from the [Canonical Hash Trie]. If `auxReq` is 2 then the
   belonging header is returned as `auxData`. `key` is the block number encoded as an
   8-byte big endian. Note that the section size for CHTs has been raised to 32k instead of
   4k blocks so for example a `sectionIdx` of 100 equals a `chtNumber` of 807 in case of
   the **les/1** [GetHeaderProofs] message.
-* BloomBits (`1`): request a key from the [BloomBits Trie]. In this trie `key` is 10 bytes
+- BloomBits (`1`): request a key from the [BloomBits Trie]. In this trie `key` is 10 bytes
   long, it consists of the bloom bit index encoded as a 2-byte big endian, followed by the
   section index encoded as an 8-byte big endian. The returned value is the corresponding
   compressed bloom bit vector.
@@ -411,12 +416,12 @@ indefinitely.
 
 Return the current status of the sent/queried transactions. Possible `status` values are:
 
-* Unknown (`0`): transaction is unknown
-* Queued (`1`): transaction is queued (not processable yet)
-* Pending (`2`): transaction is pending (processable)
-* Included (`3`): transaction is already included in the canonical chain. `data` contains
+- Unknown (`0`): transaction is unknown
+- Queued (`1`): transaction is queued (not processable yet)
+- Pending (`2`): transaction is pending (processable)
+- Included (`3`): transaction is already included in the canonical chain. `data` contains
   an RLP-encoded `[blockHash: B_32, blockNumber: P, txIndex: P]` structure.
-* Error (`4`): transaction sending failed. `data` contains a text error message.
+- Error (`4`): transaction sending failed. `data` contains a text error message.
 
 ### StopMsg (0x16)
 
@@ -434,24 +439,23 @@ Update flow control buffer and allow sending requests again. Note that the reque
 
 ### les/3 (May 2019)
 
-* Keys `"serveRecentChain"` and `"serveRecentState"` were added to the [Status] message.
-* Messages [StopMsg] and [ResumeMsg] were added to improve handling transient overloads
+- Keys `"serveRecentChain"` and `"serveRecentState"` were added to the [Status] message.
+- Messages [StopMsg] and [ResumeMsg] were added to improve handling transient overloads
   and flow control buffer underruns.
 
 ### les/2 (November 2017)
 
-* The `"announceType"` key was added to the [Status] message.
-* The BloomBits Trie and associated messages [GetHelperTrieProofs], [HelperTrieProofs]
+- The `"announceType"` key was added to the [Status] message.
+- The BloomBits Trie and associated messages [GetHelperTrieProofs], [HelperTrieProofs]
   were added to facilitate server-assisted log search. **les/1** clients would frequently
   download large ranges of receipts to search for specific logs.
-* Messages [GetProofsV2], [ProofsV2] were added to de-duplicate result nodes when
+- Messages [GetProofsV2], [ProofsV2] were added to de-duplicate result nodes when
   requesting multiple proofs at the same time.
-* Messages [SendTxV2], [GetTxStatus] and [TxStatus] were added to allow querying for past
+- Messages [SendTxV2], [GetTxStatus] and [TxStatus] were added to allow querying for past
   transactions and to enable user-lever error reporting for non-includable transactions at
   the time of submission.
-* The [GetHeaderProofs], [HeaderProofs], [GetProofs], [Proofs] and [SendTx] messages from
+- The [GetHeaderProofs], [HeaderProofs], [GetProofs], [Proofs] and [SendTx] messages from
   **les/1** are no longer supported in **les/2**.
-
 
 [Client Side Flow Control]: #client-side-flow-control
 [Canonical Hash Trie]: #canonical-hash-trie

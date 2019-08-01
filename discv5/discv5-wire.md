@@ -1,13 +1,11 @@
-Node Discovery Protocol v5 - Wire Protocol
-==========================================
+# Node Discovery Protocol v5 - Wire Protocol
 
-**Draft of April 2019**
+**Draft of April 2019.**
 
 This document specifies the wire protocol of Node Discovery v5. Note that this
 specification is a work in progress and may change incompatibly without prior notice.
 
-Notation
---------
+## Notation
 
 Here we present the notation that is used throughout this document.
 
@@ -27,8 +25,7 @@ Here we present the notation that is used throughout this document.
     is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
     authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
-UDP Communication
------------------
+## UDP Communication
 
 Node discovery messages are sent as UDP datagrams. Since UDP is a lossy transport, packets
 may be received in any order or not at all. Implementations should not re-send packets if
@@ -54,8 +51,7 @@ request/response and 1s for the handshake.
 When responding to a request, the response should be sent to the UDP envelope address of
 the request.
 
-Handshake
----------
+## Handshake
 
 Discovery communication is encrypted and authenticated using session keys, established in
 the handshake. Since every node participating in the network acts as both client and
@@ -143,7 +139,7 @@ with the same nonce compromises the key. Session keys should be kept in memory f
 limited amount of time, ensuring that nodes occasionally perform a handshake to establish
 new keys.
 
-**TBD: concurrent handshake tie-breaker rule**
+**TBD: concurrent handshake tie-breaker rule.**
 
 ### Packet Encoding
 
@@ -169,6 +165,7 @@ The WHOAREYOU packet, used during the handshake, is encoded as follows:
     whoareyou-packet = tag || magic || [token, id-nonce, enr-seq]
     magic            = sha256(dest-node-id || "WHOAREYOU")
     token            = auth-tag of request
+    id-nonce         = 32 random bytes
     enr-seq          = highest ENR sequence number of node A known on node B's side
 
 The first encrypted message sent in response to WHOAREYOU contains an authentication
@@ -199,8 +196,7 @@ value at offset 32 after the fixed-size `tag` is an RLP list (`auth-header`) or 
 
 Node records are encoded and verified as specified in [EIP-778].
 
-Protocol Messages
------------------
+## Protocol Messages
 
 This section lists all defined messages which can be sent and received. The hexadecimal
 value in brackets is the `message-type`.
@@ -220,18 +216,18 @@ is a random number.
 
     message-data = [request-id, enr-seq]
     message-type = 0x01
-    enr-seq      = ENR sequence number of sender
+    enr-seq      = local ENR sequence number of sender
 
 PING checks whether the recipient is alive and informs it about the sender's ENR sequence
 number.
 
 ### PONG Response (0x02)
 
-    message-data = [request-id, enr-seq, recipient-ip, recipient-port]
-    message-type = 0x02
-    enr-seq      = ENR sequence number of sender
-    recipient-ip    = 16 or 4 byte IP address of the intended recipient
-    recipient-port  = recipient UDP port, a 16-bit integer
+    message-data   = [request-id, enr-seq, recipient-ip, recipient-port]
+    message-type   = 0x02
+    enr-seq        = ENR sequence number of sender
+    recipient-ip   = 16 or 4 byte IP address of the intended recipient
+    recipient-port = recipient UDP port, a 16-bit integer
 
 PONG is the reply to PING.
 

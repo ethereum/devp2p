@@ -3,12 +3,12 @@
 This repository contains specifications for the peer-to-peer networking protocols used by
 Ethereum.
 
-* [Node Discovery Protocol v4]
-* [Node Discovery Protocol v5] **(Draft Specification)**
-* [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
-  * [Ethereum Wire Protocol] (version 63)
-  * [Light Ethereum Subprotocol] (version 2)
-  * [Parity Light Protocol] (version 1)
+- [Node Discovery Protocol v4]
+- [Node Discovery Protocol v5] **(Draft Specification)**
+- [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
+  - [Ethereum Wire Protocol] (version 63)
+  - [Light Ethereum Subprotocol] (version 2)
+  - [Parity Light Protocol] (version 1)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
@@ -52,45 +52,30 @@ libp2p as they mature.
 
 devp2p is part of most Ethereum clients. Implementations include:
 
-- [go-ethereum] (Go)
-- [Parity Ethereum] (Rust)
-- [Trinity] (Python)
-- [Aleth] (C++)
-- [EthereumJ] (Java)
-- [EthereumJS] (JavaScript)
-- [ruby-devp2p] (Ruby)
-- [Exthereum] (Elixir)
-- [Status eth_p2p] (Nim)
-- [Nethermind] (.NET)
-- [Ciri] (Ruby)
-- [Breadwallet] \(C)
-- [Pantheon] (Java)
-- [Cava Discovery library] (Kotlin)
-- [Cava RLPx library] (Java)
+- C#: Nethermind <https://github.com/tkstanczak/nethermind>
+- C++: Aleth <https://github.com/ethereum/aleth>
+- C: Breadwallet <https://github.com/breadwallet/breadwallet-core>
+- Elixir: Exthereum <https://github.com/exthereum/ex_wire>
+- Go: go-ethereum/geth <https://github.com/ethereum/go-ethereum>
+- Java: Cava RLPx library <https://github.com/consensys/cava/tree/master/rlpx>
+- Java: EthereumJ <https://github.com/ethereum/ethereumj>
+- Java: Pantheon <https://github.com/PegaSysEng/pantheon>
+- JavaScript: EthereumJS <https://github.com/ethereumjs/ethereumjs-devp2p>
+- Kotlin: Cava Discovery library <https://github.com/consensys/cava/tree/master/devp2p>
+- Nim: Status eth_p2p <https://github.com/status-im/nim-eth-p2p>
+- Python: Trinity <https://github.com/ethereum/trinity>
+- Ruby: Ciri <https://github.com/ciri-ethereum/ciri>
+- Ruby: ruby-devp2p <https://github.com/cryptape/ruby-devp2p>
+- Rust: Parity Ethereum <https://github.com/paritytech/parity-ethereum>
 
-WireShark dissectors are available here: https://github.com/ConsenSys/ethereum-dissectors
+WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-dissectors>
 
+[Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
+[Ethereum Wire Protocol]: ./caps/eth.md
+[Gitter channel]: https://gitter.im/ethereum/devp2p
+[Light Ethereum Subprotocol]: ./caps/les.md
 [Node Discovery Protocol v4]: ./discv4.md
 [Node Discovery Protocol v5]: ./discv5/discv5.md
-[RLPx transport protocol]: ./rlpx.md
-[Ethereum Wire Protocol]: ./caps/eth.md
-[Light Ethereum Subprotocol]: ./caps/les.md
 [Parity Light Protocol]: ./caps/pip.md
-[Gitter channel]: https://gitter.im/ethereum/devp2p
-[Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
+[RLPx transport protocol]: ./rlpx.md
 [libp2p]: https://libp2p.io
-[go-ethereum]: https://github.com/ethereum/go-ethereum/
-[Parity Ethereum]: https://github.com/paritytech/parity-ethereum
-[Trinity]: https://github.com/ethereum/trinity
-[Aleth]: https://github.com/ethereum/aleth
-[EthereumJ]: https://github.com/ethereum/ethereumj
-[EthereumJS]: https://github.com/ethereumjs/ethereumjs-devp2p
-[ruby-devp2p]: https://github.com/cryptape/ruby-devp2p
-[Exthereum]: https://github.com/exthereum/ex_wire
-[Status eth_p2p]: https://github.com/status-im/nim-eth-p2p
-[Nethermind]: https://github.com/tkstanczak/nethermind
-[Ciri]: https://github.com/ciri-ethereum/ciri
-[Breadwallet]: https://github.com/breadwallet/breadwallet-core
-[Pantheon]: https://github.com/PegaSysEng/pantheon
-[Cava Discovery library]: https://github.com/consensys/cava/tree/master/devp2p
-[Cava RLPx library]: https://github.com/consensys/cava/tree/master/rlpx

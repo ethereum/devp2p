@@ -1,7 +1,6 @@
-Node Discovery Protocol v5
-==========================
+# Node Discovery Protocol v5
 
-**Draft of April 2019**
+**Draft of April 2019.**
 
 Welcome to the Node Discovery Protocol v5 specification!
 
@@ -27,8 +26,7 @@ functions:
 - Authoritative resolution of node records: if a node's ID is known, the most recent
   version of its record can be retrieved.
 
-Specification Overview
-----------------------
+## Specification Overview
 
 The specification has three parts:
 
@@ -36,8 +34,7 @@ The specification has three parts:
 - [discv5-theory.md] describes the algorithms and data structures.
 - [discv5-rationale.md] **(outdated)** contains a design rationale and communication examples.
 
-Comparison With Other Discovery Mechanisms
-------------------------------------------
+## Comparison With Other Discovery Mechanisms
 
 Systems such as MDNS/Bonjour allow finding hosts in a local-area network. The Node
 Discovery Protocol is designed to work on the Internet and is most useful for applications
@@ -58,8 +55,7 @@ through some other mechanism. Several approaches including scalable listing of i
 entry points in DNS or discovery of participants in the local network can be used for
 reasonable secure entry into the network.
 
-Comparison With Node Discovery v4
----------------------------------
+## Comparison With Node Discovery v4
 
 - Topic advertisement was added.
 - Arbitrary node metadata can be stored/relayed.
