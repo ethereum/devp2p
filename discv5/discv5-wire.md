@@ -218,7 +218,6 @@ is a random number.
     message-data = [request-id, enr-seq]
     message-type = 0x01
     enr-seq      = ENR sequence number of sender
-   
 
 PING checks whether the recipient is alive and informs it about the sender's ENR sequence
 number.
