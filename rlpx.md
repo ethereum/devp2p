@@ -11,24 +11,22 @@ the end of this document.
 
 ## Notation
 
-```text
-X || Y
-    denotes concatenation of X and Y.
-X ^ Y
-    is byte-wise XOR of X and Y.
-X[:N]
-    denotes an N-byte prefix of X.
-[X, Y, Z, ...]
-    denotes recursive encoding of [X, Y, Z, ...] as an RLP list.
-keccak256(MESSAGE)
-    is the Keccak256 hash function as used by Ethereum.
-ecies.encrypt(PUBKEY, MESSAGE, AUTHDATA)
-    is the asymmetric authenticated encryption function as used by RLPx.
-    AUTHDATA is authenticated data which is not part of the resulting ciphertext,
-    but written to HMAC-256 before generating the message tag.
-ecdh.agree(PRIVKEY, PUBKEY)
-    is elliptic curve Diffie-Hellman key agreement between PRIVKEY and PUBKEY.
-```
+`X || Y`\
+    denotes concatenation of X and Y.\
+`X ^ Y`\
+    is byte-wise XOR of X and Y.\
+`X[:N]`\
+    denotes an N-byte prefix of X.\
+`[X, Y, Z, ...]`\
+    denotes recursive encoding as an RLP list.\
+`keccak256(MESSAGE)`\
+    is the Keccak256 hash function as used by Ethereum.\
+`ecies.encrypt(PUBKEY, MESSAGE, AUTHDATA)`\
+    is the asymmetric authenticated encryption function as used by RLPx.\
+    AUTHDATA is authenticated data which is not part of the resulting ciphertext,\
+    but written to HMAC-256 before generating the message tag.\
+`ecdh.agree(PRIVKEY, PUBKEY)`\
+    is elliptic curve Diffie-Hellman key agreement between PRIVKEY and PUBKEY.
 
 ## ECIES Encryption
 
@@ -90,36 +88,30 @@ Either side may disconnect if authentication of the first framed packet fails.
 
 Handshake messages:
 
-```text
-auth = auth-size || enc-auth-body
-auth-size = size of enc-auth-body, encoded as a big-endian 16-bit integer
-auth-vsn = 4
-auth-body = [sig, initiator-pubk, initiator-nonce, auth-vsn, ...]
-enc-auth-body = ecies.encrypt(recipient-pubk, auth-body || auth-padding, auth-size)
-auth-padding = arbitrary data
-```
+    auth = auth-size || enc-auth-body
+    auth-size = size of enc-auth-body, encoded as a big-endian 16-bit integer
+    auth-vsn = 4
+    auth-body = [sig, initiator-pubk, initiator-nonce, auth-vsn, ...]
+    enc-auth-body = ecies.encrypt(recipient-pubk, auth-body || auth-padding, auth-size)
+    auth-padding = arbitrary data
 
-```
-ack = ack-size || enc-ack-body
-ack-size = size of enc-ack-body, encoded as a big-endian 16-bit integer
-ack-vsn = 4
-ack-body = [recipient-ephemeral-pubk, recipient-nonce, ack-vsn, ...]
-enc-ack-body = ecies.encrypt(initiator-pubk, ack-body || ack-padding, ack-size)
-ack-padding = arbitrary data
-```
+    ack = ack-size || enc-ack-body
+    ack-size = size of enc-ack-body, encoded as a big-endian 16-bit integer
+    ack-vsn = 4
+    ack-body = [recipient-ephemeral-pubk, recipient-nonce, ack-vsn, ...]
+    enc-ack-body = ecies.encrypt(initiator-pubk, ack-body || ack-padding, ack-size)
+    ack-padding = arbitrary data
 
 Implementations must ignore any mismatches in `auth-vsn` and `ack-vsn`. Implementations
 must also ignore any additional list elements in `auth-body` and `ack-body`.
 
 Secrets generated following the exchange of handshake messages:
 
-```text
-static-shared-secret = ecdh.agree(privkey, remote-pubk)
-ephemeral-key = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
-shared-secret = keccak256(ephemeral-key || keccak256(nonce || initiator-nonce))
-aes-secret = keccak256(ephemeral-key || shared-secret)
-mac-secret = keccak256(ephemeral-key || aes-secret)
-```
+    static-shared-secret = ecdh.agree(privkey, remote-pubk)
+    ephemeral-key = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
+    shared-secret = keccak256(ephemeral-key || keccak256(nonce || initiator-nonce))
+    aes-secret = keccak256(ephemeral-key || shared-secret)
+    mac-secret = keccak256(ephemeral-key || aes-secret)
 
 ## Framing
 
@@ -136,17 +128,15 @@ The frame header provides information about the size of the message and the mess
 source capability. Padding is used to prevent buffer starvation, such that frame
 components are byte-aligned to block size of cipher.
 
-```text
-frame = header-ciphertext || header-mac || frame-ciphertext || frame-mac
-header-ciphertext = aes(aes-secret, header)
-header = frame-size || header-data || header-padding
-header-data = [capability-id, context-id]
-capability-id = integer, always zero
-context-id = integer, always zero
-header-padding = zero-fill header to 16-byte boundary
-frame-ciphertext = aes(aes-secret, frame-data || frame-padding)
-frame-padding = zero-fill frame-data to 16-byte boundary
-```
+    frame = header-ciphertext || header-mac || frame-ciphertext || frame-mac
+    header-ciphertext = aes(aes-secret, header)
+    header = frame-size || header-data || header-padding
+    header-data = [capability-id, context-id]
+    capability-id = integer, always zero
+    context-id = integer, always zero
+    header-padding = zero-fill header to 16-byte boundary
+    frame-ciphertext = aes(aes-secret, frame-data || frame-padding)
+    frame-padding = zero-fill frame-data to 16-byte boundary
 
 See the [Capability Messaging] section for definitions of `frame-data` and `frame-size.`
 
@@ -159,17 +149,13 @@ handshake, the MAC states are initialized as follows:
 
 Initiator:
 
-```
-egress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
-ingress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
-```
+    egress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
+    ingress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
 
 Recipient:
 
-```
-egress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
-ingress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
-```
+    egress-mac = keccak256.init((mac-secret ^ initiator-nonce) || ack)
+    ingress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
 
 When a frame is sent, the corresponding MAC values are computed by updating the
 `egress-mac` state with the data to be sent. The update is performed by XORing the header
@@ -177,20 +163,16 @@ with the encrypted output of its corresponding MAC. This is done to ensure unifo
 operations are performed for both plaintext MAC and ciphertext. All MACs are sent
 cleartext.
 
-```text
-header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ header-ciphertext
-egress-mac = keccak256.update(egress-mac, header-mac-seed)
-header-mac = keccak256.digest(egress-mac)[:16]
-```
+    header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ header-ciphertext
+    egress-mac = keccak256.update(egress-mac, header-mac-seed)
+    header-mac = keccak256.digest(egress-mac)[:16]
 
 Computing `frame-mac`:
 
-```text
-egress-mac = keccak256.update(egress-mac, frame-ciphertext)
-frame-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ keccak256.digest(egress-mac)[:16]
-egress-mac = keccak256.update(egress-mac, frame-mac-seed)
-frame-mac = keccak256.digest(egress-mac)[:16]
-```
+    egress-mac = keccak256.update(egress-mac, frame-ciphertext)
+    frame-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ keccak256.digest(egress-mac)[:16]
+    egress-mac = keccak256.update(egress-mac, frame-mac-seed)
+    frame-mac = keccak256.digest(egress-mac)[:16]
 
 Verifying the MAC on ingress frames is done by updating the `ingress-mac` state in the
 same way as `egress-mac` and comparing to the values of `header-mac` and `frame-mac` in
@@ -210,10 +192,8 @@ to the 'p2p' capability which is required to be available on all connections.
 
 The initial [Hello] message is encoded as follows:
 
-```text
-frame-data = msg-id || msg-data
-frame-size = length of frame-data, encoded as a 24bit big-endian integer
-```
+    frame-data = msg-id || msg-data
+    frame-size = length of frame-data, encoded as a 24bit big-endian integer
 
 where `msg-id` is an RLP-encoded integer identifying the message and `msg-data` is an RLP
 list containing the message data.
@@ -222,12 +202,10 @@ All messages following Hello are compressed using the Snappy algorithm. Note tha
 `frame-size` of compressed messages refers to the uncompressed size of `msg-data`. The
 compressed encoding of messages is:
 
-```text
-frame-data = msg-id || snappyCompress(msg-data)
-frame-size = length of (msg-id || msg-data) encoded as a 24bit big-endian integer
-```
+    frame-data = msg-id || snappyCompress(msg-data)
+    frame-size = length of (msg-id || msg-data) encoded as a 24bit big-endian integer
 
-### Message ID-based Multiplexing
+## Message ID-based Multiplexing
 
 While the framing layer supports a `capability-id`, the current version of RLPx doesn't
 use that field for multiplexing between different capabilities. Instead, multiplexing
@@ -263,14 +241,14 @@ First packet sent over the connection, and sent once by both sides. No other mes
 be sent until a Hello is received. Implementations must ignore any additional list elements
 in Hello because they may be used by a future version.
 
-* `protocolVersion` the version of the "p2p" capability, **5**.
-* `clientId` Specifies the client software identity, as a human-readable string (e.g.
+- `protocolVersion` the version of the "p2p" capability, **5**.
+- `clientId` Specifies the client software identity, as a human-readable string (e.g.
   "Ethereum(++)/1.0.0").
-* `capabilities` is the list of supported capabilities and their versions:
-   `[[cap1, capVersion1], [cap2, capVersion2], ...]`.
-* `listenPort` specifies the port that the client is listening on (on the interface that
+- `capabilities` is the list of supported capabilities and their versions:
+  `[[cap1, capVersion1], [cap2, capVersion2], ...]`.
+- `listenPort` specifies the port that the client is listening on (on the interface that
   the present connection traverses). If 0 it indicates the client is not listening.
-* `nodeId` is the secp256k1 public key corresponding to the node's private key.
+- `nodeId` is the secp256k1 public key corresponding to the node's private key.
 
 ### Disconnect (0x01)
 
@@ -280,22 +258,23 @@ Inform the peer that a disconnection is imminent; if received, a peer should dis
 immediately. When sending, well-behaved hosts give their peers a fighting chance (read:
 wait 2 seconds) to disconnect to before disconnecting themselves.
 
-* `reason` is an optional integer specifying one of a number of reasons for disconnect:
-  * `0x00` Disconnect requested;
-  * `0x01` TCP sub-system error;
-  * `0x02` Breach of protocol, e.g. a malformed message, bad RLP, incorrect magic number
-    &c.;
-  * `0x03` Useless peer;
-  * `0x04` Too many peers;
-  * `0x05` Already connected;
-  * `0x06` Incompatible P2P protocol version;
-  * `0x07` Null node identity received - this is automatically invalid;
-  * `0x08` Client quitting;
-  * `0x09` Unexpected identity (i.e. a different identity to a previous connection/what a
-    trusted peer told us).
-  * `0x0a` Identity is the same as this node (i.e. connected to itself);
-  * `0x0b` Timeout on receiving a message (i.e. nothing received since sending last ping);
-  * `0x10` Some other reason specific to a subprotocol.
+`reason` is an optional integer specifying one of a number of reasons for disconnect:
+
+| Reason | Meaning                                                      |
+|--------|:-------------------------------------------------------------|
+| `0x00` | Disconnect requested                                         |
+| `0x01` | TCP sub-system error                                         |
+| `0x02` | Breach of protocol, e.g. a malformed message, bad RLP, ...   |
+| `0x03` | Useless peer                                                 |
+| `0x04` | Too many peers                                               |
+| `0x05` | Already connected                                            |
+| `0x06` | Incompatible P2P protocol version                            |
+| `0x07` | Null node identity received - this is automatically invalid  |
+| `0x08` | Client quitting                                              |
+| `0x09` | Unexpected identity in handshake                             |
+| `0x0a` | Identity is the same as this node (i.e. connected to itself) |
+| `0x0b` | Ping timeout                                                 |
+| `0x10` | Some other reason specific to a subprotocol                  |
 
 ### Ping (0x02)
 
@@ -308,7 +287,6 @@ Requests an immediate reply of [Pong] from the peer.
 `[]`
 
 Reply to the peer's [Ping] packet.
-
 
 # Change Log
 
@@ -337,27 +315,28 @@ ignore additional list elements in handshake messages and [Hello].
 # References
 
 - Elaine Barker, Don Johnson, and Miles Smid. NIST Special Publication 800-56A Section 5.8.1,
-  Concatenation Key Derivation Function. 2017.<br>
-  URL https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-56ar.pdf
+  Concatenation Key Derivation Function. 2017.\
+  URL <https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-56ar.pdf>
 
-- Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001.<br>
-  URL http://www.shoup.net/papers/iso-2_1.pdf
+- Victor Shoup. A proposal for an ISO standard for public key encryption, Version 2.1. 2001.\
+  URL <http://www.shoup.net/papers/iso-2_1.pdf>
 
-- Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014.<br>
-  URL http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3
+- Mike Belshe and Roberto Peon. SPDY Protocol - Draft 3. 2014.\
+  URL <http://www.chromium.org/spdy/spdy-protocol/spdy-protocol-draft3>
 
-- Snappy compressed format description. 2011.<br>
-  URL https://github.com/google/snappy/blob/master/format_description.txt
+- Snappy compressed format description. 2011.\
+  URL <https://github.com/google/snappy/blob/master/format_description.txt>
 
 Copyright &copy; 2014 Alex Leverington.
-<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">This work is licensed under a
-<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+This work is licensed under a
+Creative Commons Attribution-NonCommercial-ShareAlike
 4.0 International License</a>.
 
 [Hello]: #hello-0x00
 [Disconnect]: #disconnect-0x01
 [Ping]: #ping-0x02
-[Pong]: #pong-0x04
+[Pong]: #pong-0x03
 [Capability Messaging]: #capability-messaging
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
 [EIP-706]: https://eips.ethereum.org/EIPS/eip-706
