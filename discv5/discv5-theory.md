@@ -220,63 +220,6 @@ disrupting operation, removing incentives to waste resources on trying to do so.
 protocol-level recommendation-based trust system can be useful, the protocol may even have
 its own network topology.
 
-## Security considerations
-
-### Spamming with useless registrations
-
-Our model is based on the following assumptions:
-
-- Anyone can place their own advertisements under any topics and the rate of placing
-  registrations is not limited globally. The number of active registrations at any time is
-  roughly proportional to the resources (network bandwidth, mostly) spent on advertising.
-- Honest actors whose purpose is to connect to other honest actors will spend an adequate
-  amount of efforts on registering and searching for registrations, depending on the rate
-  of newly established connections they are targeting. If the given topic is used only by
-  honest actors, a few registrations per minute will be satisfactory, regardless of the
-  size of the subnetwork.
-- Dishonest actors (attackers) may want to place an excessive amount of registrations just
-  to disrupt the discovery service. This will reduce the effectiveness of honest
-  registration efforts by increasing the topic radius and/or the waiting times. If the
-  attacker(s) can place a comparable amount or more registrations than all honest actors
-  combined then the rate of new (useful) connections established throughout the network
-  will reduce proportionally to the honest / (dishonest + honest) registration rates.
-
-This adverse effect can be countered by honest actors increasing their registration and
-search efforts. Fortunately, the rate of established connections between them will
-increase proportionally both with increased honest registration and search efforts. If
-both are increased in response to an attack, the required factor of increased efforts from
-honest actors is proportional to the square root of the attacker's efforts.
-
-### Detecting a useless registration attack
-
-In the case of a symmetrical protocol (where nodes are both searching and advertising
-under the same topic) it is easy to detect when most of the queried registrations turn out
-to be useless and increase both registration and query frequency. It is a bit harder but
-still possible with asymmetrical (client-server) protocols, where only clients can easily
-detect useless registrations, while advertisers (servers) do not have a direct way of
-detecting when they should increase their advertising efforts. One possible solution is
-for servers to also act as clients just to test the server capabilities of other
-advertisers. It is also possible to implement a feedback system between trusted clients
-and servers.
-
-### Amplifying network traffic by returning fake registrations
-
-An attacker might wish to direct discovery traffic to a chosen address by returning
-records pointing to that address.
-
-**TBD: this is not solved.**
-
-### Not registering/returning valid registrations
-
-Although the limited registration frequency ensures that the resource requirements of
-acting as a proper advertisement medium are sufficiently low, such selfish behavior is
-possible, especially if some client implementations choose the easy way and not implement
-it at all. This is not a serious problem as long as the majority of nodes are acting
-properly, which will hopefully be the case. Advertisers can easily detect if their
-registrations are not returned so it is probably possible to implement a mechanism to weed
-out selfish nodes if necessary, but the design of such a mechanism is outside the scope of
-this document.
-
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
