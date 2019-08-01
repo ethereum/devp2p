@@ -1,5 +1,4 @@
-Node Discovery Protocol v5 - Rationale
-======================================
+# Node Discovery Protocol v5 - Rationale
 
 **Draft of January 2019**
 
@@ -35,7 +34,7 @@ current network behavior.)
 
 The existing mutual endpoint verification process is difficult to reliably implement.
 
-#### 1.1.2  Improve message verification
+#### 1.1.2 Improve message verification
 
 Make it expensive to obtain the logical node ID from discovery communications. Right now
 an unknown UDP sender can provoke responses knowing IP alone, and obtain information about
@@ -58,7 +57,7 @@ Discovery v4 'trusts' other nodes to return neighbours according to an agreed di
 metric. Mismatches can make it hard for nodes to join the network, or lead to network
 fragmentation.
 
-#### 1.1.6 Implement secondary topic-based node index
+#### 1.1.6 Secondary topic-based node index
 
 The protocol must support discovery of nodes via an arbitrary topic identifier. Finding
 nodes belonging to a topic should be as fast or faster than finding a node with a certain
@@ -174,7 +173,6 @@ In this scenario, node `A` joins the network using node `B` as a 'bootstrap node
     The initial ENR may be a predefined bootnode, known peer (from previous connections),
     manually added peer, or manually specified bootnode. ‘Initial ENR’ means the id of the
     node that first leads to node `A` joining the network.
-
     The initial node must be also available from the command line (eg: --bootnodes) or via
     RPC. If there are already α nodes available, then all of those may be considered
     initial nodes and run concurrently. ENRs are signed by the issuer. So, to support
@@ -192,7 +190,7 @@ In this scenario, node `A` joins the network using node `B` as a 'bootstrap node
 
     **Addresses 1.1.5.**
 
-4. **Node `B` defers the response because node `A` is unknown caller**
+4. **Node `B` starts handshake because node `A` is unknown caller**
 
     At this point there is no message that can be sent back to the caller, such as WhoAreYou
     as part of a verification process. All messages are signed. This would reveal to the
@@ -262,7 +260,7 @@ In this scenario, node `A` joins the network using node `B` as a 'bootstrap node
 ### Protocol Requirements
 
 - `FindNode` should accept a specific bucket as the parameter to avoid revealing the lookup
-   target.
+  target.
 - `FindNode` should accept the recipient's ID as a parameter to address requirement 1.1.2.
 - `WhoAreYou` messages should not be much larger, if at all, than the `FindNode` message,
   to prevent amplification attempts.
@@ -397,27 +395,27 @@ node (`B`) which supports [EIP-868].
 
 1. **`A` sends v4 ping to `B`**
 
-   This is needed to start the v4 endpoint proof procedure. `A`s ping should
-   include its current ENR sequence number.
+    This is needed to start the v4 endpoint proof procedure. `A`s ping should
+    include its current ENR sequence number.
 
 2. **`B` sends v4 pong and pings back**
 
-   The pong indicates support for EIP-868 by listing `B`s ENR sequence number.
+    The pong indicates support for EIP-868 by listing `B`s ENR sequence number.
 
 3. **`A` sends v4 pong to `B`**
 
-   This completes the v4 endpoint proof.
+    This completes the v4 endpoint proof.
 
 4. **`A` requests `B`s ENR using the EIP-868 enrRequest message**
 
 5. **`B` responds with ENR**
 
-   The ENR sent by `B` is authenticated against `B`s node key. Support for discovery v5 is
-   announced through a key/value pair in the record.
+    The ENR sent by `B` is authenticated against `B`s node key. Support for discovery v5 is
+    announced through a key/value pair in the record.
 
 6. **`A` calls v5 `FindNode` on `B`**
 
-   This is possible because `A` now knows that `B` understands v5.
+    This is possible because `A` now knows that `B` understands v5.
 
 ### Protocol Requirements
 
@@ -468,7 +466,7 @@ modifications to the obfuscation method.
 - A runtime configuration option indicating whether unexposed traffic is supported may be
   added.
 
-**Addresses 1.1.8**
+**Addresses 1.1.8.**
 
 ## Packet Replay
 
@@ -484,7 +482,7 @@ successfully replayed back to a `FindNode` requester, at best the requester's ro
 table would be polluted, at worst the intended recipient of the `FindNode` request could
 lose reputation. A similar scenario applies for `WhoAreYou` / `IAm`.
 
-**TBD add scenario where replayed FindNode is rejected**
+**TBD: add scenario where replayed FindNode is rejected.**
 
 #### Protocol Requirements
 
@@ -493,7 +491,7 @@ lose reputation. A similar scenario applies for `WhoAreYou` / `IAm`.
 - The initiator of a conversation supplies the conversation nonce as part of the message,
   which is used in the reply or in any potential future more complex conversations.
 
-**Mitigates 1.2.1 and 1.2.2**
+**Mitigates 1.2.1 and 1.2.2.**
 
 ### Topic Advertisement Request
 
@@ -561,7 +559,6 @@ network simulations.
 - Check that topic advertisements don't easily allow scraping of node IDs with their IP
   endpoints (1.1.2) If they do, work out the best balance for a limit on `TopicQuery`
   response node list lengths.
-
 
 [wire protocol specification]: ./discv5-wire.md
 [EIP-868]: https://eips.ethereum.org/EIPS/eip-868

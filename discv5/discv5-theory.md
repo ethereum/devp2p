@@ -1,13 +1,11 @@
-Node Discovery Protocol v5 - Theory
-===================================
+# Node Discovery Protocol v5 - Theory
 
-**Draft of April 2019**
+**Draft of April 2019.**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
 
-Nodes, Records and Distances
-----------------------------
+## Nodes, Records and Distances
 
 A participant in the Node Discovery Protocol is represented by a 'node record' as defined
 in [EIP-778]. The node record keeps arbitrary information about the node. For the purposes
@@ -28,7 +26,7 @@ used in place of the actual distance.
 
     logdistance(n₁, n₂) = log2(distance(n₁, n₂))
 
-### Maintaining the local record
+## Maintaining The Local Record
 
 Participants should update their record, increase the sequence number and sign a new
 version of the record whenever their information changes. This is especially important for
@@ -43,8 +41,7 @@ IP address and port.
 If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
 translation), implementation should omit IP address and UDP port from the record.
 
-Node Table
-----------
+## Node Table
 
 Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored
 in a routing table consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a
@@ -90,8 +87,7 @@ Nodes are expected to keep track of their close neighbors and regularly refresh 
 information. To do so, a lookup targeting the least recently refreshed bucket should be
 performed at regular intervals.
 
-Topic Advertisement
--------------------
+## Topic Advertisement
 
 A node's provided services are identified by arbitrary strings called *topics*. Depending
 on the needs of the application, a node can advertise multiple topics or no topics at all.
@@ -131,16 +127,14 @@ It is adjusted such that ads will stay in the topic queue for approximately 10 m
 
 When an ad is added to the queue, the new wait period of the queue is computed as:
 
-```text
-target-ad-lifetime = 600 # how long ads stay queued (10 min)
-target-registration-interval = target-ad-lifetime / queue-length
-min-wait-period = 60 # (1 min)
-control-loop-constant = 600
+    target-ad-lifetime = 600 # how long ads stay queued (10 min)
+    target-registration-interval = target-ad-lifetime / queue-length
+    min-wait-period = 60 # (1 min)
+    control-loop-constant = 600
 
-period = time-of-registration - time-of-previous-registration
-new-wait-period = wait-period * exp((target-registration-interval - period) / control-loop-constant)
-wait-period = max(new-wait-period, min-wait-period)
-```
+    period = time-of-registration - time-of-previous-registration
+    new-wait-period = wait-period * exp((target-registration-interval - period) / control-loop-constant)
+    wait-period = max(new-wait-period, min-wait-period)
 
 ### Advertisement Protocol
 
@@ -205,7 +199,7 @@ average distance between a randomly selected address and the address of the clos
 node found. If the approximated number of nodes in our topic radius is under 100, we
 increase the radius.
 
-### Topic Search
+## Topic Search
 
 Finding nodes that provide a certain topic is a continuous process which reads the content
 of topic queues inside the approximated topic radius. Nodes within the radius are
@@ -226,9 +220,9 @@ disrupting operation, removing incentives to waste resources on trying to do so.
 protocol-level recommendation-based trust system can be useful, the protocol may even have
 its own network topology.
 
-### Security considerations
+## Security considerations
 
-#### Spamming with useless registrations
+### Spamming with useless registrations
 
 Our model is based on the following assumptions:
 
@@ -253,7 +247,7 @@ increase proportionally both with increased honest registration and search effor
 both are increased in response to an attack, the required factor of increased efforts from
 honest actors is proportional to the square root of the attacker's efforts.
 
-#### Detecting a useless registration attack
+### Detecting a useless registration attack
 
 In the case of a symmetrical protocol (where nodes are both searching and advertising
 under the same topic) it is easy to detect when most of the queried registrations turn out
@@ -265,14 +259,14 @@ for servers to also act as clients just to test the server capabilities of other
 advertisers. It is also possible to implement a feedback system between trusted clients
 and servers.
 
-#### Amplifying network traffic by returning fake registrations
+### Amplifying network traffic by returning fake registrations
 
 An attacker might wish to direct discovery traffic to a chosen address by returning
 records pointing to that address.
 
-**TBD: this is not solved**
+**TBD: this is not solved.**
 
-#### Not registering/returning valid registrations
+### Not registering/returning valid registrations
 
 Although the limited registration frequency ensures that the resource requirements of
 acting as a proper advertisement medium are sufficiently low, such selfish behavior is
@@ -284,12 +278,8 @@ out selfish nodes if necessary, but the design of such a mechanism is outside th
 this document.
 
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
-[PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
-[NODES]: ./discv5-wire.md#nodes-response-0x04
-[REQTICKET]: ./discv5-wire#reqticket-request-0x05
-[TICKET]: ./discv5-wire#ticket-response-0x06
-[REGTOPIC]: ./discv5-wire#regtopic-request-0x07
-[REGCONFIRMATION]: ./discv5-wire#regconfirmation-response-0x08
+[REQTICKET]: ./discv5-wire.md#reqticket-request-0x05
+[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x08
 [TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
