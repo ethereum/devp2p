@@ -44,7 +44,7 @@ negotiation.
 
 #### 1.1.5 Guard against Kademlia implementation flaws
 
-Discovery v4 trusts other nodes to return neighbours according to an agreed distance
+Discovery v4 trusts other nodes to return neighbors according to an agreed distance
 metric. Mismatches in implementation can make it hard for nodes to join the network, or
 lead to network fragmentation.
 
@@ -72,46 +72,51 @@ analysis systems, e.g. using inter-packet timing is a secondary concern.
 Individual potential vulnerabilities are identified below. These each represent their own
 risk mitigation goal.
 
-#### 1.2.1 Replay neighbours
-
-A FINDNODE response (neighbors), if successfully replayed, would pollute the routing table
-with stale information.
-
-#### 1.2.2 Replay of the handshake
+#### 1.2.1 Replay of the handshake
 
 The handshake, if successfully replayed from an older session, would allow a malicious
 node to occupy a former IP location, or pollute the routing table with old information.
 
-#### 1.2.3 Kademlia redirection
+#### 1.2.2 Replay NODES
+
+A NODES response, if successfully replayed, would pollute the routing table with stale
+information.
+
+#### 1.2.3 Replay PONG
+
+A PONG, if successfully replayed, could convince a node that a node is live and
+participating when it isn't.
+
+#### 1.2.4 Kademlia redirection
 
 A FindNode response contains false endpoint information intended at directing traffic at a
 victim / polluting the routing table. A topic query results in fake endpoint information,
 directing traffic at a victim.
 
-#### 1.2.4 Kademlia redirection + self-propagation
+#### 1.2.5 Kademlia redirection + self-propagation
 
 As 1.2.3 but the responses attempt to replicate the malicious node throughout the routing
 table, to amplify the source of pollution and traffic.
 
-#### 1.2.5 Unsolicited replies
+#### 1.2.6 Unsolicited replies
 
 A malicious node is attempting to spam a node with fake responses to typical requests.
 These messages may be replayed from previous communications, or may be new messages with
 spoofed source endpoints. The aim is to disrupt weak implementations or have their
 information be received as authentic, to pollute the recipient's routing table.
 
-#### 1.2.6 Amplification
+#### 1.2.7 Amplification
 
 Malicious requests of small message size are sent from spoofed source IPs to direct larger
 response messages at the victim.
 
-#### 1.2.7 Kademlia direct validation
+#### 1.2.8 Kademlia direct validation
 
 Direct validation of a newly discovered node can be an attack vector. A malicious node may
 supply false node information with the IP of a victim. Validation traffic is then directed
 at the victim.
 
-#### 1.2.8 Kademlia ID count per address validations
+#### 1.2.9 Kademlia ID count per address validations
 
 There are various attacks facilitated by being able to associate multiple fake (or even
 real) malicious node ids with a single IP endpoint. One mitigation method that is
@@ -120,7 +125,7 @@ associated with an IP address. However, this is an attack vector. A malicious ac
 supply many logical node ids for a single IP address and thus prevent the correct node
 from being able to join the network.
 
-#### 1.2.9 Sybil/Eclipse attacks
+#### 1.2.10 Sybil/Eclipse attacks
 
 These attacks rely on being able to create many real nodes, or spoof many logical node IDs
 for a small number of physical endpoints, to form a large, isolated area of the network
