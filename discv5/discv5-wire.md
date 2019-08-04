@@ -175,7 +175,7 @@ header completing the handshake. The plain text of the authentication response i
     version          = 5
     id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
     static-node-key  = the private key used for node record identity
-    node-record      = current record of sender
+    node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
 
 `auth-response-pt` is encrypted with a separate key and uses an all-zero nonce. This is
 safe because only one message is ever encrypted with `auth-response-key`.
