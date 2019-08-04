@@ -408,12 +408,11 @@ this document.
   *S/Kademlia: A Practicable Approach Towards Secure Key-Based Routing.* 2007.\
   <https://telematics.tm.kit.edu/publications/Files/267/SKademlia_2007.pdf>
 
-- Xin Sun, Ruben Torres and Sanjay Rao.
-  *Preventing DDoS Attacks with P2P Systems through Robust Membership Management.* 2007.\
-  <https://engineering.purdue.edu/~isl/TR-EE-07-13.pdf>
+- Xin Sun, Ruben Torres and Sanjay Rao. *Feasiblity of DDoS Attacks with P2P Systems and
+  Prevention through Robust Membership Management.* 2007.\
+  <https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=1357&context=ecetr>
 
-- Erik Hjelmvik, Wolfgang John.
-  *Breaking and Improving Protocol Obfuscation.* 2010.\
+- Erik Hjelmvik, Wolfgang John. *Breaking and Improving Protocol Obfuscation.* 2010.\
   <https://internetstiftelsen.se/docs/hjelmvik_breaking.pdf>
 
 - Adam Langley, Wan-Teh Chang. *QUIC Crypto*. 2016.\
