@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Wire Protocol
 
-**Draft of April 2019.**
+**Draft of August 2019.**
 
 This document specifies the wire protocol of Node Discovery v5. Note that this
 specification is a work in progress and may change incompatibly without prior notice.
@@ -143,14 +143,14 @@ new keys.
 
 ### Packet Encoding
 
-All packets start with a fixed-size `tag`. For a packet sent by node A to node B:
+All regular packets except WHOAREYOU start with a fixed-size `tag`. For a packet sent by
+node A to node B:
 
     tag              = xor(sha256(dest-node-id), src-node-id)
     dest-node-id     = 32-byte node ID of B
     src-node-id      = 32-byte node ID of A
 
-The recipient can recover the sender's ID by performing the same calculation in
-reverse.
+The recipient can recover the sender's ID by performing the same calculation in reverse.
 
     src-node-id      = xor(sha256(dest-node-id), tag)
 
@@ -162,25 +162,29 @@ The encoding of the 'random packet', sent if no session keys are available, is:
 
 The WHOAREYOU packet, used during the handshake, is encoded as follows:
 
-    whoareyou-packet = tag || magic || [token, id-nonce, enr-seq]
+    whoareyou-packet = magic || [token, id-nonce, enr-seq]
     magic            = sha256(dest-node-id || "WHOAREYOU")
     token            = auth-tag of request
     id-nonce         = 32 random bytes
     enr-seq          = highest ENR sequence number of node A known on node B's side
 
 The first encrypted message sent in response to WHOAREYOU contains an authentication
-header. Note that the `auth-response` is encrypted with a separate key and uses an
-all-zero nonce. This is safe because only one message is ever encrypted with
-`auth-response-key`.
+header completing the handshake. The plain text of the authentication response is.
+
+    auth-response-pt = [version, id-nonce-sig, node-record]
+    version          = 5
+    id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
+    static-node-key  = the private key used for node record identity
+    node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
+
+`auth-response-pt` is encrypted with a separate key and uses an all-zero nonce. This is
+safe because only one message is ever encrypted with `auth-response-key`.
 
     message-packet   = tag || auth-header || message
-    auth-header      = [auth-tag, auth-scheme-name, ephemeral-pubkey, auth-response]
+    auth-header      = [auth-tag, id-nonce, auth-scheme-name, ephemeral-pubkey, auth-response]
     auth-scheme-name = "gcm"
-    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, tag)
-    auth-response-pt = [id-nonce-sig, node-record]
+    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-plain, "")
     zero-nonce       = 12 zero bytes
-    id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
-    static-node-key  = the private key used for record identity
     message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag || auth-header)
     message-pt       = message-type || message-data
     auth-tag         = AES-GCM nonce, 12 random bytes unique to message
@@ -239,7 +243,8 @@ PONG is the reply to PING.
 
 FINDNODE queries for nodes at the given logarithmic distance from the recipient's node ID.
 The node IDs of all nodes in the response must have a shared prefix length of `distance`
-with the recipient's node ID.
+with the recipient's node ID. A request with distance `0` should return the recipient's
+current record as the only result.
 
 ### NODES Response (0x04)
 
@@ -286,9 +291,10 @@ is to encrypt and authenticate them with a separate key.
 
 ### REGTOPIC Request (0x07)
 
-    message-data = [request-id, ticket]
+    message-data = [request-id, ticket, ENR]
     message-type = 0x07
     ticket       = supplied by TICKET response
+    node-record  = current node record of sender
 
 REGTOPIC registers the sender for the given topic with a ticket. The ticket must be valid
 and its waiting time must have elapsed before using the ticket.

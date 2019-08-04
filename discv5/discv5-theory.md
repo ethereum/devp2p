@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Draft of April 2019.**
+**Draft of August 2019.**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
@@ -58,11 +58,20 @@ dead, removed and N₁ added to the front of the bucket.
 Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
 buckets for low distances.
 
-### Liveness Checks In Practice
+### Table Maintenance In Practice
+
+Nodes are expected to keep track of their close neighbors and regularly refresh their
+information. To do so, a lookup targeting the least recently refreshed bucket should be
+performed at regular intervals.
 
 Checking node liveness whenever a node is to be added to a bucket is impractical and
 creates a DoS vector. Implementations can perform liveness checks asynchronously with
-bucket addition and occasionally verify that a random node in a random bucket is live.
+bucket addition and occasionally verify that a random node in a random bucket is live by
+sending [PING]. When the PONG response indicates that a new version of the node record is
+available, the liveness check should pull the new record and update it in the local table.
+
+For FINDNODE, implementations must avoid returning any nodes whose liveness has not been
+verified.
 
 ### Recursive Lookup
 
@@ -80,12 +89,6 @@ If a round of FINDNODE queries fails to return a node any closer than the closes
 seen, the initiator resends the find node to all of the `k` closest nodes it has not
 already queried. The lookup terminates when the initiator has queried and gotten responses
 from the `k` closest nodes it has seen.
-
-### Bucket Maintenance
-
-Nodes are expected to keep track of their close neighbors and regularly refresh their
-information. To do so, a lookup targeting the least recently refreshed bucket should be
-performed at regular intervals.
 
 ## Topic Advertisement
 
@@ -220,64 +223,8 @@ disrupting operation, removing incentives to waste resources on trying to do so.
 protocol-level recommendation-based trust system can be useful, the protocol may even have
 its own network topology.
 
-## Security considerations
-
-### Spamming with useless registrations
-
-Our model is based on the following assumptions:
-
-- Anyone can place their own advertisements under any topics and the rate of placing
-  registrations is not limited globally. The number of active registrations at any time is
-  roughly proportional to the resources (network bandwidth, mostly) spent on advertising.
-- Honest actors whose purpose is to connect to other honest actors will spend an adequate
-  amount of efforts on registering and searching for registrations, depending on the rate
-  of newly established connections they are targeting. If the given topic is used only by
-  honest actors, a few registrations per minute will be satisfactory, regardless of the
-  size of the subnetwork.
-- Dishonest actors (attackers) may want to place an excessive amount of registrations just
-  to disrupt the discovery service. This will reduce the effectiveness of honest
-  registration efforts by increasing the topic radius and/or the waiting times. If the
-  attacker(s) can place a comparable amount or more registrations than all honest actors
-  combined then the rate of new (useful) connections established throughout the network
-  will reduce proportionally to the honest / (dishonest + honest) registration rates.
-
-This adverse effect can be countered by honest actors increasing their registration and
-search efforts. Fortunately, the rate of established connections between them will
-increase proportionally both with increased honest registration and search efforts. If
-both are increased in response to an attack, the required factor of increased efforts from
-honest actors is proportional to the square root of the attacker's efforts.
-
-### Detecting a useless registration attack
-
-In the case of a symmetrical protocol (where nodes are both searching and advertising
-under the same topic) it is easy to detect when most of the queried registrations turn out
-to be useless and increase both registration and query frequency. It is a bit harder but
-still possible with asymmetrical (client-server) protocols, where only clients can easily
-detect useless registrations, while advertisers (servers) do not have a direct way of
-detecting when they should increase their advertising efforts. One possible solution is
-for servers to also act as clients just to test the server capabilities of other
-advertisers. It is also possible to implement a feedback system between trusted clients
-and servers.
-
-### Amplifying network traffic by returning fake registrations
-
-An attacker might wish to direct discovery traffic to a chosen address by returning
-records pointing to that address.
-
-**TBD: this is not solved.**
-
-### Not registering/returning valid registrations
-
-Although the limited registration frequency ensures that the resource requirements of
-acting as a proper advertisement medium are sufficiently low, such selfish behavior is
-possible, especially if some client implementations choose the easy way and not implement
-it at all. This is not a serious problem as long as the majority of nodes are acting
-properly, which will hopefully be the case. Advertisers can easily detect if their
-registrations are not returned so it is probably possible to implement a mechanism to weed
-out selfish nodes if necessary, but the design of such a mechanism is outside the scope of
-this document.
-
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
+[PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REQTICKET]: ./discv5-wire.md#reqticket-request-0x05

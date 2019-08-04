@@ -32,7 +32,7 @@ The specification has three parts:
 
 - [discv5-wire.md] defines the wire protocol.
 - [discv5-theory.md] describes the algorithms and data structures.
-- [discv5-rationale.md] **(outdated)** contains a design rationale and communication examples.
+- [discv5-rationale.md] contains the design rationale.
 
 ## Comparison With Other Discovery Mechanisms
 
