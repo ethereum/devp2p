@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Draft of April 2019.**
+**Draft of August 2019.**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
@@ -58,11 +58,20 @@ dead, removed and N₁ added to the front of the bucket.
 Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
 buckets for low distances.
 
-### Liveness Checks In Practice
+### Table Maintenance In Practice
+
+Nodes are expected to keep track of their close neighbors and regularly refresh their
+information. To do so, a lookup targeting the least recently refreshed bucket should be
+performed at regular intervals.
 
 Checking node liveness whenever a node is to be added to a bucket is impractical and
 creates a DoS vector. Implementations can perform liveness checks asynchronously with
-bucket addition and occasionally verify that a random node in a random bucket is live.
+bucket addition and occasionally verify that a random node in a random bucket is live by
+sending [PING]. When the PONG response indicates that a new version of the node record is
+available, the liveness check should pull the new record and update it in the local table.
+
+For FINDNODE, implementations must avoid returning any nodes whose liveness has not been
+verified.
 
 ### Recursive Lookup
 
@@ -80,12 +89,6 @@ If a round of FINDNODE queries fails to return a node any closer than the closes
 seen, the initiator resends the find node to all of the `k` closest nodes it has not
 already queried. The lookup terminates when the initiator has queried and gotten responses
 from the `k` closest nodes it has seen.
-
-### Bucket Maintenance
-
-Nodes are expected to keep track of their close neighbors and regularly refresh their
-information. To do so, a lookup targeting the least recently refreshed bucket should be
-performed at regular intervals.
 
 ## Topic Advertisement
 
@@ -221,6 +224,7 @@ protocol-level recommendation-based trust system can be useful, the protocol may
 its own network topology.
 
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
+[PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REQTICKET]: ./discv5-wire.md#reqticket-request-0x05
