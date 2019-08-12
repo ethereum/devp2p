@@ -426,6 +426,10 @@ this document.
 - W3C Credentials Community Group. *Decentralized Identifiers (DIDs) Spec.* 2017.\
   <https://w3c-ccg.github.io/did-spec>
 
+- Seoung Kyun Kim, Zane Ma, Siddharth Murali, Joshua Mason, Andrew Miller, Michael Bailey.
+  *Measuring Ethereum Network Peers*. 2018.\
+  <http://mdbailey.ece.illinois.edu/publications/imc18_ethereum.pdf>
+
 - Yuval Marcus, Ethan Heilman, Sharon Goldberg.
   *Low-Resource Eclipse Attacks on Ethereum’s Peer-to-Peer Network.* 2018.\
   <https://eprint.iacr.org/2018/236.pdf>
