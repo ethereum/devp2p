@@ -177,13 +177,13 @@ header completing the handshake. The plain text of the authentication response i
     static-node-key  = the private key used for node record identity
     node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
 
-`auth-response-pt` is encrypted with a separate key and uses an all-zero nonce. This is
-safe because only one message is ever encrypted with `auth-response-key`.
+`auth-response-pt` is encrypted with a separate key, the `auth-resp-key`, using an
+all-zero nonce. This is safe because only one message is ever encrypted with this key.
 
     message-packet   = tag || auth-header || message
     auth-header      = [auth-tag, id-nonce, auth-scheme-name, ephemeral-pubkey, auth-response]
     auth-scheme-name = "gcm"
-    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-plain, "")
+    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, "")
     zero-nonce       = 12 zero bytes
     message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag || auth-header)
     message-pt       = message-type || message-data
