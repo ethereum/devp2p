@@ -21,7 +21,7 @@ Here we present the notation that is used throughout this document.
     is the SHA256 digest of `x`\
 `aesgcm_encrypt(key, nonce, pt, ad)`\
     is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
-    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.\
+    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
 ## UDP Communication
 
