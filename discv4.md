@@ -10,15 +10,25 @@ versions at the end of this document.
 
 ## Node Identities
 
-Every node has a cryptographic identity, a key on the elliptic curve secp256k1. The public
+Every node has a cryptographic identity, a key on the secp256k1 elliptic curve. The public
 key of the node serves as its identifier or 'node ID'.
 
-The 'distance' between two node IDs is the bitwise exclusive or on the hashes of the
+The 'distance' between two node keys is the bitwise exclusive or on the hashes of the
 public keys, taken as the number.
 
     distance(n₁, n₂) = keccak256(n₁) XOR keccak256(n₂)
 
-## Node Table
+## Node Records
+
+Participants in the Discovery Protocol are expected to maintain a [node record] \(ENR\)
+containing up-to-date information. All records must use the "v4" identity scheme. Other
+nodes may request the local record at any time by sending an [ENRRequest] packet.
+
+To resolve the current record of any node public key, perform a Kademlia lookup using
+[FindNode] packets. When the node is found, send ENRRequest to it and return the record
+from the response.
+
+## Kademlia Table
 
 Nodes in the Discovery Protocol keep information about other nodes in their neighborhood.
 Neighbor nodes are stored in a routing table consisting of 'k-buckets'. For each `0 ≤ i <
@@ -86,7 +96,7 @@ as well as any extra data after the list.
 
 ### Ping Packet (0x01)
 
-    packet-data = [version, from, to, expiration, ...]
+    packet-data = [version, from, to, expiration, enr-seq ...]
     version = 4
     from = [sender-ip, sender-udp-port, sender-tcp-port]
     to = [recipient-ip, recipient-udp-port, 0]
@@ -94,8 +104,11 @@ as well as any extra data after the list.
 The `expiration` field is an absolute UNIX time stamp. Packets containing a time stamp
 that lies in the past are expired may not be processed.
 
+The `enr-seq` field is the current ENR sequence number of the sender. This field is
+optional.
+
 When a ping packet is received, the recipient should reply with a [Pong] packet. It may
-also consider the sender for addition into the node table. Implementations should ignore
+also consider the sender for addition into the local table. Implementations should ignore
 any mismatches in version.
 
 If no communication with the sender has occurred within the last 12h, a ping should be
@@ -103,13 +116,16 @@ sent in addition to pong in order to receive an endpoint proof.
 
 ### Pong Packet (0x02)
 
-    packet-data = [to, ping-hash, expiration, ...]
+    packet-data = [to, ping-hash, expiration, enr-seq, ...]
 
 Pong is the reply to ping.
 
 `ping-hash` should be equal to `hash` of the corresponding ping packet. Implementations
 should ignore unsolicited pong packets that do not contain the hash of the most recent
 ping packet.
+
+The `enr-seq` field is the current ENR sequence number of the sender. This field is
+optional.
 
 ### FindNode Packet (0x03)
 
@@ -129,9 +145,33 @@ the sender of FindNode has been verified by the endpoint proof procedure.
 
 Neighbors is the reply to [FindNode].
 
+### ENRRequest Packet (0x05)
+
+    packet-data = [expiration]
+
+When a packet of this type is received, the node should reply with an ENRResponse packet
+containing the current version of its [node record].
+
+To guard against amplification attacks, the sender of ENRRequest should have replied to a
+ping packet recently (just like for FindNode). The `expiration` field, a UNIX timestamp,
+should be handled as for all other existing packets i.e. no reply should be sent if it
+refers to a time in the past.
+
+### ENRResponse Packet (0x06)
+
+    packet-data = [request-hash, ENR]
+
+This packet is the response to ENRRequest.
+
+- `request-hash` is the hash of the entire ENRRequest packet being replied to.
+- `ENR` is the node record.
+
+The recipient of the packet should verify that the node record is signed by the public key
+which signed the response packet.
+
 # Change Log
 
-## Known Issues in the current version
+## Known Issues in the Current Version
 
 The `expiration` field present in all packets is supposed to prevent packet replay. Since
 it is an absolute time stamp, the node's clock must be accurate to verify it correctly.
@@ -144,6 +184,11 @@ communication with the recipient has occurred within the last 12h, initiate the 
 by sending a ping. Wait for a ping from the other side, reply to it and then send
 FindNode.
 
+## EIP-868 (October 2019)
+
+[EIP-868] adds the [ENRRequest] and [ENRResponse] packets. It also modifies [Ping] and
+[Pong] to include the local ENR sequence number.
+
 ## EIP-8 (December 2017)
 
 [EIP-8] mandated that implementations ignore mismatches in Ping version and any additional
@@ -153,4 +198,8 @@ list elements in `packet-data`.
 [Pong]: #pong-packet-0x02
 [FindNode]: #findnode-packet-0x03
 [Neighbors]: #neighbors-packet-0x04
+[ENRRequest]: #enrrequest-packet-0x05
+[ENRResponse]: #enrresponse-packet-0x06
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
+[EIP-868]: https://eips.ethereum.org/EIPS/eip-868
+[node record]: ./enr.md
