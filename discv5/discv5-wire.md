@@ -19,8 +19,6 @@ Here we present the notation that is used throughout this document.
     means binary XOR of `a` and `b`\
 `sha256(x)`\
     is the SHA256 digest of `x`\
-`sign(key, x)`\
-    creates a signature of `x` using the given key\
 `aesgcm_encrypt(key, nonce, pt, ad)`\
     is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
     authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
@@ -83,7 +81,7 @@ key and the session keys are derived from it using the HKDF key derivation funct
     ephemeral-key    = random private key
     ephemeral-pubkey = public key corresponding to ephemeral-key
     dest-pubkey      = public key of B
-    secret           = agree(ephemeral-key, dest-pubkey)
+    secret           = ecdh(ephemeral-key, dest-pubkey)
     info             = "discovery v5 key agreement" || node-id-A || node-id-B
     prk              = HKDF-Extract(secret, id-nonce)
 
@@ -141,7 +139,26 @@ new keys.
 
 **TBD: concurrent handshake tie-breaker rule.**
 
-### Packet Encoding
+### Identity-Specific Cryptography in the Handshake
+
+Establishment of session keys is dependent on the identity scheme of the recipient (i.e.
+the node which sends WHOAREYOU). Similarly, the signature over `id-nonce-input` is made by
+the identity key of the initiator. Although initiator and recipient might not be using the
+same identity scheme in their respective node records, implementations must be able to
+handle handshaking for all supported identity schemes.
+
+At this time, the only supported identity scheme is "v4".
+
+`id_sign(data)` creates a signature over `data` using the node's static private key. The
+signature is encoded as the 64-byte array `r || s`, i.e. as the concatenation of the
+signature values.
+
+`ecdh(pubkey, privkey)` creates a secret through elliptic-curve Diffie-Hellman key
+agreement. The public key is multiplied by the private key to create a secret ephemeral
+key `eph = pubkey * privkey`. The 33-byte secret output is `y || eph.x` where `y` is
+`0x02` when `eph.y` is even or `0x03` when `eph.y` is odd.
+
+## Packet Encoding
 
 All regular packets except WHOAREYOU start with a fixed-size `tag`. For a packet sent by
 node A to node B:
@@ -173,7 +190,8 @@ header completing the handshake. The plain text of the authentication response i
 
     auth-response-pt = [version, id-nonce-sig, node-record]
     version          = 5
-    id-nonce-sig     = sign(static-node-key, sha256("discovery-id-nonce" || id-nonce))
+    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-key)
+    id-nonce-sig     = id_sign(id-nonce-input)
     static-node-key  = the private key used for node record identity
     node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
 
@@ -185,7 +203,7 @@ all-zero nonce. This is safe because only one message is ever encrypted with thi
     auth-scheme-name = "gcm"
     auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, "")
     zero-nonce       = 12 zero bytes
-    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag || auth-header)
+    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag)
     message-pt       = message-type || message-data
     auth-tag         = AES-GCM nonce, 12 random bytes unique to message
 
