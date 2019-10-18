@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Rationale
 
-**Draft of August 2019**
+**Draft of October 2019**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
@@ -342,24 +342,59 @@ disturb the operation of the protocol. Session keys per node-ID/IP generally pre
 replay across sessions. The `request-id`, mirrored in response packets, prevents replay of
 responses within a session.
 
-## Security Considerations for the Topic Index
+## The Topic Index
 
-### Spamming with useless registrations
+Using FINDNODE queries with appropriately chosen targets, the entire DHT can be sampled by
+a random walk to find all other participants. When building a distributed application, it
+is often desirable to restrict the search to participants which provide a certain service.
+A simple solution to this problem would be to simply split up the network and require
+participation in many smaller application-specific networks. However, such networks are
+hard to bootstrap and also more vulnerable to attacks which could isolate nodes.
+
+The topic index provides discovery by provided service in a different way. Nodes maintain
+a single node table tracking their neighbors and advertise 'topics' on nodes found by
+randomly walking the DHT. While the 'global' topic index can be also spammed, it makes
+complete isolation a lot harder. To prevent nodes interested in a certain topic from
+finding each other, the entire discovery network would have to be overpowered.
+
+To make the index useful, searching for nodes by topic must be efficient regardless of the
+number of advertisers. This is achieved by estimating the topic 'radius', i.e. the
+percentage of all live nodes which are advertising the topic. Advertisement and search
+activities are restricted to a region of DHT address space around the topic's 'center'.
+
+We also want the index to satisfy another property: When a topic advertisement is placed,
+it should last for a well-defined amount of time. This ensures nodes may rely on their
+advertisements staying placed rather than worrying about keeping them alive.
+
+Finally, the index should consume limited resources. Just as the node table is limited in
+number and size of buckets, the size of the index data structure on each node is limited.
+
+### Why should advertisers wait?
+
+Advertisers must wait a certain amount of time before they can be registered. Enforcing
+this time limit prevents misuse of the topic index because any topic must be important
+enough to outweigh the cost of waiting. Imagine a group phone call: announcing the
+participants of the call using topic advertisement isn't a good use of the system because
+the topic exists only for a short time and will have very few participants. The waiting
+time prevents using the index for this purpose because the call might already be over
+before everyone could get registered.
+
+### Dealing with Topic Spam
 
 Our model is based on the following assumptions:
 
-- Anyone can place their own advertisements under any topics and the rate of placing
-  registrations is not limited globally. The number of active registrations at any time is
-  roughly proportional to the resources (network bandwidth, mostly) spent on advertising.
+- Anyone can place their own advertisements under any topics and the rate of placing ads
+  is not limited globally. The number of active ads for any node is roughly proportional
+  to the resources (network bandwidth, mostly) spent on advertising.
 - Honest actors whose purpose is to connect to other honest actors will spend an adequate
-  amount of efforts on registering and searching for registrations, depending on the rate
-  of newly established connections they are targeting. If the given topic is used only by
-  honest actors, a few registrations per minute will be satisfactory, regardless of the
-  size of the subnetwork.
-- Dishonest actors may want to place an excessive amount of registrations just to disrupt
-  the discovery service. This will reduce the effectiveness of honest registration efforts
-  by increasing the topic radius and/or the waiting times. If the attacker(s) can place a
-  comparable amount or more registrations than all honest actors combined then the rate of
+  amount of efforts on registering and searching for ads, depending on the rate of newly
+  established connections they are targeting. If the given topic is used only by honest
+  actors, a few registrations per minute will be satisfactory, regardless of the size of
+  the subnetwork.
+- Dishonest actors may want to place an excessive amount of ads just to disrupt the
+  discovery service. This will reduce the effectiveness of honest registration efforts by
+  increasing the topic radius and/or topic queue waiting times. If the attacker(s) can
+  place a comparable amount or more ads than all honest actors combined then the rate of
   new (useful) connections established throughout the network will reduce proportionally
   to the `honest / (dishonest + honest)` registration rates.
 
@@ -371,33 +406,14 @@ honest actors is proportional to the square root of the attacker's efforts.
 
 ### Detecting a useless registration attack
 
-In the case of a symmetrical protocol (where nodes are both searching and advertising
-under the same topic) it is easy to detect when most of the queried registrations turn out
-to be useless and increase both registration and query frequency. It is a bit harder but
-still possible with asymmetrical (client-server) protocols, where only clients can easily
-detect useless registrations, while advertisers (servers) do not have a direct way of
-detecting when they should increase their advertising efforts. One possible solution is
-for servers to also act as clients just to test the server capabilities of other
-advertisers. It is also possible to implement a feedback system between trusted clients
-and servers.
-
-### Amplifying network traffic by returning fake registrations
-
-An attacker might wish to direct discovery traffic to a chosen address by returning
-records pointing to that address.
-
-**TBD: this is not solved.**
-
-### Not registering/returning valid registrations
-
-Although the limited registration frequency ensures that the resource requirements of
-acting as a proper advertisement medium are sufficiently low, such selfish behavior is
-possible, especially if some client implementations choose the easy way and not implement
-it at all. This is not a serious problem as long as the majority of nodes are acting
-properly, which will hopefully be the case. Advertisers can easily detect if their
-registrations are not returned so it is probably possible to implement a mechanism to weed
-out selfish nodes if necessary, but the design of such a mechanism is outside the scope of
-this document.
+In the case of a symmetrical protocol, where nodes are both searching and advertising
+under the same topic, it is easy to detect when most of the found ads turn out to be
+useless and increase both registration and query frequency. It is a bit harder but still
+possible with asymmetrical (client-server) protocols, where only clients can easily detect
+useless registrations, while advertisers (servers) do not have a direct way of detecting
+when they should increase their advertising efforts. One possible solution is for servers
+to also act as clients just to test the server capabilities of other advertisers. It is
+also possible to implement a feedback system between trusted clients and servers.
 
 # References
 
