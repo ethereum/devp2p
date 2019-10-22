@@ -39,7 +39,7 @@ UDP envelope IP and port found in the [PONG] message can be used to determine th
 IP address and port.
 
 If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
-translation), implementation should omit IP address and UDP port from the record.
+translation), implementations should omit IP address and UDP port from the record.
 
 ## Node Table
 
@@ -56,7 +56,7 @@ the bucket, N₂, needs to be revalidated. If no reply is received from N₂ it 
 dead, removed and N₁ added to the front of the bucket.
 
 Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
-buckets for low distances.
+k-buckets for low distances.
 
 ### Table Maintenance In Practice
 
@@ -65,30 +65,72 @@ information. To do so, a lookup targeting the least recently refreshed bucket sh
 performed at regular intervals.
 
 Checking node liveness whenever a node is to be added to a bucket is impractical and
-creates a DoS vector. Implementations can perform liveness checks asynchronously with
+creates a DoS vector. Implementations should perform liveness checks asynchronously with
 bucket addition and occasionally verify that a random node in a random bucket is live by
 sending [PING]. When the PONG response indicates that a new version of the node record is
 available, the liveness check should pull the new record and update it in the local table.
 
-For FINDNODE, implementations must avoid returning any nodes whose liveness has not been
-verified.
+When responding to FINDNODE, implementations must avoid relaying any nodes whose liveness
+has not been verified. This is easy to achieve by storing an additional flag per node in
+the table, tracking whether the node has ever successfully responded to a PING request.
 
-### Recursive Lookup
+In order to keep all k-bucket positions occupied even when bucket members fail liveness
+checks, it is strongly recommended to maintain a 'replacement cache' alongside each
+bucket. This cache holds recently-seen node which would fall into the corresponding bucket
+but cannot become a member of the bucket because it is already at capacity. Once a bucket
+member becomes unresponsive, a replacement can be chosen from the cache.
+
+### Lookup
 
 A 'lookup' locates the `k` closest nodes to a node ID.
 
-The lookup initiator starts by picking `α` closest nodes to the target it knows of. The
-initiator then sends concurrent [FINDNODE] packets to those nodes. `α` is an
-implementation-defined concurrency parameter, typically `3`. In the recursive step, the
-initiator resends FINDNODE to nodes it has learned about from previous queries. Of the `k`
-nodes the initiator has heard of closest to the target, it picks `α` that it has not yet
-queried and sends FINDNODE to them. Nodes that fail to respond quickly are removed from
-consideration until and unless they do respond.
+The lookup initiator starts by picking `α` closest nodes to the target it knows of from
+the local table. The initiator then sends [FINDNODE] requests to those nodes. `α` is an
+implementation-defined concurrency parameter, typically `3`. As NEIGHBORS responses are
+received, the initiator resends FINDNODE to nodes it has learned about from previous
+queries. Of the `k` nodes the initiator has heard of closest to the target, it picks `α`
+that it has not yet queried and sends FINDNODE to them. The lookup terminates when the
+initiator has queried and gotten responses from the `k` closest nodes it has seen.
 
-If a round of FINDNODE queries fails to return a node any closer than the closest already
-seen, the initiator resends the find node to all of the `k` closest nodes it has not
-already queried. The lookup terminates when the initiator has queried and gotten responses
-from the `k` closest nodes it has seen.
+To improve the resilience of lookups against adversarial nodes, the algorithm may be
+adapted to perform network traversal on multiple disjoint paths. Not only does this
+approach benefit security, it also improves effectiveness because more nodes are visited
+during a single lookup. The initial `k` closest nodes are partioned into multiple
+independent 'path' buckets, and ​concurrent FINDNODE​ requests executed as described above,
+with one difference: results discovered on one path are not reused on another, i.e. each
+path attempts to reach the closest nodes to the lookup target independently without
+reusing intermediate results found on another path. Note that it is still necessary to
+track previously asked nodes across all paths to keep the paths disjoint.
+
+### Lookup Protocol
+
+This section shows how the wire protocol messages can be used to perform a lookup
+interaction against a single node.
+
+Node `A` is looking for target `x`. It selects node `B` from the local table or
+intermediate lookup results. To query for nodes close to `x` on `B`, node `A` computes the
+query distance `d = logdistance(B, x)` and sends its request.
+
+    A -> B  FINDNODE [d]
+
+Node `B` responds with multiple nodes messages containing the nodes at the queried
+distance.
+
+    A <- B  NODES [N₁, N₂, N₃]
+    A <- B  NODES [N₄, N₅]
+
+Depending on the value of `d` and the content of `B`s table, the response to the initial
+query might contain very few nodes or no nodes at all. Should this be the case, `A` varies
+the distance to retrieve more nodes from adjacent k-buckets on `B`:
+
+    A -> B  FINDNODE [d+1]
+
+`B` responds with more nodes:
+
+    A <- B  NODES [N₆, N₇]
+
+Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
+repeating the lookup procedure on another, closer node.
 
 ## Topic Advertisement
 
