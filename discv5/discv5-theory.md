@@ -145,9 +145,9 @@ following rules:
   case.
 - Otherwise the ad may be placed immediately.
 
-Tickets are opaque objects, not unlike HTTP session cookies. While details of encoding and
-ticket validation are up to the implementation, tickets must contain enough information to
-verify that:
+Tickets are opaque objects storing arbitrary information determined by the issuing node.
+While details of encoding and ticket validation are up to the implementation, tickets must
+contain enough information to verify that:
 
 - The node attempting to use the ticket is the node which requested it.
 - The ticket is valid for a single topic only.
