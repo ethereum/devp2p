@@ -324,4 +324,4 @@ topic.
 [encoding section]: #packet-encoding
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
-[EIP-778]: https://eips.ethereum.org/EIPS/eip-778
+[EIP-778]: ../enr.md

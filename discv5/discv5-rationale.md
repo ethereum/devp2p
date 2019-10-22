@@ -452,4 +452,4 @@ also possible to implement a feedback system between trusted clients and servers
 
 [wire protocol]: ./discv5-wire.md
 [topic-based node index]: ./discv5-theory.md#topic-advertisement
-[node records]: https://eips.ethereum.org/EIPS/eip-778
+[node records]: ../enr.md

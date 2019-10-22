@@ -323,7 +323,7 @@ advertisement, but samples the average number of results from TOPICQUERY instead
 average time to registration. The radius estimation value can be shared with the
 registration algorithm if the the same topic is being registered and searched for.
 
-[EIP-778]: https://eips.ethereum.org/EIPS/eip-778
+[EIP-778]: ../enr.md
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
