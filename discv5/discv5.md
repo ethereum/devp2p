@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5
 
-**Draft of April 2019.**
+**Draft of October 2019.**
 
 Welcome to the Node Discovery Protocol v5 specification!
 

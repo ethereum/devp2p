@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Draft of August 2019.**
+**Draft of October 2019.**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
@@ -26,7 +26,7 @@ used in place of the actual distance.
 
     logdistance(n₁, n₂) = log2(distance(n₁, n₂))
 
-## Maintaining The Local Record
+## Maintaining The Local Node Record
 
 Participants should update their record, increase the sequence number and sign a new
 version of the record whenever their information changes. This is especially important for
@@ -92,141 +92,199 @@ from the `k` closest nodes it has seen.
 
 ## Topic Advertisement
 
-A node's provided services are identified by arbitrary strings called *topics*. Depending
-on the needs of the application, a node can advertise multiple topics or no topics at all.
-Every node participating in the discovery DHT acts as an advertisement medium, meaning
-that it accepts topic registrations from advertising nodes and later returns them to nodes
-searching for the same topic.
+The topic advertisement subsystem indexes participants by their provided services. A
+node's provided services are identified by arbitrary strings called 'topics'. A node
+providing a certain service is said to 'place an ad' for itself when it makes itself
+discoverable under that topic. Depending on the needs of the application, a node can
+advertise multiple topics or no topics at all. Every node participating in the discovery
+protocol acts as an advertisement medium, meaning that it accepts topic ads from other
+nodes and later returns them to nodes searching for the same topic.
 
-The reason topic discovery is proposed in addition to application-specific networks is to
-solve bootstrapping issues and improve downward scalability of subnetworks. Scalable
-networks that have small subnetworks (and maybe even create new subnetworks automatically)
-cannot afford to require a trusted bootnode for each of those subnets. Without a trusted
-bootnode, small peer-to-peer networks are very hard to bootstrap and also more vulnerable
-to attacks that could isolate nodes, especially the new ones which don't know any trusted
-peers. Even though a global registry can also be spammed in order to make it harder to
-find useful and honest peers, it makes complete isolation a lot harder because in order to
-prevent the nodes of a small subnet from finding each other, the entire discovery network
-would have to be overpowered.
+### Topic Table
 
-### Advertisement Storage
+Nodes store ads for any number of topics and a limited number of ads for each topic. The
+data structure holding advertisements is called the 'topic table'. The list of ads for a
+particular topic is called the 'topic queue' because it functions like a FIFO queue of
+limited length. The image below depicts a topic table containing three queues. The queue
+for topic `T₁` is at capacity.
 
-Each node participating in the protocol stores ads for any number of topics and a limited
-number of ads for each topic. The list of ads for a particular topic is called the *topic
-queue* because it functions like a FIFO queue of limited length. There is also a global
-limit on the number of ads regardless of the topic queue which contains them. When the
-global limit is reached, the last entry of the least recently requested topic queue is
-removed.
+![topic table](./img/topic-queue-diagram.png)
 
-For each topic queue, the advertisement medium maintains a *wait period*. This value acts
-as a valve controlling the influx of new ads. Registrant nodes communicate interest to
-register an ad and receive a *waiting ticket* which they can use to actually register
-after the period has passed. Since regular communication among known nodes is required for
-other purposes (e.g. node liveness checks), registrants re-learn the wait period values
-automatically.
+The queue size limit is implementation-defined. Implementations should place a global
+limit on the number of ads in the topic table regardless of the topic queue which contains
+them. Reasonable limits are 100 ads per queue and 50000 ads across all queues. Since ENRs
+are at most 300 bytes in size, these limits ensure that a full topic table consumes
+approximately 15MB of memory.
 
-The wait period for each queue is assigned based on the amount of sucessful registrations.
-It is adjusted such that ads will stay in the topic queue for approximately 10 minutes.
+Any node may appear at most once in any topic queue, that is, registration of a node which
+is already registered for a given topic fails. Implementations may impose other
+restrictions on the table, such as restrictions on the number of IP-addresses in a certain
+range or number of occurrences of the same node across queues.
 
-When an ad is added to the queue, the new wait period of the queue is computed as:
+### Tickets
 
-    target-ad-lifetime = 600 # how long ads stay queued (10 min)
-    target-registration-interval = target-ad-lifetime / queue-length
-    min-wait-period = 60 # (1 min)
-    control-loop-constant = 600
+Ads should remain in the queue for a constant amount of time, the `target-ad-lifetime`. To
+maintain this guarantee, new registrations are throttled and registrants must wait for a
+certain amount of time before they are admitted. When a node attempts to place an ad, it
+receives a 'ticket' which tells them how long they must wait before they will be accepted.
+It is up to the registrant node to keep the ticket and present it to the advertisement
+medium when the waiting time has elapsed.
 
-    period = time-of-registration - time-of-previous-registration
-    new-wait-period = wait-period * exp((target-registration-interval - period) / control-loop-constant)
-    wait-period = max(new-wait-period, min-wait-period)
+The waiting time constant is:
+
+    target-ad-lifetime = 15min
+
+The assigned waiting time for any registration attempt is determined according to the
+following rules:
+
+- When the table is full, the waiting time is assigned based on the lifetime of the oldest
+  ad across the whole table, i.e. the registrant must wait for a table slot to become
+  available.
+- When the topic queue is full, the waiting time depends on the lifetime of the oldest ad
+  in the queue. The assigned time is `target-ad-lifetime - oldest-ad-lifetime` in this
+  case.
+- Otherwise the ad may be placed immediately.
+
+Tickets are opaque objects storing arbitrary information determined by the issuing node.
+While details of encoding and ticket validation are up to the implementation, tickets must
+contain enough information to verify that:
+
+- The node attempting to use the ticket is the node which requested it.
+- The ticket is valid for a single topic only.
+- The ticket can only be used within the registration window.
+- The ticket can't be used more than once.
+
+Implementations may choose to include arbitrary other information in the ticket, such as
+the cumulative wait time spent by the advertiser. A practical way to handle tickets is to
+encrypt and authenticate them with a dedicated secret key:
+
+    ticket       = aesgcm_encrypt(ticket-key, ticket-nonce, ticket-pt, '')
+    ticket-pt    = [src-node-id, src-ip, topic, req-time, wait-time, cum-wait-time]
+    src-node-id  = node ID that requested the ticket
+    src-ip       = IP address that requested the ticket
+    topic        = the topic that ticket is valid for
+    req-time     = absolute time of REGTOPIC request
+    wait-time    = waiting time assigned when ticket was created
+    cum-wait     = cumulative waiting time of this node
+
+### Registration Window
+
+The image below depicts a single ticket's validity over time. When the ticket is issued,
+the node keeping it must wait until the registration window opens. The length of the
+registration window is 10 seconds. The ticket becomes invalid after the registration
+window has passed.
+
+![ticket validity over time](./img/ticket-validity.png)
+
+Since all ticket waiting times are assigned to expire when a slot in the queue opens, the
+advertisement medium may receive multiple valid tickets during the registration window and
+must choose one of them to be admitted in the topic queue. The winning node is notified
+using a [REGCONFIRMATION] response.
+
+Picking the winner can be achieved by keeping track of a single 'next ticket' per queue
+during the registration window. Whenever a new ticket is submitted, first determine its
+validity and compare it against the current 'next ticket' to determine which of the two is
+better according to an implementation-defined metric such as the cumulative wait time
+stored in the ticket.
 
 ### Advertisement Protocol
 
-Let us assume that node `A` advertises itself under topic `T`. It selects node `C` as
-advertisement medium and wants to register an ad, so that when node `B` (who is searching
-for topic `T`) asks `C`, `C` can return the registration entry of `A` to `B`.
+This section explains how the topic-related protocol messages are used to place an ad.
 
-Node `A` first tells `C` that it wishes to register by requesting a ticket for topic `T`,
-using the [REQTICKET] message.
+Let us assume that node `A` provides topic `T`. It selects node `C` as advertisement
+medium and wants to register an ad, so that when node `B` (who is searching for topic `T`)
+asks `C`, `C` can return the registration entry of `A` to `B`.
 
-    A -> C  REQTICKET
+Node `A` first attempts to register without a ticket by sending [REGTOPIC] to `C`.
 
-`C` replies with a ticket. The ticket contains the node identifier of `A`, the topic, a
-serial number and wait period assigned by `C`.
+    A -> C  REGTOPIC [T, ""]
 
-    A <- C  TICKET
+`C` replies with a ticket and waiting time.
 
-Node `A` now waits for the duration of the wait period. When the wait is over, `A` sends a
-registration request including the ticket. `C` does not need to remember its issued
-tickets, just the serial number of the latest ticket accepted from `A` (after which it
-will not accept any tickets issued earlier).
+    A <- C  TICKET [ticket, wait-time]
 
-    A -> C  REGTOPIC
+Node `A` now waits for the duration of the waiting time. When the wait is over, `A` sends
+another registration request including the ticket. `C` does not need to remember its
+issued tickets since the ticket is authenticated and contains enough information for `C`
+to determine its validity.
 
-If the ticket was valid, Node `C` places `A` into the topic queue for `T`. The
-[REGCONFIRMATION] response message signals whether `A` is registered.
+    A -> C  REGTOPIC [T, ticket]
 
-    A <- C  REGCONFIRMATION
+Node `C` replies with another ticket. Node `A` must keep this ticket in place of the
+earlier one, and must also be prepared to handle a confirmation call in case registration
+was successful.
 
-### Ad Placement And Topic Radius Detection
+    A <- C  TICKET [ticket, wait-time]
 
-When the number of nodes advertising a topic (topic size) is at least a certain percentage
-of the whole discovery network (rough estimate: at least 1%), it is sufficient to select
-random nodes to place ads and also look for ads at randomly selected nodes. In case of a
-very high network size/topic size ratio, it helps to have a convention for selecting a
-subset of nodes as potential advertisement media. This subset is defined as the nodes
-whose Kademlia address is close to `keccak256(T)`, meaning that the binary XOR of the
-address and the topic hash interpreted as a fixed point number is smaller than a given
-*topic radius*. A radius of 1 means the entire network, in which case advertisements are
-distributed uniformly.
+Node `C` waits for the registration window to end on the queue and selects `A` as the node
+which is registered. Node `C` places `A` into the topic queue for `T` and sends a
+[REGCONFIRMATION] response.
 
-Example:
+    A <- C  REGCONFIRMATION [T]
 
-- Nodes in the topic discovery network: 10000
-- Number of advertisers of topic T: 100
-- Registration frequency: 3 per minute
-- Average registration lifetime: 10 minutes
-- Average number of registrations of topic T at any moment: `3 * 10 * 100 = 3000`
-- Expected number of registrations of T found at a randomly selected node (topic density)
-  assuming a topic radius of 1: 0.3
+### Ad Placement And Topic Radius
 
-When the number of advertisers is smaller than 1% of the entire network, we want to
-decrease the topic radius proportionally in order to keep the topic density at a
-sufficiently high level. To achieve this, both advertisers and searchers should initially
-try selecting nodes with an assumed topic radius of 1 and collect statistical data about
-the density of registrations at the selected nodes. If the topic density in the currently
-assumed topic radius is under the target level (0.3 in our example), the radius is
-decreased. There is no point in decreasing the targeted node subset under the size of
-approximately 100 nodes since in this case even a single advertiser can easily be found.
-Approximating the density of nodes in a given address space is possible by calculating the
-average distance between a randomly selected address and the address of the closest actual
-node found. If the approximated number of nodes in our topic radius is under 100, we
-increase the radius.
+Since every node may act as an advertisement medium for any topic, advertisers and nodes
+looking for ads must agree on a scheme by which ads for a topic are distributed. When the
+number of nodes advertising a topic is at least a certain percentage of the whole
+discovery network (rough estimate: at least 1%), ads may simply be placed on random nodes
+because searching for the topic on randomly selected will locate the ads quickly enough.
+
+However, topic search should be fast even when the number of advertisers for a topic is
+much smaller than the number of all live nodes. Advertisers and searchers must agree on a
+subset of nodes to serve as advertisement media for the topic. This subset is simply a
+region of node ID address space, consisting of nodes whose Kademlia address is within a
+certain distance to the topic hash `sha256(T)`. This distance is called the 'topic
+radius'.
+
+Example: for a topic `f3b2529e...` with a radius of 2^240, the subset covers all nodes
+whose IDs have prefix `f3b2...`. A radius of 2^256 means the entire network, in which case
+advertisements are distributed uniformly among all nodes. The diagram below depicts a
+region of address space with the topic hash `t` in the middle and several nodes close to
+`t` surrounding it. Dots above the nodes represent entries in the node's queue for the
+topic.
+
+![diagram explaining the topic radius concept](./img/topic-radius-diagram.png)
+
+To place their ads, participants simply perform a random walk within the currently
+estimated radius and run the advertisement protocol by collecting tickets from all nodes
+encountered during the walk and using them when their waiting time is over.
+
+### Topic Radius Estimation
+
+Advertisers must estimate the topic radius continuously in order to place their ads on
+nodes where they will be found. The radius mustn't fall below a certain size because
+restricting registration to too few nodes leaves the topic vulnerable to censorship and
+leads to long waiting times. If the radius were too large, searching nodes would take too
+long to find the ads.
+
+Estimating the radius uses the waiting time as an indicator of how many other nodes are
+attempting to place ads in a certain region. This is achieved by keeping track of the
+average time to successful registration within segments of the address space surrounding
+the topic hash. Advertisers initially assume the radius is 2^256, i.e. the entire network.
+As tickets are collected, the advertiser samples the time it takes to place an ad in each
+segment and adjusts the radius such that registration at the chosen distance takes
+approximately `target-ad-lifetime / 2` to complete.
 
 ## Topic Search
 
 Finding nodes that provide a certain topic is a continuous process which reads the content
-of topic queues inside the approximated topic radius. Nodes within the radius are
-contacted with [TOPICQUERY] packets. Collecting tickets and waiting on them is not
-required. The approximated topic radius value can be shared with the registration
-algorithm if the the same topic is being registered and searched for.
+of topic queues inside the approximated topic radius. This is a much simpler process than
+topic advertisement because collecting tickets and waiting on them is not required.
 
-To find nodes, the searcher generates random node IDs inside the topic radius and performs
-recursive Kademlia lookups on them. All (intermediate) nodes encountered during lookup are
-asked for topic queue enties using the [TOPICQUERY] packet.
+To find nodes for a topic, the searcher generates random node IDs inside the estimated
+topic radius and performs Kademlia lookups for these IDs. All (intermediate) nodes
+encountered during lookup are asked for topic queue entries using the [TOPICQUERY] packet.
 
-Topic search is not meant to be the only mechanism used for selecting peers. A persistent
-database of useful peers is also recommended, where the meaning of "useful" is
-protocol-specific. Like any DHT algorithm, topic advertisement is based on the law of
-large numbers. It is easy to spread junk in it at the cost of wasting some resources.
-Creating a more trusted sub-network of peers over time prevents any such attack from
-disrupting operation, removing incentives to waste resources on trying to do so. A
-protocol-level recommendation-based trust system can be useful, the protocol may even have
-its own network topology.
+Radius estimation for topic search is similar to the estimation procedure for
+advertisement, but samples the average number of results from TOPICQUERY instead of
+average time to registration. The radius estimation value can be shared with the
+registration algorithm if the the same topic is being registered and searched for.
 
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
-[REQTICKET]: ./discv5-wire.md#reqticket-request-0x05
-[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x08
-[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
+[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x05
+[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x07
+[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x08

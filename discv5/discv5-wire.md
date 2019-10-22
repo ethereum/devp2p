@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Wire Protocol
 
-**Draft of August 2019.**
+**Draft of October 2019.**
 
 This document specifies the wire protocol of Node Discovery v5. Note that this
 specification is a work in progress and may change incompatibly without prior notice.
@@ -273,17 +273,21 @@ current record as the only result.
 NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
 sent as responses to a single query.
 
-### REQTICKET Request (0x05)
+### REGTOPIC Request (0x05)
 
-    message-data = [request-id, topic]
-    message-type = 0x05
-    topic        = a 32-byte topic hash
+    message-data = [request-id, ENR, ticket]
+    message-type = 0x07
+    node-record  = current node record of sender
+    ticket       = byte array containing ticket content
 
-Implementation note: The least requested topics will be evicted from the global space.
-This means that an attacker attempting to pollute the global space by requesting creation
-of many *new* topic queues will only result in their own topic queues being evicted.
-Implementers should be cautious of the attacker attempting to promote their own queues by
-requesting their own adverts.
+REGTOPIC attempts to register the sender for the given topic. If the requesting node has a
+ticket from a previous registration attempt, it must present the ticket. Otherwise
+`ticket` is the empty byte array (RLP: `0x80`). The ticket must be valid and its waiting
+time must have elapsed before using the ticket.
+
+REGTOPIC is always answered by a TICKET response. The requesting node may also receive a
+REGCONFIRMATION response when registration is successful. It may take up to 10s for the
+confirmation to be sent.
 
 ### TICKET Response (0x06)
 
@@ -292,49 +296,32 @@ requesting their own adverts.
     ticket       = an opaque byte array representing the ticket
     wait-time    = time to wait before registering, in seconds
 
-TICKET is the response to REQTICKET. It contains a ticket which can be used to register
-for the requested topic after `wait-time` has elapsed.
+TICKET is the response to REGTOPIC. It contains a ticket which can be used to register for
+the requested topic after `wait-time` has elapsed. See the [theory section on tickets] for
+more information.
 
-Note that `ticket` is opaque for the caller and shouldn't be interpreted in any way.
-Implementations may choose any internal representation. A practical way to handle tickets
-is to encrypt and authenticate them with a separate key.
+### REGCONFIRMATION Response (0x07)
 
-    ticket       = aesgcm_encrypt(ticket-key, ticket-nonce, ticket-pt, '')
-    ticket-pt    = [src-node-id, topic, req-time, wait-time, serial]
-    src-node-id  = node ID that requested the ticket
-    topic        = the topic that ticket is valid for
-    req-time     = absolute time of REQTICKET request
-    wait-time    = waiting time assigned when ticket was created
-    serial       = serial number of ticket
-
-### REGTOPIC Request (0x07)
-
-    message-data = [request-id, ticket, ENR]
+    message-data = [request-id, topic]
     message-type = 0x07
-    ticket       = supplied by TICKET response
-    node-record  = current node record of sender
+    request-id   = request-id of REGTOPIC
 
-REGTOPIC registers the sender for the given topic with a ticket. The ticket must be valid
-and its waiting time must have elapsed before using the ticket.
+REGCONFIRMATION notifies the recipient about a successful registration for the given
+topic. This call is sent by the advertisement medium after the time window for
+registration has elapsed on a topic queue.
 
-### REGCONFIRMATION Response (0x08)
-
-    message-data = [request-id, registered]
-    message-type = 0x07
-    registered   = boolean, 1 if ticket was valid and node is registered, 0 if not
-
-REGCONFIRMATION is the response to REGTOPIC.
-
-### TOPICQUERY Request (0x09)
+### TOPICQUERY Request (0x08)
 
     message-data = [request-id, topic]
     message-type = 0x07
     topic        = 32-byte topic hash
 
-TOPICQUERY requests nodes in the [topic queue] of the given topic. The response is a NODES
-message containing node records registered for the topic.
+TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
+request must send one or more NODES messages containing node records registered for the
+topic.
 
 [handshake section]: #handshake
 [encoding section]: #packet-encoding
-[topic queue]: ./discv5-theory.md#advertisement-storage
+[topic queue]: ./discv5-theory.md#topic-table
+[theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: https://eips.ethereum.org/EIPS/eip-778
