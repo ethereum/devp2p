@@ -3,6 +3,7 @@
 This repository contains specifications for the peer-to-peer networking protocols used by
 Ethereum.
 
+- [Ethereum Node Records], our node metadata format.
 - [Node Discovery Protocol v4]
 - [Node Discovery Protocol v5] **(Draft Specification)**
 - [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
@@ -74,6 +75,7 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Ethereum Wire Protocol]: ./caps/eth.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Light Ethereum Subprotocol]: ./caps/les.md
+[Ethereum Node Records]: ./enr.md
 [Node Discovery Protocol v4]: ./discv4.md
 [Node Discovery Protocol v5]: ./discv5/discv5.md
 [Parity Light Protocol]: ./caps/pip.md
