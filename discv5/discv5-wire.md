@@ -137,6 +137,14 @@ with the same nonce compromises the key. Session keys should be kept in memory f
 limited amount of time, ensuring that nodes occasionally perform a handshake to establish
 new keys.
 
+Implementations should also ensure that session secrets and the handshake are tied to a
+specific UDP endpoint. This is simple to implement by using the node ID and IP/port as the
+key into the in-memory session cache. When a node switches endpoints, e.g. when roaming
+between different wireless networks, sessions will to be re-established by re-handshaking.
+This requires no effort on behalf of the roaming node because the recipients of protocol
+messages will simply refuse to decrypt messages from the new endpoint and reply with
+WHOAREYOU.
+
 **TBD: concurrent handshake tie-breaker rule.**
 
 ### Identity-Specific Cryptography in the Handshake
