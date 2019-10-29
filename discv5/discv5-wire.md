@@ -333,3 +333,8 @@ topic.
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
+
+## Test Vectors
+
+A collection of test vectors for this specification can be found at
+[discv5 wire test vectors](./discv5-wire-test-vectors.md).
