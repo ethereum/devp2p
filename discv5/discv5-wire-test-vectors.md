@@ -14,7 +14,6 @@ primarily test for correct RLP encoding in the packet types.
 
     tag: 0x0101010101010101010101010101010101010101010101010101010101010101
     auth-tag: 0x020202020202020202020202
-    id-nonce: 0x0303030303030303030303030303030303030303030303030303030303030303
     random-data: 0x0404040404040404040404040404040404040404040404040404040404040404040404040404040404040404
 
 #### Expected Output
@@ -28,6 +27,7 @@ primarily test for correct RLP encoding in the packet types.
     magic: 0x0101010101010101010101010101010101010101010101010101010101010101
     token: 0x020202020202020202020202
     id-nonce: 0x0303030303030303030303030303030303030303030303030303030303030303
+    enr-seq: 0x01
 
 #### Expected Output
 
@@ -70,8 +70,8 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
-    enr-seq: 1
+    id: 0x01
+    enr-seq: 0x01
 
 #### Expected Output
 
@@ -81,8 +81,8 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
-    enr-seq: 1
+    id: 0x01
+    enr-seq: 0x01
     recipient-ip: "127.0.0.1"
     recipient-port: 5000
 
@@ -94,8 +94,8 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
-    distance: 256
+    id: 0x01
+    distance: 0x0100 (decimal 256)
 
 #### Expected Output
 
@@ -105,8 +105,8 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
-    total: 2
+    id: 0x01
+    total: 0x02
     enr-1: "enr:-HW4QBzimRxkmT18hMKaAL3IcZF1UcfTMPyi3Q1pxwZZbcZVRI8DC5infUAB_UauARLOJtYTxaagKoGmIjzQxO2qUygBgmlkgnY0iXNlY3AyNTZrMaEDymNMrg1JrLQB2KTGtv6MVbcNEVv0AHacwUAPMljNMTg"
     enr-2: "enr:-HW4QNfxw543Ypf4HXKXdYxkyzfcxcO-6p9X986WldfVpnVTQX1xlTnWrktEWUbeTZnmgOuAY_KUhbVV1Ft98WoYUBMBgmlkgnY0iXNlY3AyNTZrMaEDDiy3QkHAxPyOgWbxp5oF1bDdlYE6dLCUUp8xfVw50jU"
 
@@ -118,7 +118,7 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
+    id: 0x01
     topic-hash: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
 
 #### Expected Output
@@ -129,7 +129,7 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
+    id: 0x01
     ticket: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
 
 #### Expected Output
@@ -140,7 +140,7 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
+    id: 0x01
     registered: true
 
 #### Expected Output
@@ -151,7 +151,7 @@ protocol message.
 
 #### Input Parameters
 
-    id: 1
+    id: 0x01
     topic-hash: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
 
 #### Expected Output
