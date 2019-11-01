@@ -283,7 +283,7 @@ sent as responses to a single query.
 
 ### REGTOPIC Request (0x05)
 
-    message-data = [request-id, ENR, ticket]
+    message-data = [request-id, topic, ENR, ticket]
     message-type = 0x07
     node-record  = current node record of sender
     ticket       = byte array containing ticket content
