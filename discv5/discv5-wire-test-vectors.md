@@ -255,7 +255,7 @@ protocol.
 
 Note that the 16 byte MAC is prepended to the ciphertext.
 
-    message-ciphertext: a5d12a2d94b8ccb3ba55558229867dc13bfa3648
+    message-ciphertext: 0xa5d12a2d94b8ccb3ba55558229867dc13bfa3648
 
 ### Authentication Header and Encrypted Message Generation
 
