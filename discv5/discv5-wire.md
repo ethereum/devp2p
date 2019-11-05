@@ -328,8 +328,14 @@ TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient
 request must send one or more NODES messages containing node records registered for the
 topic.
 
+## Test Vectors
+
+A collection of test vectors for this specification can be found at
+[discv5 wire test vectors].
+
 [handshake section]: #handshake
 [encoding section]: #packet-encoding
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
+[discv5 wire test vectors]: ./discv5-wire-test-vectors.md
