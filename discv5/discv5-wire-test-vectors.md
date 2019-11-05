@@ -231,13 +231,13 @@ ephemeral key before taking the `sha256` hash of the `id-nonce`.
 
 The `local-secret-key` is the raw secp256k1 private key used to sign the nonce.
 
-    id_nonce: 0x02a77e3aa0c144ae7c0a3af73692b7d6e5b7a2fdc0eda16e8d5e6cb0d08e88dd04
+    id_nonce: 0xa77e3aa0c144ae7c0a3af73692b7d6e5b7a2fdc0eda16e8d5e6cb0d08e88dd04
     ephemeral-key: 0x9961e4c2356d61bedb83052c115d311acb3a96f5777296dcf297351130266231503061ac4aaee666073d7e5bc2c80c3f5c5b500c1cb5fd0a76abbb6b675ad157
     local-secret-key: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
 
 #### Expected Outputs
 
-    id-nonce-sig: 0x3b7b8ce9df3fbd9b6367c365622ccc82a2cb9d94219401e7b08e3194f9f835764a07caad38bf0f5a7a89501a8156bb053c880774502f5cd8a6190fbe374adc89
+    id-nonce-sig: 0xc5036e702a79902ad8aa147dabfe3958b523fd6fa36cc78e2889b912d682d8d35fdea142e141f690736d86f50b39746ba2d2fc510b46f82ee08f08fd55d133a4
 
 ### Encryption/Decryption
 
