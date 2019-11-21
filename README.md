@@ -63,7 +63,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 - Java: Pantheon <https://github.com/PegaSysEng/pantheon>
 - JavaScript: EthereumJS <https://github.com/ethereumjs/ethereumjs-devp2p>
 - Kotlin: Cava Discovery library <https://github.com/consensys/cava/tree/master/devp2p>
-- Nim: Status eth_p2p <https://github.com/status-im/nim-eth-p2p>
+- Nim: Nimbus nim-eth <https://github.com/status-im/nim-eth>
 - Python: Trinity <https://github.com/ethereum/trinity>
 - Ruby: Ciri <https://github.com/ciri-ethereum/ciri>
 - Ruby: ruby-devp2p <https://github.com/cryptape/ruby-devp2p>
