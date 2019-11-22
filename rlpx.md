@@ -226,12 +226,13 @@ numerically highest wins, others are ignored.
 ## "p2p" Capability
 
 The "p2p" capability is present on all connections. After the initial handshake, both
-sides of the connection must send a [Hello] message. Upon receiving the [Hello] message a
-session is active and any other message may be sent. Implementations must ignore any
-difference in protocol version for forward-compatibility reasons. When communicating with
-a peer of lower version, implementations should try to mimic that version.
+sides of the connection must send either [Hello] or a [Disconnect] message. Upon receiving
+the [Hello] message a session is active and any other message may be sent. Implementations
+must ignore any difference in protocol version for forward-compatibility reasons. When
+communicating with a peer of lower version, implementations should try to mimic that
+version.
 
-At any time, a [Disconnect] message may be sent.
+At any time after protocol negotiation, a [Disconnect] message may be sent.
 
 ### Hello (0x00)
 
