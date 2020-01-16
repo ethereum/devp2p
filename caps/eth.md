@@ -1,8 +1,8 @@
 # Ethereum Wire Protocol (ETH)
 
-'eth' is a protocol on the [RLPx] transport that facilitates exchange of
-Ethereum blockchain information between peers. The current protocol version is **eth/63**.
-See end of document for a list of changes in past protocol versions.
+'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
+blockchain information between peers. The current protocol version is **eth/64**. See end
+of document for a list of changes in past protocol versions.
 
 ### Basic Operation
 
@@ -41,8 +41,9 @@ concurrently.
 
 ### State Synchronization (a.k.a. "fast sync")
 
-eth/63 also allows synchronizing transaction execution results ("state"). This may be
-faster than re-executing all transactions but comes at the expense of some security.
+Protocol versions eth/63 and later also allow synchronizing transaction execution results
+("state"). This may be faster than re-executing all transactions but comes at the expense
+of some security.
 
 State synchronization typically proceeds by downloading the chain of block headers,
 verifying their proof-of-work values. Block bodies are requested as in the Chain
@@ -55,17 +56,18 @@ incrementally by requesting the root node, its children, grandchildren, ... usin
 
 ### Status (0x00)
 
-`[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32]`
+`[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32, forkID]`
 
 Inform a peer of its current state. This message should be sent just after the connection
 is established and prior to any other eth protocol messages.
 
-- `protocolVersion`: the current protocol version, 63
+- `protocolVersion`: the current protocol version
 - `networkId`: Integer identifying the blockchain, see table below
 - `td`: total difficulty of the best chain. Integer, as found in block header.
 - `bestHash`: The hash of the best (i.e. highest TD) known block.
 - `genesisHash`: The hash of the Genesis block.
 - `number`: The block number of the latest block in the chain.
+- `forkID`: An [EIP-2124] fork identifier, encoded as `[forkHash, forkNext]`.
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
@@ -189,6 +191,12 @@ message.
 
 ## Change Log
 
+### eth/64 ([EIP-2364], November 2019)
+
+Version 64 changed the [Status] message to include the [EIP-2124] ForkID. This allows peers
+to determine mutual compatibility of chain execution rules without synchronizing the
+blockchain.
+
 ### eth/63 (2016)
 
 Version 63 added the [GetNodeData], [NodeData], [GetReceipts] and [Receipts] messages
@@ -240,3 +248,5 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [Rinkeby]: https://rinkeby.io
+[EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
+[EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
