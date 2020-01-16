@@ -191,9 +191,9 @@ message.
 
 ## Change Log
 
-### eth/64 ([EIP-2364], 2019)
+### eth/64 ([EIP-2364], November 2019)
 
-Version 64 changed the [Status] message to include the EIP-2124 ForkID. This allows peers
+Version 64 changed the [Status] message to include the [EIP-2124] ForkID. This allows peers
 to determine mutual compatibility of chain execution rules without synchronizing the
 blockchain.
 
