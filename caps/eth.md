@@ -67,7 +67,7 @@ is established and prior to any other eth protocol messages.
 - `bestHash`: The hash of the best (i.e. highest TD) known block.
 - `genesisHash`: The hash of the Genesis block.
 - `number`: The block number of the latest block in the chain.
-- `forkID`: A [EIP-2124] fork identifier, encoded as `[forkHash, forkNext]`.
+- `forkID`: An [EIP-2124] fork identifier, encoded as `[forkHash, forkNext]`.
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
