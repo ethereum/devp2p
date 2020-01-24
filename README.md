@@ -53,16 +53,15 @@ libp2p as they mature.
 
 devp2p is part of most Ethereum clients. Implementations include:
 
-- C#: Nethermind <https://github.com/tkstanczak/nethermind>
+- C#: Nethermind <https://github.com/NethermindEth/nethermind>
 - C++: Aleth <https://github.com/ethereum/aleth>
 - C: Breadwallet <https://github.com/breadwallet/breadwallet-core>
 - Elixir: Exthereum <https://github.com/exthereum/ex_wire>
 - Go: go-ethereum/geth <https://github.com/ethereum/go-ethereum>
-- Java: Cava RLPx library <https://github.com/consensys/cava/tree/master/rlpx>
-- Java: EthereumJ <https://github.com/ethereum/ethereumj>
-- Java: Pantheon <https://github.com/PegaSysEng/pantheon>
+- Java: Tuweni RLPx library <https://github.com/apache/incubator-tuweni/tree/master/rlpx>
+- Java: Besu <https://github.com/hyperledger/besu>
 - JavaScript: EthereumJS <https://github.com/ethereumjs/ethereumjs-devp2p>
-- Kotlin: Cava Discovery library <https://github.com/consensys/cava/tree/master/devp2p>
+- Kotlin: Tuweni Discovery library <https://github.com/apache/incubator-tuweni/tree/master/devp2p>
 - Nim: Nimbus nim-eth <https://github.com/status-im/nim-eth>
 - Python: Trinity <https://github.com/ethereum/trinity>
 - Ruby: Ciri <https://github.com/ciri-ethereum/ciri>
