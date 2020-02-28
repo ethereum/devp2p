@@ -5,8 +5,10 @@ about the [eth capability] on a certain node.
 
 ## Entry Format
 
-    entry-key   = "eth"
-    entry-value = [[ forkHash, forkNext ]]
+```abnf
+entry-key   = "eth"
+entry-value = [[ forkHash, forkNext ]]
+```
 
 At this time, the "eth" entry is a single element list containing an [EIP-2124] fork ID
 value. Please see the EIP for definitions of `forkHash` and `forkNext`.
