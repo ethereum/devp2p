@@ -9,8 +9,8 @@ prior notice.
 
 Node Discovery is a system for finding other participants in a peer-to-peer network. The
 system can be used by any node, for any purpose, at no cost other than running the network
-protocol and storing a limited number of other nodes' records. Any node can be used as the
-an entry point into the network.
+protocol and storing a limited number of other nodes' records. Any node can be used as an
+entry point into the network.
 
 The system's design is loosely inspired by the Kademlia DHT, but unlike most DHTs no
 arbitrary keys and values are stored. Instead, the DHT stores and relays 'node records',
