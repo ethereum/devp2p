@@ -66,7 +66,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 - Python: Trinity <https://github.com/ethereum/trinity>
 - Ruby: Ciri <https://github.com/ciri-ethereum/ciri>
 - Ruby: ruby-devp2p <https://github.com/cryptape/ruby-devp2p>
-- Rust: Parity Ethereum <https://github.com/paritytech/parity-ethereum>
+- Rust: openethereum <https://github.com/openethereum/openethereum>
 
 WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-dissectors>
 
