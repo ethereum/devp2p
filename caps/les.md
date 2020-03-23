@@ -211,7 +211,7 @@ capabilities while staying compatible with past protocol versions.
 
 ### Announce (0x01)
 
-`[headHash: B_32, headNumber: P, headTd: P, reorgDepth: P, [key_0, value_0], [key_1, value_1], ...]`
+`[headHash: B_32, headNumber: P, headTd: P, reorgDepth: P, [[key_0, value_0], [key_1, value_1], ...]]`
 
 Announce a new chain head and optionally also a change to some of the values announced at
 handshake. A restrictive change of server capabilities (for example, an increase of
