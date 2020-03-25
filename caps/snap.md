@@ -167,7 +167,7 @@ Caveats:
 
 Returns a number of requested contract codes.
 
-### GetTrieNodes (0x04)
+### GetTrieNodes (0x06)
 
 `[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...]]`
 
@@ -181,7 +181,7 @@ Notes:
 - Nodes **must** always respond to the query.
 - The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one trie node, unless none requested are available, in which case it **must** answer with an empty response.
 
-### TrieNodes (0x05)
+### TrieNodes (0x07)
 
 `[reqID: P, codes: [code1: B, code2: B, ...]]`
 
