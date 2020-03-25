@@ -1,6 +1,6 @@
 # Ethereum Snapshot Protocol (SNAP)
 
-The `snap` protocol runs on top of [RLPx], facilitating the exchange of Ethereum state snapshots between peers. The protocol is an optional extension for peers supporting (or caring about) the [dynamic flat snapshot] format.
+The `snap` protocol runs on top of [RLPx](../rlpx.md), facilitating the exchange of Ethereum state snapshots between peers. The protocol is an optional extension for peers supporting (or caring about) the dynamic snapshot format.
 
 The current version is `snap/1`.
 
@@ -27,6 +27,36 @@ To put some numbers on the orders of magnitudes, synchronizing Ethereum mainnet 
 | Packets |       |        |
 
 
+## Synchronization algorithm
+
+The crux of the snapshot synchronization is making contiguous ranges of accounts and storage slots available for remote retrieval. The sort order is the same as the state trie iteration order, which makes it possible to not only request N subsequent accounts, but also to Merkle prove them. Some important properties of this simple algorithm:
+
+- Opposed to fast sync, we only need to transfer the useful leaf data from the state trie and can reconstruct internal nodes locally.
+- Opposed to warp sync, we can download small chunks of accounts and storage slots and immediately verify their Merkle proofs, making junk attacks impossible.
+- Opposed to warp sync, random account ranges can be retrieves, thus synchronization concurrency is totally dependent on client implementation and is not forced by the protocol.
+
+The gotcha of the snapshot synchronization is that serving nodes need to be able to provide **fast** iterable access to the state of the most recent N (128) blocks. Iterating the Merkle trie itself might be functional, but it's not viable (iterating the state trie takes 9h 30m). Geth introduced support for [dynamic snapshots](https://github.com/ethereum/go-ethereum/pull/20152), which allows iterating all the accounts in 7m. Some important properties of the dynamic snapshots:
+
+- Serving a contiguous range of accounts or storage slots take O(n) operations, and more importantly, it's the same for disk access too, being stored contiguously on disk.
+- Maintaining a live dynamic snapshot means:
+  - Opposed to warp sync, syncing nodes can always get the latest data, thus they don't need to process days' worth of blocks afterwards.
+  - Opposed to warp sync, there is no pre-computation to generate a snapshot (it's updated live), so there's no periodic burden on the nodes to iterate the tries.
+  - Providing access to 128 recent snapshots permits O(1) direct access to any account and state, which can be used during EVM execution for SLOAD.
+
+The caveat of the snapshot synchronization is that as with fast sync (and opposed to warp sync), the available data constantly moves (as new blocks arrive). The probability of finishing sync before the 128 block window (15m) moves out is asymptotically zero. This is not a problem, because we can self-heal. It is fine to import state snapshot chunks from different tries, because the inconsistencies can be fixed by running a fast-sync-state-sync on top of the assembled semi-correct state afterwards. Some important properties of the self-healing:
+
+- Synchronization can be aborted at any time and resumed later. It might cause self-healing to run longer, but it will fix the data either way.
+- Synchronization on slow connections is guaranteed to finish too, the data cannot disappear from the network (opposed to warp sync).
+
+## Data format
+
+The accounts in the `snap` protocol are analogous to the Ethereum RLP consensus encoding (same fields, same order), but in a **slim** format:
+
+- The code hash is `empty list` instead of `Keccak256("")`
+- The root hash is `empty list` instead of `Hash(<empty trie>)`
+
+This is done to avoid having to transfer the same 32+32 bytes for all plain accounts over the network.
+
 ## Protocol Messages
 
 ### GetAccountRange (0x00)
@@ -51,9 +81,25 @@ Rationale:
 - The starting account is identified deliberately by hash and not by address. As the accounts in the Ethereum Merkle trie are sorted by hash, the address is irrelevant. In addition, there is no consensus requirement for full nodes to be aware of the address pre-images.
 - The response is capped by byte size and not by number of accounts, because it makes the network traffic more deterministic. As the state density is unknowable, it's also impossible to delimit the query with an ending hash.
 
+Caveats:
+
+- When requesting accounts from a starting hash, malicious nodes may skip ahead and return a prefix-gapped reply. Such a reply would cause sync to finish early with a lot of missing data. To counter this, requesters should always ask for a 1-2 account overlaps so malicious nodes can't skip accounts at the head of the request.
+
 ### AccountRange (0x01)
 
-`[reqID: P, accounts: [[accHash: B_32, accData: B], ...], proof: [node_1: B, node_2, ...]]`
+`[reqID: P, accounts: [[accHash: B_32, accBody: B], ...], proof: [node_1: B, node_2, ...]]`
+
+Returns a number of consecutive accounts and the Merkle proofs for the entire range.
+
+- `reqID`: ID of the request this is a response for
+- `accounts`: List of consecutive accounts from the trie
+  - `accHash`: Hash of the account
+  - `accBody`: Account body in slim format
+- `proof`: List of trie nodes proving the account range
+
+Notes:
+
+- If the account range is the entire state, no proofs should be sent along the response. This is unlikely for accounts, but since it's a common situation for storage slots, this clause keeps the behavior the same across both.
 
 ### GetStorageRange (0x02)
 
@@ -77,16 +123,72 @@ Rationale:
 
 - The response is capped by byte size and not by number of slots, because it makes the network traffic more deterministic. As the state density is unknowable, it's also impossible to delimit the query with an ending hash.
 
+Caveats:
+
+- When requesting storage slots from a starting hash, malicious nodes may skip ahead and return a prefix-gapped reply. Such a reply would cause sync to finish early with a lot of missing data. To counter this, requesters should always ask for a 1-2 slot overlaps so malicious nodes can't skip slots at the head of the request.
+
 ### StorageRange (0x03)
 
 `[reqID: P, slots: [[slotHash: B_32, slotData: B], ...], proof: [node_1: B, node_2, ...]]`
+
+Returns a number of consecutive storage slots and the Merkle proofs for the entire range.
+
+- `reqID`: ID of the request this is a response for
+- `slots`: List of consecutive slots from the trie
+  - `slotHash`: Hash of the storage slot
+  - `slotData`: Data content of the slot
+- `proof`: List of trie nodes proving the slot range
+
+Notes:
+
+- If the slot range is the entire storage state, no proofs should be sent along the response.
+
+### GetCode (0x04)
+
+`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...]]`
+
+Requests a number of contract byte-codes by hash. This is analogous to the `eth/63` `GetNodeData`, but restricted to only bytecode to break the generality that causes issues with database optimizations.
+
+- `reqID`: Request ID to match up responses with
+- `hashes`: Code hashes to retrieve the code for
+
+Notes:
+
+- Nodes **must** always respond to the query.
+- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one bytecode, unless none requested are available, in which case it **must** answer with an empty response.
+
+Caveats:
+
+- Syncing nodes should keep in mind that a contract code can be up to 24KB in size per the current Ethereum consensus rules.
+
+### Code (0x05)
+
+`[reqID: P, codes: [code1: B, code2: B, ...]]`
+
+Returns a number of requested contract codes.
+
+### GetTrieNodes (0x04)
+
+`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...]]`
+
+Requests a number of state (either account or storage) Merkle trie nodes by hash. This is analogous to the `eth/63` `GetNodeData`, but restricted to only tries to break the generality that causes issues with database optimizations.
+
+- `reqID`: Request ID to match up responses with
+- `hashes`: Trie node hashes to retrieve the code for
+
+Notes:
+
+- Nodes **must** always respond to the query.
+- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one trie node, unless none requested are available, in which case it **must** answer with an empty response.
+
+### TrieNodes (0x05)
+
+`[reqID: P, codes: [code1: B, code2: B, ...]]`
+
+Returns a number of requested state trie nodes.
 
 ## Change Log
 
 ### snap/1 ([EIP-XXXX], April 2020)
 
 Version 1 was the introduction of the snapshot protocol.
-
-
-[RLPx]: ../rlpx.md
-[dynamic flat snapshot]: todo
