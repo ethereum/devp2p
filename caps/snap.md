@@ -14,9 +14,9 @@ The synchronization mechanism the protocol enables is for peers to retrieve and 
 
 The `snap` protocol permits downloading the entire Ethereum state without having to download all the intermediate Merkle proofs, which can be regenerated locally. This reduces the networking load enormously:
 
-* Ingress bandwidth is reduced from `O(accounts * log account + SUM(states * log states))` (Merkle trie nodes) to `O(accounts + SUM(states))` (actual state data).
-* Egress bandwidth is reduced from `O(accounts * log account + SUM(states * log states)) * 32 bytes` (Merkle trie node hashes) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
-* Round trip time is reduced from `O(accounts * log account + SUM(states * log states)) / 384` (states retrieval packets) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
+- Ingress bandwidth is reduced from `O(accounts * log account + SUM(states * log states))` (Merkle trie nodes) to `O(accounts + SUM(states))` (actual state data).
+- Egress bandwidth is reduced from `O(accounts * log account + SUM(states * log states)) * 32 bytes` (Merkle trie node hashes) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
+- Round trip time is reduced from `O(accounts * log account + SUM(states * log states)) / 384` (states retrieval packets) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
 
 To put some numbers on the orders of magnitudes, synchronizing Ethereum mainnet state at block #X with `eth` vs the `snap` protocol:
 
@@ -25,7 +25,6 @@ To put some numbers on the orders of magnitudes, synchronizing Ethereum mainnet 
 | Ingress |       |        |
 | Egress  |       |        |
 | Packets |       |        |
-
 
 ## Synchronization algorithm
 
@@ -189,6 +188,6 @@ Returns a number of requested state trie nodes.
 
 ## Change Log
 
-### snap/1 ([EIP-XXXX], April 2020)
+### snap/1 ([EIP-XXXX](https://eips.ethereum.org/EIPS/eip-XXXX), April 2020)
 
 Version 1 was the introduction of the snapshot protocol.
