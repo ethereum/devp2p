@@ -173,7 +173,7 @@ Returns a number of requested contract codes.
 Requests a number of state (either account or storage) Merkle trie nodes by hash. This is analogous to the `eth/63` `GetNodeData`, but restricted to only tries to break the generality that causes issues with database optimizations.
 
 - `reqID`: Request ID to match up responses with
-- `hashes`: Trie node hashes to retrieve the code for
+- `hashes`: Trie node hashes to retrieve the nodes for
 
 Notes:
 
@@ -182,7 +182,7 @@ Notes:
 
 ### TrieNodes (0x07)
 
-`[reqID: P, codes: [code1: B, code2: B, ...]]`
+`[reqID: P, nodes: [node1: B, node2: B, ...]]`
 
 Returns a number of requested state trie nodes.
 
