@@ -6,7 +6,7 @@ The current version is `snap/1`.
 
 ### Overview
 
-The `snap` protocol is designed for semi real-time data retrieval. It's goal is to make dynamic snapshots of recent states available for peers. The `snap` protocol does not take part in chain maintenance (block and transaction propagation); and it is meant to be run side-by-side with the `eth` protocol, not standalone (e.g. chain progression is announced via `eth`).
+The `snap` protocol is designed for semi real-time data retrieval. It's goal is to make dynamic snapshots of recent states available for peers. The `snap` protocol does not take part in chain maintenance (block and transaction propagation); and it is **meant to be run side-by-side with the `eth` protocol**, not standalone (e.g. chain progression is announced via `eth`).
 
 The protocol itself is simplistic by design (take note, the supporting implementation is everything but simple). It supports retrieving a contiguous segment of accounts from the Ethereum state trie, or a contiguous segment of storage slots from one particular storage trie. Both replies are Merkle proven for immediate verification.
 
@@ -25,6 +25,15 @@ To put some numbers on the orders of magnitudes, synchronizing Ethereum mainnet 
 | Ingress |       |        |
 | Egress  |       |        |
 | Packets |       |        |
+
+## Relation to `eth`
+
+The `snap` protocol is a *dependent satellite* of `eth` (i.e. to run `snap`, you need to run `eth` too), not a fully standalone protocol. This is a deliberate design decision:
+
+- `snap` is meant to be a bootstrap aid for newly joining full nodes. By enforcing all `snap` peers to also speak `eth`, we can avoid non-full nodes from lingering attached to `snap` indefinitely.
+- `eth` already contains well established chain and fork negotiation mechanisms, as well as remote peer staleness detection during sync. By running both protocols side-by-side, `snap` can benefit of all these mechanisms without having to duplicate them.
+
+The `snap` protocol is not an extension / next version of `eth` as it relies on the availability of a *snapshot* acceleration structure that can iterate accounts and storage slots linearly; and it also enables one specific sync method that might not be suitable for all clients. Keeping `snap` as a separate protocol permits every client to decide to pursue it or not, without hindering their capacity to participate in the `eth` protocol.
 
 ## Synchronization algorithm
 
@@ -151,6 +160,8 @@ Requests a number of contract byte-codes by hash. This is analogous to the `eth/
 - `reqID`: Request ID to match up responses with
 - `hashes`: Code hashes to retrieve the code for
 
+*This functionality was duplicated into `snap` from `eth/65` to permit `eth` long term to become a chain maintenance protocol only and move synchronization primitives out into satellite protocols only.*
+
 Notes:
 
 - Nodes **must** always respond to the query.
@@ -174,6 +185,8 @@ Requests a number of state (either account or storage) Merkle trie nodes by hash
 
 - `reqID`: Request ID to match up responses with
 - `hashes`: Trie node hashes to retrieve the nodes for
+
+*This functionality was duplicated into `snap` from `eth/65` to permit `eth` long term to become a chain maintenance protocol only and move synchronization primitives out into satellite protocols only.*
 
 Notes:
 
