@@ -1,9 +1,8 @@
 # Node Discovery Protocol v5 - Wire Protocol
 
-**Draft of October 2019.**
+**Protocol version v5.1**
 
-This document specifies the wire protocol of Node Discovery v5. Note that this
-specification is a work in progress and may change incompatibly without prior notice.
+This document specifies the wire protocol of Node Discovery v5.
 
 ## Notation
 
@@ -137,14 +136,6 @@ with the same nonce compromises the key. Session keys should be kept in memory f
 limited amount of time, ensuring that nodes occasionally perform a handshake to establish
 new keys.
 
-Implementations should also ensure that session secrets and the handshake are tied to a
-specific UDP endpoint. This is simple to implement by using the node ID and IP/port as the
-key into the in-memory session cache. When a node switches endpoints, e.g. when roaming
-between different wireless networks, sessions will to be re-established by re-handshaking.
-This requires no effort on behalf of the roaming node because the recipients of protocol
-messages will simply refuse to decrypt messages from the new endpoint and reply with
-WHOAREYOU.
-
 **TBD: concurrent handshake tie-breaker rule.**
 
 ### Identity-Specific Cryptography in the Handshake
@@ -197,8 +188,8 @@ The first encrypted message sent in response to WHOAREYOU contains an authentica
 header completing the handshake. The plain text of the authentication response is.
 
     auth-response-pt = [version, id-nonce-sig, node-record]
-    version          = 5
-    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-key)
+    version          = 1
+    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-pubkey)
     id-nonce-sig     = id_sign(id-nonce-input)
     static-node-key  = the private key used for node record identity
     node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
@@ -263,14 +254,14 @@ PONG is the reply to PING.
 
 ### FINDNODE Request (0x03)
 
-    message-data = [request-id, distance]
+    message-data = [request-id, distance₁, distance₂, ..., distanceₙ]
     message-type = 0x03
     distance     = the requested log2 distance, a positive integer
 
-FINDNODE queries for nodes at the given logarithmic distance from the recipient's node ID.
-The node IDs of all nodes in the response must have a shared prefix length of `distance`
-with the recipient's node ID. A request with distance `0` should return the recipient's
-current record as the only result.
+FINDNODE queries for nodes at the given logarithmic distances from the recipient's node ID.
+The recipient should create a result set containing nodes from its local node table.
+
+A request with distance `0` should return the recipient's current record as the result.
 
 ### NODES Response (0x04)
 
@@ -281,7 +272,30 @@ current record as the only result.
 NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
 sent as responses to a single query.
 
-### REGTOPIC Request (0x05)
+### TALKREQ Request (0x05)
+
+    message-data = [request-id, protocol, request]
+    message-type = 0x09
+
+TALKREQ sends an application-level request. The purpose of this message is pre-negotiating
+connections made through another application-specific protocol identified by `protocol`.
+
+If `request-id` is non-zero, the recipient must respond with a TALKRESP message containing
+the response to the request. If the `protocol` is unknown to the recipient, it must
+respond with an empty TALKRESP response.
+
+### TALKRESP Response (0x06)
+
+    message-data = [request-id, response]
+    message-type = 0x10
+    request-id   = request-id of TALKREQ
+
+TALKRESP is the response to TALKREQ.
+
+### REGTOPIC Request (0x07)
+
+**NOTE: the content and semantics of this message are not final.**
+**Implementations should not respond to or send these messages.**
 
     message-data = [request-id, topic, ENR, ticket]
     message-type = 0x07
@@ -297,7 +311,10 @@ REGTOPIC is always answered by a TICKET response. The requesting node may also r
 REGCONFIRMATION response when registration is successful. It may take up to 10s for the
 confirmation to be sent.
 
-### TICKET Response (0x06)
+### TICKET Response (0x08)
+
+**NOTE: the content and semantics of this message are not final.**
+**Implementations should not respond to or send these messages.**
 
     message-data = [request-id, ticket, wait-time]
     message-type = 0x06
@@ -308,7 +325,10 @@ TICKET is the response to REGTOPIC. It contains a ticket which can be used to re
 the requested topic after `wait-time` has elapsed. See the [theory section on tickets] for
 more information.
 
-### REGCONFIRMATION Response (0x07)
+### REGCONFIRMATION Response (0x09)
+
+**NOTE: the content and semantics of this message are not final.**
+**Implementations should not respond to or send these messages.**
 
     message-data = [request-id, topic]
     message-type = 0x07
@@ -318,7 +338,10 @@ REGCONFIRMATION notifies the recipient about a successful registration for the g
 topic. This call is sent by the advertisement medium after the time window for
 registration has elapsed on a topic queue.
 
-### TOPICQUERY Request (0x08)
+### TOPICQUERY Request (0x10)
+
+**NOTE: the content and semantics of this message are not final.**
+**Implementations should not respond to or send these messages.**
 
     message-data = [request-id, topic]
     message-type = 0x07
