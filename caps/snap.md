@@ -151,53 +151,65 @@ Notes:
 
 - If the slot range is the entire storage state, no proofs should be sent along the response.
 
-### GetCode (0x04)
+### GetByteCodes (0x04)
 
-`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...]]`
+`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...], bytes: P]`
 
 Requests a number of contract byte-codes by hash. This is analogous to the `eth/63` `GetNodeData`, but restricted to only bytecode to break the generality that causes issues with database optimizations.
 
 - `reqID`: Request ID to match up responses with
 - `hashes`: Code hashes to retrieve the code for
+- `bytes`: Soft limit at which to stop returning data
 
 *This functionality was duplicated into `snap` from `eth/65` to permit `eth` long term to become a chain maintenance protocol only and move synchronization primitives out into satellite protocols only.*
 
 Notes:
 
 - Nodes **must** always respond to the query.
+- The returned codes **must** be in the request order.
 - The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one bytecode, unless none requested are available, in which case it **must** answer with an empty response.
+- If a bytecode is unavailable, the node **must** skip that slot and proceed to the next one. The node **must not** return `nil` or other placeholders.
 
-Caveats:
+Rationale:
 
-- Syncing nodes should keep in mind that a contract code can be up to 24KB in size per the current Ethereum consensus rules.
+- The response is capped by byte size and not by number of slots, because it makes the network traffic more deterministic, as contract sizes can vary randomly up to 24KB with current consensus rules.
+- By retaining the original request order and skipping unavailable bytecodes, the requesting node can differentiate between unavailable data (gaps in the hashes) and QoS limitations (missing suffix).
 
-### Code (0x05)
+### ByteCodes (0x05)
 
 `[reqID: P, codes: [code1: B, code2: B, ...]]`
 
-Returns a number of requested contract codes.
+Returns a number of requested contract codes. The order is the same as in the request, but there might be gaps if not all codes are available or there might be fewer is QoS limits are reached.
 
 ### GetTrieNodes (0x06)
 
-`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...]]`
+`[reqID: P, hashes: [hash1: B_32, hash2: B_32, ...], bytes: P]`
 
 Requests a number of state (either account or storage) Merkle trie nodes by hash. This is analogous to the `eth/63` `GetNodeData`, but restricted to only tries to break the generality that causes issues with database optimizations.
 
 - `reqID`: Request ID to match up responses with
 - `hashes`: Trie node hashes to retrieve the nodes for
+- `bytes`: Soft limit at which to stop returning data
 
 *This functionality was duplicated into `snap` from `eth/65` to permit `eth` long term to become a chain maintenance protocol only and move synchronization primitives out into satellite protocols only.*
 
 Notes:
 
 - Nodes **must** always respond to the query.
+- The returned nodes **must** be in the request order.
 - The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one trie node, unless none requested are available, in which case it **must** answer with an empty response.
+- If a trie node is unavailable, the node **must** skip that slot and proceed to the next one. The node **must not** return `nil` or other placeholders.
+
+Rationale:
+
+- The response is capped by byte size and not by number of slots, because it makes the network traffic more deterministic. Although opposed to the previous request types (accounts, slots, codes), trie nodes are relatively deterministic (100-500B), the protocol remains cleaner if all packets follow the same traffic shaping rules.
+- By retaining the original request order and skipping unavailable trie nodes, the requesting node can differentiate between unavailable data (gaps in the hashes) and QoS limitations (missing suffix).
 
 ### TrieNodes (0x07)
 
 `[reqID: P, nodes: [node1: B, node2: B, ...]]`
 
-Returns a number of requested state trie nodes.
+Returns a number of requested state trie nodes. The order is the same as in the request, but there might be gaps if not all codes are available or there might be fewer is QoS limits are reached.
 
 ## Change Log
 
