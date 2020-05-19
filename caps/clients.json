@@ -2,9 +2,9 @@
   {"name": "Geth",
     "repository": "https://github.com/ethereum/go-ethereum",
    "last-update": "2020-05-18",
-   "caps": ["disc/4", "enr/1", "eth/61", "eth/62", "eth/63", "eth/64", "eth/65", "les/2"]},
+   "features": ["disc/4", "enr/1", "eth/61", "eth/62", "eth/63", "eth/64", "eth/65", "les/2"]},
   {"name": "OpenEthereum",
     "repository": "https://github.com/openethereum/openethereum",
     "last-update": "2020-05-18",
-    "caps": ["eth/63", "plp/1"]}
+    "features": ["eth/63", "plp/1"]}
 ]
