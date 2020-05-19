@@ -34,7 +34,7 @@ function main(newOpts) {
         has: "✔️",
         hasNot: "❌",
         svgResultsFile: '../caps/features.svg',
-        stylesFile: 'style.css',
+        stylesFile: 'styles.css',
     }
     Object.assign(opts, newOpts)
     const clientFeatures = JSON.parse(fs.readFileSync(opts.featuresFile).toString())
@@ -52,3 +52,6 @@ module.exports = {
     main: main,
 }
 
+if (require.main === module) {
+    main()
+}
