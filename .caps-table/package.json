@@ -19,6 +19,6 @@
   "homepage": "https://github.com/ethereum/devp2p#readme",
   "dependencies": {
     "mocha": "^7.1.2",
-    "pure-svg-table": "^1.0.2"
+    "pure-svg-table": "^1.0.3"
   }
 }

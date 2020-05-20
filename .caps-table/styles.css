@@ -12,3 +12,10 @@ td:not(:first-child) {
     text-align: center;
     max-width: 30px;
 }
+
+/*
+ * Hack to keep column headers to be stripped off
+ */
+div {
+    height: 30px;
+}

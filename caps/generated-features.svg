@@ -14,9 +14,17 @@ td:not(:first-child) {
     text-align: center;
     max-width: 30px;
 }
+
+/*
+ * Hack to keep column headers to be stripped off
+ */
+div {
+    height: 30px;
+}
 </style>
   <foreignObject x="0" y="0" width="100%" height="100%">
     <body xmlns="http://www.w3.org/1999/xhtml">
+      <div/>
       <table>
         <tr>
           <td/>
