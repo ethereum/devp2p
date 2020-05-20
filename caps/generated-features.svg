@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg">
+  <style>
+tr:first-of-type &gt; td:first-of-type {
+    background-color: green;
+    transform: rotate(0);
+}
+
+tr:first-of-type &gt; td {
+    background-color: yellow;
+    transform:
+        /* Magic Numbers */
+        translate(5px, -5px)
+        /* 45 is really 360 - 45 */
+        rotate(315deg);
+    //width: 30px;
+
+    border-bottom: 1px solid #ccc;
+    padding: 5px 10px;
+}
+
+</style>
+  <foreignObject x="0" y="0" width="100%" height="100%">
+    <body xmlns="http://www.w3.org/1999/xhtml">
+      <table>
+        <tr>
+          <td/>
+          <td>disc/4</td>
+          <td>enr/1</td>
+          <td>eth/61</td>
+          <td>eth/62</td>
+          <td>eth/63</td>
+          <td>eth/64</td>
+          <td>eth/65</td>
+          <td>les/2</td>
+          <td>plp/1</td>
+        </tr>
+        <tr>
+          <td>Geth</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>✔️</td>
+          <td>❌</td>
+        </tr>
+        <tr>
+          <td>OpenEthereum</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>✔️</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>✔️</td>
+        </tr>
+      </table>
+    </body>
+  </foreignObject>
+</svg>
