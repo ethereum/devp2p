@@ -3,6 +3,7 @@ tr:first-of-type > td:first-of-type {
     background-color: green;
     transform: rotate(0);
 }
+
 tr:first-of-type > td {
     background-color: yellow;
     transform:

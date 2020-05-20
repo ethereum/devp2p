@@ -4,6 +4,7 @@
   "description": "Generate a table of features supported by clients",
   "main": "index.js",
   "scripts": {
+    "generate": "node index.js",
     "test": "mocha *.test.js"
   },
   "repository": {

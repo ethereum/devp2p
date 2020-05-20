@@ -13,6 +13,9 @@ jobs:
       - run:
           name: Run the Markdown Linter
           command: ".lint/lint.sh ."
+      - run:
+          name: Generate SVG table of features
+          command: "cd .caps-table && npm install && npm run generate"
       - save_cache:
           key: lint-node-modules-{{ checksum ".lint/package-lock.json" }}
           paths:

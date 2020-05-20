@@ -33,7 +33,7 @@ function main(newOpts) {
         featuresFile: '../caps/clients.json',
         has: "✔️",
         hasNot: "❌",
-        svgResultsFile: '../caps/features.svg',
+        svgResultsFile: '../caps/generated-features.svg',
         stylesFile: 'styles.css',
     }
     Object.assign(opts, newOpts)
