@@ -1,19 +1,14 @@
-
 tr:first-of-type > td:first-of-type {
-    background-color: green;
     transform: rotate(0);
 }
 
 tr:first-of-type > td {
-    background-color: yellow;
-    transform:
-        /* Magic Numbers */
-        translate(5px, -5px)
-        /* 45 is really 360 - 45 */
-        rotate(315deg);
-    //width: 30px;
-
-    border-bottom: 1px solid #ccc;
+    white-space: nowrap;
+    transform: translate(20px, -15px) rotate(-45deg);
     padding: 5px 10px;
 }
 
+td:not(:first-child) {
+    text-align: center;
+    max-width: 30px;
+}
