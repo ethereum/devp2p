@@ -1,24 +1,19 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg">
-  <style>
-tr:first-of-type &gt; td:first-of-type {
-    background-color: green;
+  <style>tr:first-of-type &gt; td:first-of-type {
     transform: rotate(0);
 }
 
 tr:first-of-type &gt; td {
-    background-color: yellow;
-    transform:
-        /* Magic Numbers */
-        translate(5px, -5px)
-        /* 45 is really 360 - 45 */
-        rotate(315deg);
-    //width: 30px;
-
-    border-bottom: 1px solid #ccc;
+    white-space: nowrap;
+    transform: translate(20px, -15px) rotate(-45deg);
     padding: 5px 10px;
 }
 
+td:not(:first-child) {
+    text-align: center;
+    max-width: 30px;
+}
 </style>
   <foreignObject x="0" y="0" width="100%" height="100%">
     <body xmlns="http://www.w3.org/1999/xhtml">
