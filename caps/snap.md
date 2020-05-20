@@ -82,7 +82,8 @@ Notes:
 
 - Nodes **must** always respond to the query.
 - If the node does **not** have the state for the requested state root, it **must** return an empty reply. It is the responsibility of the caller to query an available state.
-- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one account, unless there are no more accounts in the account trie, in which case it **must** answer with an empty response.
+- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one account, unless there are no more accounts in the account trie, in which case it **must** answer with a non-existence proof.
+- The responding node **must** Merkle prove the starting hash (even if it does not exist) and the last returned account (if any exists after the starting hash).
 
 Rationale:
 
@@ -91,13 +92,13 @@ Rationale:
 
 Caveats:
 
-- When requesting accounts from a starting hash, malicious nodes may skip ahead and return a prefix-gapped reply. Such a reply would cause sync to finish early with a lot of missing data. To counter this, requesters should always ask for a 1-2 account overlaps so malicious nodes can't skip accounts at the head of the request.
+- When requesting accounts from a starting hash, malicious nodes may skip ahead and return a gaped reply. Such a reply would cause sync to finish early with a lot of missing data. Proof of non-existence for the starting hash prevents this attack, completely covering the range from start to end.
 
 ### AccountRange (0x01)
 
 `[reqID: P, accounts: [[accHash: B_32, accBody: B], ...], proof: [node_1: B, node_2, ...]]`
 
-Returns a number of consecutive accounts and the Merkle proofs for the entire range.
+Returns a number of consecutive accounts and the Merkle proofs for the entire range (boundary proofs). The left-side proof must be for the requested origin account (even if it does not exist) and the right-side proof must be for the last returned account.
 
 - `reqID`: ID of the request this is a response for
 - `accounts`: List of consecutive accounts from the trie
@@ -125,7 +126,8 @@ Notes:
 
 - Nodes **must** always respond to the query.
 - If the node does **not** have the state for the requested state root or account, it **must** return an empty reply. It is the responsibility of the caller to query an available account.
-- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one slot, unless there are no more slots in the storage trie, in which case it **must** answer with an empty response.
+- The responding node is allowed to return less data than requested (serving QoS limits), but the node **must** return at least one slot, unless there are no more slots in the storage trie, in which case it **must** answer with a non-existence proof.
+- The responding node **must** Merkle prove the starting hash (even if it does not exist) and the last returned slot (if any exists after the starting hash).
 
 Rationale:
 
@@ -139,7 +141,7 @@ Caveats:
 
 `[reqID: P, slots: [[slotHash: B_32, slotData: B], ...], proof: [node_1: B, node_2, ...]]`
 
-Returns a number of consecutive storage slots and the Merkle proofs for the entire range.
+Returns a number of consecutive storage slots and the Merkle proofs for the entire range (boundary proofs). The left-side proof must be for the requested origin slots (even if it does not exist) and the right-side proof must be for the last returned slots.
 
 - `reqID`: ID of the request this is a response for
 - `slots`: List of consecutive slots from the trie
