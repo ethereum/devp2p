@@ -71,7 +71,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 
 WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-dissectors>
 
-![Table of features](capts/generated-features.svg)
+![Table of features](caps/generated-features.svg)
 
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [Ethereum Wire Protocol]: ./caps/eth.md

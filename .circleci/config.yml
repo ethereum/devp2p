@@ -8,14 +8,14 @@ jobs:
       - restore_cache:
           key: lint-node-modules-{{ checksum ".lint/package-lock.json" }}
       - run:
+          name: Generate SVG table of features
+          command: "cd .caps-table && npm install && npm run generate"
+      - run:
           name: Install the Markdown Linter
           command: "cd .lint && npm install"
       - run:
           name: Run the Markdown Linter
           command: ".lint/lint.sh ."
-      - run:
-          name: Generate SVG table of features
-          command: "cd .caps-table && npm install && npm run generate"
       - save_cache:
           key: lint-node-modules-{{ checksum ".lint/package-lock.json" }}
           paths:
