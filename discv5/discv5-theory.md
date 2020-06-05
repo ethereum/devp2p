@@ -25,7 +25,7 @@ used in place of the actual distance.
 
     logdistance(n₁, n₂) = log2(distance(n₁, n₂))
 
-## Maintaining The Local Node Record
+### Maintaining The Local Node Record
 
 Participants should update their record, increase the sequence number and sign a new
 version of the record whenever their information changes. This is especially important for
@@ -40,29 +40,133 @@ IP address and port.
 If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
 translation), implementations should omit IP address and UDP port from the record.
 
-## Session Cache
+## Sessions
 
-All communication between discovery protocol nodes is encrypted and authenticated. To
-make this work efficiently, nodes must store session keys for communication with other
-recently seen nodes. Since sessions are ephemeral and can be re-established whenever
-necessary, it is sufficient to store a limited number of sessions in an in-memory LRU
-cache.
+Discovery communication is encrypted and authenticated using session keys, established in
+the handshake.
+
+### Handshake
+
+Since every node participating in the network acts as both client and server, a handshake
+can be initiated by either side of communication at any time. In the following
+definitions, we assume that node A wishes to communicate with node B, e.g. to send a
+FINDNODE query.
+
+Node A must have a node record for node B and know B's node ID to communicate with it. If
+node A has session keys from prior communication, it encrypts its request with those keys.
+If no keys are known, it initiates the handshake by sending a packet with random content.
+
+    A -> B   FINDNODE encrypted with unknown key or random-packet
+
+Node B receives the initial packet, extracts the source node ID from the packet (see
+[encoding section]), and continues the handshake by responding with WHOAREYOU. The
+WHOAREYOU packet contains a nonce value to be signed by A as well as the highest known ENR
+sequence number of node A's record.
+
+    A <- B   WHOAREYOU including id-nonce, enr-seq
+
+Node A now knows that node B is alive and can send it's initial packet again. Alongside
+the encrypted packet, node A includes an ephemeral public key in the cryptosystem used by
+B's identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the
+"v4" scheme).
+
+The ephemeral key is used to perform Diffie-Hellman key agreement with B's static public
+key and the session keys are derived from it using the HKDF key derivation function.
+
+    ephemeral-key    = random private key
+    ephemeral-pubkey = public key corresponding to ephemeral-key
+    dest-pubkey      = public key of B
+    secret           = ecdh(ephemeral-key, dest-pubkey)
+    info             = "discovery v5 key agreement" || node-id-A || node-id-B
+    prk              = HKDF-Extract(secret, id-nonce)
+
+    initiator-key, recipient-key, auth-resp-key = HKDF-Expand(prk, info)
+
+The authentication header also contains a signature over `id-nonce` as well as node A's
+record if the local sequence number is higher than `enr-seq`. The signature proves that
+node A controls the identity key which signed the record and also prevents replay of the
+handshake.
+
+    A -> B   FINDNODE with handshake header, encrypted with new initiator-key
+
+Node B receives the packet and performs key agreement/derivation with its static private
+key and the `ephemeral-key`. It can now verify that the signature over `id-nonce` was
+created by node A's public key. To verify the signature it looks at node A's record which
+it either already has a copy of or which was received in the header.
+
+If the `id-nonce` signature is valid, Node B considers the new session keys valid,
+decrypts the message contained in the packet and responds to it. In our example case, the
+response is a `NODES` message:
+
+    A <- B   NODES encrypted with new recipient-key
+
+Node A receives the response and authenticates/decrypts it with the new session keys. If
+decryption succeeds, node B's identity is verified. Node A now considers the new session
+keys valid and uses them for all further communication.
+
+### Handshake Implementation Considerations
+
+Since a handshake may happen at any time, implementations should keep a reference to all
+sent request packets until the request either times out, is answered by the corresponding
+response packet or answered by WHOAREYOU. If WHOAREYOU is received as the answer to a
+request, the request must be re-sent with an authentication header containing new keys.
+
+Multiple responses may be pending when WHOAREYOU is received, as in the following example:
+
+    A -> B   FINDNODE
+    A -> B   PING
+    A -> B   TOPICQUERY
+    A <- B   WHOAREYOU (token references PING)
+
+In those cases, pending requests can be considered invalid (the remote end cannot decrypt
+them) and the packet referenced by WHOAREYOU (example: PING) must be re-sent with an
+authentication header. When the response to the re-sent request (example: PONG) is
+received, the new session is established and other pending requests (example: FINDNODE,
+TOPICQUERY) may be re-sent.
+
+Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
+WHOAREYOU is received but no requests are pending, the handshake attempt can be ignored.
+
+### Identity-Specific Cryptography in the Handshake
+
+Establishment of session keys is dependent on the identity scheme of the recipient (i.e.
+the node which sends WHOAREYOU). Similarly, the signature over `id-nonce-input` is made by
+the identity key of the initiator. Although initiator and recipient might not be using the
+same identity scheme in their respective node records, implementations must be able to
+handle handshaking for all supported identity schemes.
+
+At this time, the only supported identity scheme is "v4".
+
+`id_sign(data)` creates a signature over `data` using the node's static private key. The
+signature is encoded as the 64-byte array `r || s`, i.e. as the concatenation of the
+signature values.
+
+`ecdh(pubkey, privkey)` creates a secret through elliptic-curve Diffie-Hellman key
+agreement. The public key is multiplied by the private key to create a secret ephemeral
+key `eph = pubkey * privkey`. The 33-byte secret output is `y || eph.x` where `y` is
+`0x02` when `eph.y` is even or `0x03` when `eph.y` is odd.
+
+### Session Cache
+
+Nodes should store session keys for communication with other recently-seen nodes. Since
+sessions are ephemeral and can be re-established whenever necessary, it is sufficient to
+store a limited number of sessions in an in-memory LRU cache.
 
 To prevent IP spoofing attacks, implementations must ensure that session secrets and the
 handshake are tied to a specific UDP endpoint. This is simple to implement by using the
 node ID and IP/port as the 'key' into the in-memory session cache. When a node switches
 endpoints, e.g. when roaming between different wireless networks, sessions will to be
-re-established by handshaking again. This requires no effort on behalf of the roaming
-node because the recipients of protocol messages will simply refuse to decrypt messages
-from the new endpoint and reply with WHOAREYOU.
+re-established by handshaking again. This requires no effort on behalf of the roaming node
+because the recipients of protocol messages will simply refuse to decrypt messages from
+the new endpoint and reply with WHOAREYOU.
 
 The number of messages which can be encrypted with a certain session key is limited
-because encryption of each message requires a unique nonce for AES-GCM. In addition to
-the keys, the session cache must also keep track of the count of outgoing messages to
-ensure the uniqueness of nonce values. Since the wire protocol uses 96 bit AES-GCM
-nonces, it is strongly recommended to generate them by encoding the current outgoing
-message count into the first 32 bits of the nonce and filling the remaining 64 bits with
-random data generated by a cryptographically secure random number generator.
+because encryption of each message requires a unique nonce for AES-GCM. In addition to the
+keys, the session cache must also keep track of the count of outgoing messages to ensure
+the uniqueness of nonce values. Since the wire protocol uses 96 bit AES-GCM nonces, it is
+strongly recommended to generate them by encoding the current outgoing message count into
+the first 32 bits of the nonce and filling the remaining 64 bits with random data
+generated by a cryptographically secure random number generator.
 
 ## Node Table
 
@@ -344,9 +448,10 @@ encountered during lookup are asked for topic queue entries using the [TOPICQUER
 Radius estimation for topic search is similar to the estimation procedure for
 advertisement, but samples the average number of results from TOPICQUERY instead of
 average time to registration. The radius estimation value can be shared with the
-registration algorithm if the the same topic is being registered and searched for.
+registration algorithm if the same topic is being registered and searched for.
 
 [EIP-778]: ../enr.md
+[encoding section]: ./discv5-wire.md#packet-encoding
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03

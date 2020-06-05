@@ -48,179 +48,88 @@ request/response and 1s for the handshake.
 When responding to a request, the response should be sent to the UDP envelope address of
 the request.
 
-## Handshake
-
-Discovery communication is encrypted and authenticated using session keys, established in
-the handshake. Since every node participating in the network acts as both client and
-server, a handshake can be initiated by either side of communication at any time. In the
-following definitions, we assume that node A wishes to communicate with node B, e.g. to
-send a FINDNODE query.
-
-Node A must have a node record for node B and know B's node ID to communicate with it. If
-node A has session keys from prior communication, it encrypts its request with those keys.
-If no keys are known, it initiates the handshake by sending a packet with random content.
-
-    A -> B   FINDNODE (encrypted with unknown key) or random-packet
-
-Node B receives the initial packet, extracts the source node ID from the packet's `tag`
-(see [encoding section]) and continues the handshake by responding with WHOAREYOU. The
-WHOAREYOU packet contains a nonce value to be signed by A as well as the highest known ENR
-sequence number of node A's record.
-
-    A <- B   WHOAREYOU (including id-nonce, enr-seq)
-
-Node A now knows that node B is alive and can send it's initial packet again. Alongside
-the encrypted packet, node A includes an ephemeral public key in the cryptosystem used by
-B's identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the
-"v4" scheme).
-
-The ephemeral key is used to perform Diffie-Hellman key agreement with B's static public
-key and the session keys are derived from it using the HKDF key derivation function.
-
-    ephemeral-key    = random private key
-    ephemeral-pubkey = public key corresponding to ephemeral-key
-    dest-pubkey      = public key of B
-    secret           = ecdh(ephemeral-key, dest-pubkey)
-    info             = "discovery v5 key agreement" || node-id-A || node-id-B
-    prk              = HKDF-Extract(secret, id-nonce)
-
-    initiator-key, recipient-key, auth-resp-key = HKDF-Expand(prk, info)
-
-The authentication header also contains an encrypted signature over `id-nonce` (preventing
-replay of the handshake) as well as node A's node record if the local sequence number is
-higher than `enr-seq`.
-
-    A -> B   FINDNODE (with authentication header, encrypted with new initiator-write-key)
-
-Node B receives the packet and performs key agreement/derivation with its static private
-key and the `ephemeral-key`. It can now decrypt the header values and verify that the
-signature over `id-nonce` was created by node A's public key. To verify the signature it
-looks at node A's record which it either already has a copy of or which was received in
-the header.
-
-If the `id-nonce` signature is valid, Node B considers the new session keys valid,
-decrypts the message contained in the packet and responds to it. In our example case, the
-response is a `NODES` message:
-
-    A <- B   NODES (encrypted with new recipient-write-key)
-
-Node A receives the response and authenticates/decrypts it with the new session keys. If
-decryption succeeds node B's identity is verified, A considers the new session keys valid
-and uses them for all further communication.
-
-### Handshake Implementation Considerations
-
-Since a handshake may happen at any time, implementations should keep a reference to all
-sent request packets until the request either times out, is answered by the corresponding
-response packet or answered by WHOAREYOU. If WHOAREYOU is received as the answer to a
-request, the request must be re-sent with an authentication header containing new keys.
-
-Multiple responses may be pending when WHOAREYOU is received, as in the following example:
-
-    A -> B   FINDNODE
-    A -> B   PING
-    A -> B   TOPICQUERY
-    A <- B   WHOAREYOU (token references PING)
-
-In those cases, pending requests can be considered invalid (the remote end cannot decrypt
-them) and the packet referenced by WHOAREYOU (example: PING) must be re-sent with an
-authentication header. When the response to the re-sent request (example: PONG) is
-received, the new session is established and other pending requests (example: FINDNODE,
-TOPICQUERY) may be re-sent.
-
-Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
-WHOAREYOU is received but no requests are pending, the handshake attempt can be ignored.
-
-Implementations should be careful about AES-GCM nonces because encrypting two messages
-with the same nonce compromises the key. Session keys should be kept in memory for a
-limited amount of time, ensuring that nodes occasionally perform a handshake to establish
-new keys.
-
-**TBD: concurrent handshake tie-breaker rule.**
-
-### Identity-Specific Cryptography in the Handshake
-
-Establishment of session keys is dependent on the identity scheme of the recipient (i.e.
-the node which sends WHOAREYOU). Similarly, the signature over `id-nonce-input` is made by
-the identity key of the initiator. Although initiator and recipient might not be using the
-same identity scheme in their respective node records, implementations must be able to
-handle handshaking for all supported identity schemes.
-
-At this time, the only supported identity scheme is "v4".
-
-`id_sign(data)` creates a signature over `data` using the node's static private key. The
-signature is encoded as the 64-byte array `r || s`, i.e. as the concatenation of the
-signature values.
-
-`ecdh(pubkey, privkey)` creates a secret through elliptic-curve Diffie-Hellman key
-agreement. The public key is multiplied by the private key to create a secret ephemeral
-key `eph = pubkey * privkey`. The 33-byte secret output is `y || eph.x` where `y` is
-`0x02` when `eph.y` is even or `0x03` when `eph.y` is odd.
-
 ## Packet Encoding
 
-All regular packets except WHOAREYOU start with a fixed-size `tag`. For a packet sent by
-node A to node B:
 
-    tag              = xor(sha256(dest-node-id), src-node-id)
-    dest-node-id     = 32-byte node ID of B
-    src-node-id      = 32-byte node ID of A
+The discv5 protocol deals with three distinct kinds of packets:
 
-The recipient can recover the sender's ID by performing the same calculation in reverse.
+- Ordinary message packets, which carry an encrypted/authenticated message.
+- WHOAREYOU packets, which are sent when the recipient of an ordinary message packet
+  cannot decrypt/authenticate the packet's message.
+- Handshake message packets, which are sent following WHOAREYOU. These packets establish a
+  new session and carry handshake-related data in addition to the encrypted/authenticated
+  message.
 
-    src-node-id      = xor(sha256(dest-node-id), tag)
+In the following definitions, we assume that the sender of a packet has knowledge of its
+own 256bit node ID (`src-id`) and the node ID of the packet destination (`dest-id`). When
+sending any packet except WHOAREYOU, the sender also generates a unique 96-bit `nonce`
+value.
 
-The encoding of the 'random packet', sent if no session keys are available, is:
+All packets start with a fixed-size `header`, followed by a variable-length `authdata`
+section, followed by the encrypted/authenticated `message`.
 
-    random-packet    = tag || rlp_bytes(auth-tag) || random-data
-    auth-tag         = 12 random bytes unique to message
-    random-data      = at least 44 bytes of random data
+    packet        = header || authdata || message
+    header        = protocol-id || src-id || flag || authdata-size
+    message       = aesgcm_encrypt(initiator-key, nonce, message-plaintext, header || authdata)
+    protocol-id   = "discv5  "
+    authdata-size = uint16    -- byte length of authdata
+    flag          = uint8     -- packet type identifier
 
-The WHOAREYOU packet, used during the handshake, is encoded as follows:
+The recipient may then verify whether the packet is truly a discv5 packet sent to the
+correct node. If the `checksum` doesn't match, the recipient should simply ignore the
+packet.
 
-    whoareyou-packet = magic || [token, id-nonce, enr-seq]
-    magic            = sha256(dest-node-id || "WHOAREYOU")
-    token            = auth-tag of request
-    id-nonce         = 32 random bytes
-    enr-seq          = highest ENR sequence number of node A known on node B's side
+The `flag` field identifies the kind of packet and determines the encoding of `authdata`,
+which differs depending on the packet type.
 
-The first encrypted message sent in response to WHOAREYOU contains an authentication
-header completing the handshake. The plain text of the authentication response is.
+### Ordinary Message Packet (`flag = 0`)
 
-    auth-response-pt = [version, id-nonce-sig, node-record]
-    version          = 1
-    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-pubkey)
-    id-nonce-sig     = id_sign(id-nonce-input)
-    static-node-key  = the private key used for node record identity
-    node-record      = record of sender OR [] if enr-seq in WHOAREYOU != current seq
+For message packets, the `authdata` section is just the 96-bit AES/GCM nonce:
 
-`auth-response-pt` is encrypted with a separate key, the `auth-resp-key`, using an
-all-zero nonce. This is safe because only one message is ever encrypted with this key.
+    authdata      = nonce
+    authdata-size = 12
 
-    message-packet   = tag || auth-header || message
-    auth-header      = [auth-tag, id-nonce, auth-scheme-name, ephemeral-pubkey, auth-response]
-    auth-scheme-name = "gcm"
-    auth-response    = aesgcm_encrypt(auth-resp-key, zero-nonce, auth-response-pt, "")
-    zero-nonce       = 12 zero bytes
-    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag)
-    message-pt       = message-type || message-data
-    auth-tag         = AES-GCM nonce, 12 random bytes unique to message
+![message packet layout](./img/message-packet-layout.png)
 
-All messages following the handshake are encoded as follows:
+### WHOAREYOU Packet (`flag = 1`)
 
-    message-packet   = tag || rlp_bytes(auth-tag) || message
-    message          = aesgcm_encrypt(initiator-key, auth-tag, message-pt, tag)
+In WHOAREYOU packets, the `authdata` section contains information for the verification
+procedure. The `message` field of WHOAREYOU packets is always empty.
 
-Implementations can distinguish the two `message-packet` encodings by checking whether the
-value at offset 32 after the fixed-size `tag` is an RLP list (`auth-header`) or byte array
-(`auth-tag`).
+    authdata      = request-nonce || id-nonce || enr-seq
+    authdata-size = 52
+    request-nonce = uint96    -- nonce of request packet that couldn't be decrypted
+    id-nonce      = uint256   -- random bytes
+    enr-seq       = uint64    -- ENR sequence number of the requesting node
+
+![whoareyou packet layout](./img/whoareyou-packet-layout.png)
+
+### Handshake Message Packet (`flag = 2`)
+
+For handshake message packets, the `authdata` section has variable size since public key
+and signature sizes depend on the ENR identity scheme. For the "v4" identity scheme, we
+assume 64-byte signature size and 33 bytes of (compressed) public key size.
+
+`authdata` starts with a fixed-size `authdata-head` component, followed by the ID
+signature, ephemeral public key and optional node record. The `record` field may be
+omitted if the `enr-seq` of WHOAREYOU is recent enough, i.e. when it matches the current
+sequence number of the sending node.
+
+    authdata      = authdata-head || id-signature || eph-pubkey || record
+    authdata-size = 15 + sig-size + eph-key-size + len(record)
+    authdata-head = version || nonce || sig-size || eph-key-size
+    version       = uint8     -- value: 1
+    sig-size      = uint8     -- value: 64 for ID scheme "v4"
+    eph-key-size  = uint8     -- value: 33 for ID scheme "v4"
+
+![handshake packet layout](./img/handshake-packet-layout.png)
 
 Node records are encoded and verified as specified in [EIP-778].
 
 ## Protocol Messages
 
 This section lists all defined messages which can be sent and received. The hexadecimal
-value in brackets is the `message-type`.
+value in parentheses is the `message-type`.
 
 The first element of every `message-data` list is the request ID. For requests, this value
 is assigned by the requester. The recipient of a message must mirror the value in the
@@ -357,7 +266,6 @@ A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
 [handshake section]: #handshake
-[encoding section]: #packet-encoding
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
