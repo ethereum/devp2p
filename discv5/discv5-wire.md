@@ -165,12 +165,12 @@ PONG is the reply to PING.
 
     message-data = [request-id, distance₁, distance₂, ..., distanceₙ]
     message-type = 0x03
-    distance     = the requested log2 distance, a positive integer
+    distanceₙ    = requested log2 distance, a positive integer
 
 FINDNODE queries for nodes at the given logarithmic distances from the recipient's node ID.
 The recipient should create a result set containing nodes from its local node table.
 
-A request with distance `0` should return the recipient's current record as the result.
+A request with distance `0` should return the recipient's current record as the only result.
 
 ### NODES Response (0x04)
 
@@ -180,6 +180,9 @@ A request with distance `0` should return the recipient's current record as the 
 
 NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
 sent as responses to a single query.
+
+When handling NODES as a response to FINDNODE, the recipient should verify that the
+received nodes match the requested distances.
 
 ### TALKREQ Request (0x05)
 
