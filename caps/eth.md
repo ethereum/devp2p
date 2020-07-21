@@ -21,7 +21,7 @@ limit, the peer should be disconnected.
 
 In addition to the hard limit on received messages, clients should also impose 'soft'
 limits on the requests and responses which they send. The recommended soft limit varies
-per message type. Limiting requests and responses ensures that concurrent activity, i.e.
+per message type. Limiting requests and responses ensures that concurrent activity, e.g.
 block synchronization and transaction exchange work smoothly over the same peer
 connection.
 
@@ -71,8 +71,8 @@ else after an implementation-defined timeout.
 
 All nodes must exchange pending transactions in order to relay them to miners, which will
 pick them for inclusion into the blockchain. Client implementations keep track of the set
-of transactions which are not yet included in the 'transaction pool'. The pool is subject
-to client-specific limits and can contain many (i.e. thousands of) transactions.
+of pending transactions in the 'transaction pool'. The pool is subject to client-specific
+limits and can contain many (i.e. thousands of) transactions.
 
 When a new peer connection is established, the transaction pools on both sides need to be
 synchronized. Initially, both ends should send [NewPooledTransactionHashes] messages
