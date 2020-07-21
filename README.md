@@ -7,8 +7,8 @@ Ethereum.
 - [Node Discovery Protocol v4]
 - [Node Discovery Protocol v5] **(Draft Specification)**
 - [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
-  - [Ethereum Wire Protocol] (version 63)
-  - [Light Ethereum Subprotocol] (version 2)
+  - [Ethereum Wire Protocol] (version 65)
+  - [Light Ethereum Subprotocol] (version 3)
   - [Parity Light Protocol] (version 1)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
