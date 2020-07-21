@@ -241,9 +241,13 @@ requesters will know which hashes to request again (everything starting from the
 returned transaction) and which to assume unavailable (all gaps before the last returned
 transaction).
 
+It is permissible to first announce a transaction via NewPooledTransactionHashes, but then
+to refuse serving it via PooledTransactions. This situation can arise when the transaction
+is included in a block (and removed from the pool) in between the announcement and the
+request.
+
 A peer may respond with an empty list iff none of the hashes match transactions in its
-pool. It is allowed to announce a transaction that will not be served later if it gets
-included in a block in between.
+pool.
 
 ### GetNodeData (0x0d)
 
