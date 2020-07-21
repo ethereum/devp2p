@@ -1,40 +1,43 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/64**. See end
+blockchain information between peers. The current protocol version is **eth/65**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
 
 Once a connection is established, a [Status] message must be sent. Following the reception
-of the peer's Status message, the Ethereum session is active and any other messages may be
+of the peer's Status message, the Ethereum session is active and any other message may be
 sent.
 
-All known transactions should be sent following the Status exchange with one or more
-[Transactions] messages.
+Within a session, three high-level tasks can be performed: chain synchronization, block
+propagation and transaction exchange. These tasks use disjoint sets of protocol messages
+and clients typically perform them as concurrent activities on all peer connections.
 
-[Transactions] messages should also be sent periodically as the node has new transactions
-to disseminate. A node should never send a transaction back to a peer that it can
-determine already knows of it (either because it was previously sent or because it was
-informed from this peer originally).
+Client implementations should enforce limits on protocol message sizes. The underlying
+RLPx transport limits the size of a single message to 16.7 MiB. The practical limits for
+the eth protocol are lower, typically 10 MiB. If a received message is larger than the
+limit, the peer should be disconnected.
 
-Blocks are typically re-propagated to all connected peers as soon as basic validity of the
-announcement has been established (e.g. after the proof-of-work check). Propagation uses
-the [NewBlock] and [NewBlockHashes] messages. The [NewBlock] message includes the full
-block and is sent to a small fraction of connected peers (usually the square root of the
-total number of peers). All other peers are sent a [NewBlockHashes] message containing
-just the hash of the new block. Those peers may request the full block later if they fail
-to receive it from anyone within reasonable time.
+In addition to the hard limit on received messages, clients should also impose 'soft'
+limits on the requests and responses which they send. The recommended soft limit varies
+per message type. Limiting requests and responses ensures that concurrent activity, e.g.
+block synchronization and transaction exchange work smoothly over the same peer
+connection.
 
 ### Chain Synchronization
 
-Two peers get connected and send their [Status] message. Status includes the Total
-Difficulty (TD) and hash of their best block.
+Nodes participating in the eth protocol are expected to have knowledge of the complete
+chain of all blocks from the genesis block to current, latest block. The chain is obtained
+by downloading it from other peers.
+
+Upon connection, both peers send their [Status] message, which includes the Total
+Difficulty (TD) and hash of their 'best' known block.
 
 The client with the worst TD then proceeds to download block headers using the
 [GetBlockHeaders] message. It verifies proof-of-work values in received headers and
 fetches block bodies using the [GetBlockBodies] message. Received blocks are executed
-using the Ethereum Virtual Machine, recreating the state tree.
+using the Ethereum Virtual Machine, recreating the state tree and receipts.
 
 Note that header downloads, block body downloads and block execution may happen
 concurrently.
@@ -42,8 +45,8 @@ concurrently.
 ### State Synchronization (a.k.a. "fast sync")
 
 Protocol versions eth/63 and later also allow synchronizing transaction execution results
-("state"). This may be faster than re-executing all transactions but comes at the expense
-of some security.
+(i.e. state tree and receipts). This may be faster than re-executing all historical
+transactions but comes at the expense of some security.
 
 State synchronization typically proceeds by downloading the chain of block headers,
 verifying their proof-of-work values. Block bodies are requested as in the Chain
@@ -51,6 +54,59 @@ Synchronization section but block transactions aren't executed. Instead, the cli
 a block near the head of the chain and downloads merkle tree nodes and contract code
 incrementally by requesting the root node, its children, grandchildren, ... using
 [GetNodeData] until the entire tree is synchronized.
+
+### Block Propagation
+
+Newly-mined blocks must be relayed to all nodes. This happens through block propagation,
+which is a two step process. When a [NewBlock] announcement message is received from a
+peer, the client first verifies the basic validity of the block and checks that the
+proof-of-work value is valid. It then sends the block to a small fraction of connected
+peers (usually the square root of the total number of peers) using the [NewBlock] message.
+
+After the proof-of-work check, the client imports the block into its local chain by
+executing all transactions contained in the block, computing the block's 'post state'. The
+block's state root hash must match the computed post state root. Once the block is fully
+processed the client sends a [NewBlockHashes] message about the block to all peers which
+it didn't notify earlier. Those peers may request the full block later if they fail to
+receive it via [NewBlock] from anyone else.
+
+A node should never send a block announcement back to a peer which previously announced
+the same block. This is usually achieved by remembering a large set of block hashes
+recently relayed to or from each peer.
+
+The reception of a block announcement may also trigger chain synchronization if the block
+is not the immediate successor of the client's current latest block.
+
+### Transaction Exchange
+
+All nodes must exchange pending transactions in order to relay them to miners, which will
+pick them for inclusion into the blockchain. Client implementations keep track of the set
+of pending transactions in the 'transaction pool'. The pool is subject to client-specific
+limits and can contain many (i.e. thousands of) transactions.
+
+When a new peer connection is established, the transaction pools on both sides need to be
+synchronized. Initially, both ends should send [NewPooledTransactionHashes] messages
+containing all transaction hashes in the local pool to start the exchange.
+
+On receipt of a NewPooledTransactionHashes announcement, the client filters the received
+set, collecting transaction hashes which it doesn't yet have in its own local pool. It can
+then request the transactions using the [GetPooledTransactions] message.
+
+When new transactions appear in the client's pool, it should propagate them to the network
+using the [Transactions] and [NewPooledTransactionHashes] messages. The Transactions
+message relays complete transaction objects and is typically sent to a small, random
+fraction of connected peers. All other peers receive a notification of the transaction
+hash and can request the complete transaction object if it is unknown to them. The
+dissemination of complete transactions to a fraction of peers usually ensures that all
+nodes receive the transaction and won't need to request it.
+
+A node should never send a transaction back to a peer that it can determine already knows
+of it (either because it was previously sent or because it was informed from this peer
+originally). This is usually achieved by remembering a set of transaction hashes recently
+relayed by the peer.
+
+Transactions must be validated before re-propagating them. Relaying an invalid transaction
+results in peer disconnection.
 
 ## Protocol Messages
 
@@ -130,6 +186,8 @@ in a GetBlockHeaders message. This may validly contain no block headers if none 
 requested block headers were found. The number of headers that can be requested in a
 single message may be subject to implementation-defined limits.
 
+The recommended soft limit for BlockHeaders responses is 2 MiB.
+
 ### GetBlockBodies (0x05)
 
 `[hash_0: B_32, hash_1: B_32, ...]`
@@ -147,6 +205,8 @@ in the format described in the main Ethereum specification, previously asked for
 GetBlockBodies message. This may be empty if no blocks were available for the last
 GetBlockBodies query.
 
+The recommended soft limit for BlockBodies responses is 2 MiB.
+
 ### NewBlock (0x07)
 
 `[[blockHeader, transactionList, uncleList], totalDifficulty]`
@@ -156,6 +216,52 @@ Specify a single block that the peer should know about. The composite item in th
 specification.
 
 - `totalDifficulty` is the total difficulty of the block (aka score).
+
+### NewPooledTransactionHashes (0x08)
+
+`[hash_0: B_32, hash_1: B_32, ...]`
+
+This message announces one or more transactions that have appeared in the network and
+which have not yet been included in a block. To be maximally helpful, nodes should inform
+peers of all transactions that they may not be aware of.
+
+The recommended soft limit for this message is 4096 hashes (128 KiB).
+
+Nodes should only announce hashes of transactions that the remote peer could reasonably be
+considered not to know, but it is better to return more transactions than to have a nonce
+gap in the pool.
+
+### GetPooledTransactions (0x09)
+
+`[hash_0: B_32, hash_1: B_32, ...]`
+
+This message requests transactions from the recipient's transaction pool by hash.
+
+The recommended soft limit for GetPooledTransactions requests is 256 hashes (8 KiB). The
+recipient may enforce an arbitrary limit on the response (size or serving time), which
+must not be considered a protocol violation.
+
+### PooledTransactions (0x0a)
+
+`[[nonce: P, receivingAddress: B_20, value: P, ...], ...]`
+
+This is the response to GetPooledTransactions, returning the requested transactions from
+the local pool. The items in the list are transactions in the format described in the main
+Ethereum specification.
+
+The transactions must be in same order as in the request, but it is OK to skip
+transactions which are not available. This way, if the response size limit is reached,
+requesters will know which hashes to request again (everything starting from the last
+returned transaction) and which to assume unavailable (all gaps before the last returned
+transaction).
+
+It is permissible to first announce a transaction via NewPooledTransactionHashes, but then
+to refuse serving it via PooledTransactions. This situation can arise when the transaction
+is included in a block (and removed from the pool) in between the announcement and the
+request.
+
+A peer may respond with an empty list iff none of the hashes match transactions in its
+pool.
 
 ### GetNodeData (0x0d)
 
@@ -174,6 +280,8 @@ message may be an empty list if the peer doesn't know about any of the previousl
 requested hashes. The number of items that can be requested in a single message may be
 subject to implementation-defined limits.
 
+The recommended soft limit for NodeData responses is 2 MiB.
+
 ### GetReceipts (0x0f)
 
 `[blockHash_0: B_32, blockHash_1: B_32, ...]`
@@ -189,12 +297,25 @@ implementation-defined limits.
 Provide a set of receipts which correspond to block hashes in a previous [GetReceipts]
 message.
 
+The recommended soft limit for Receipts responses is 2 MiB.
+
 ## Change Log
+
+### eth/65 ([EIP-2464], January 2020)
+
+Version 65 improved transaction exchange, introducing three additional messages:
+[NewPooledTransactionHashes], [GetPooledTransactions], and [PooledTransactions].
+
+Prior to version 65, peers always exchanged complete transaction objects. As activity and
+transaction sizes increased on the Ethereum mainnet, the network bandwidth used for
+transaction exchange became a significant burden on node operators. The update reduced the
+required bandwidth by adopting a two-tier transaction broadcast system similar to block
+propagation.
 
 ### eth/64 ([EIP-2364], November 2019)
 
-Version 64 changed the [Status] message to include the [EIP-2124] ForkID. This allows peers
-to determine mutual compatibility of chain execution rules without synchronizing the
+Version 64 changed the [Status] message to include the [EIP-2124] ForkID. This allows
+peers to determine mutual compatibility of chain execution rules without synchronizing the
 blockchain.
 
 ### eth/63 (2016)
@@ -243,6 +364,9 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetBlockBodies]: #getblockbodies-0x05
 [BlockBodies]: #blockbodies-0x06
 [NewBlock]: #newblock-0x07
+[NewPooledTransactionHashes]: #newpooledtransactionhashes-0x08
+[GetPooledTransactions]: #getpooledtransactions-0x09
+[PooledTransactions]: #pooledtransactions-0x0a
 [GetNodeData]: #getnodedata-0x0d
 [NodeData]: #nodedata-0x0e
 [GetReceipts]: #getreceipts-0x0f
@@ -250,3 +374,4 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [Rinkeby]: https://rinkeby.io
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
 [EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
+[EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
