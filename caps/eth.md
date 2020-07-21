@@ -74,7 +74,7 @@ A node should never send a block announcement back to a peer which previously an
 the same block. This is usually achieved by remembering a large set of block hashes
 recently relayed to or from each peer.
 
-The reception of a block announcment may also trigger chain synchronization if the block
+The reception of a block announcement may also trigger chain synchronization if the block
 is not the immediate successor of the client's current latest block.
 
 ### Transaction Exchange
