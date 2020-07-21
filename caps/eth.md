@@ -57,15 +57,25 @@ incrementally by requesting the root node, its children, grandchildren, ... usin
 
 ### Block Propagation
 
-Newly-mined blocks must be relayed to all nodes. This happens through block announcements.
+Newly-mined blocks must be relayed to all nodes. This happens through block propagation,
+which is a two step process. When a [NewBlock] announcement message is received from a
+peer, the client first verifies the basic validity of the block and checks that the
+proof-of-work value is valid. It then sends the block to a small fraction of connected
+peers (usually the square root of the total number of peers) using the [NewBlock] message.
 
-Blocks are announced to all connected peers as soon as basic validity of the block has
-been established (e.g. after the proof-of-work check). Propagation uses the [NewBlock] and
-[NewBlockHashes] messages. The [NewBlock] message includes the full block and is sent to a
-small fraction of connected peers (usually the square root of the total number of peers).
-All other peers are sent a [NewBlockHashes] message containing just the hash of the new
-block. Those peers may request the full block later if they fail to receive it from anyone
-else after an implementation-defined timeout.
+After the proof-of-work check, the client imports the block into its local chain by
+executing all transactions contained in the block, computing the block's 'post state'. The
+block's state root hash must match the computed post state root. Once the block is fully
+processed the client sends a [NewBlockHashes] message about the block to all peers which
+it didn't notify earlier. Those peers may request the full block later if they fail to
+receive it via [NewBlock] from anyone else.
+
+A node should never send a block announcement back to a peer which previously announced
+the same block. This is usually achieved by remembering a large set of block hashes
+recently relayed to or from each peer.
+
+The reception of a block announcment may also trigger chain synchronization if the block
+is not the immediate successor of the client's current latest block.
 
 ### Transaction Exchange
 
