@@ -176,6 +176,8 @@ in a GetBlockHeaders message. This may validly contain no block headers if none 
 requested block headers were found. The number of headers that can be requested in a
 single message may be subject to implementation-defined limits.
 
+The recommended soft limit for BlockHeaders responses is 2 MiB.
+
 ### GetBlockBodies (0x05)
 
 `[hash_0: B_32, hash_1: B_32, ...]`
@@ -192,6 +194,8 @@ Reply to [GetBlockBodies]. The items in the list are some of the blocks, minus t
 in the format described in the main Ethereum specification, previously asked for in a
 GetBlockBodies message. This may be empty if no blocks were available for the last
 GetBlockBodies query.
+
+The recommended soft limit for BlockBodies responses is 2 MiB.
 
 ### NewBlock (0x07)
 
@@ -266,6 +270,8 @@ message may be an empty list if the peer doesn't know about any of the previousl
 requested hashes. The number of items that can be requested in a single message may be
 subject to implementation-defined limits.
 
+The recommended soft limit for NodeData responses is 2 MiB.
+
 ### GetReceipts (0x0f)
 
 `[blockHash_0: B_32, blockHash_1: B_32, ...]`
@@ -280,6 +286,8 @@ implementation-defined limits.
 
 Provide a set of receipts which correspond to block hashes in a previous [GetReceipts]
 message.
+
+The recommended soft limit for Receipts responses is 2 MiB.
 
 ## Change Log
 
