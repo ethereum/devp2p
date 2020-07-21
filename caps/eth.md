@@ -17,7 +17,7 @@ and clients typically perform them as concurrent activities on all peer connecti
 Client implementations should enforce limits on protocol message sizes. The underlying
 RLPx transport limits the size of a single message to 16.7 MiB. The practical limits for
 the eth protocol are lower, typically 10 MiB. If a received message is larger than the
-limit, the peer is disconnected.
+limit, the peer should be disconnected.
 
 In addition to the hard limit on received messages, clients should also impose 'soft'
 limits on the requests and responses which they send. The recommended soft limit varies
