@@ -198,12 +198,17 @@ The initial [Hello] message is encoded as follows:
 where `msg-id` is an RLP-encoded integer identifying the message and `msg-data` is an RLP
 list containing the message data.
 
-All messages following Hello are compressed using the Snappy algorithm. Note that the
-`frame-size` of compressed messages refers to the uncompressed size of `msg-data`. The
-compressed encoding of messages is:
+All messages following Hello are compressed using the Snappy algorithm.
 
     frame-data = msg-id || snappyCompress(msg-data)
-    frame-size = length of (msg-id || msg-data) encoded as a 24bit big-endian integer
+    frame-size = length of frame-data encoded as a 24bit big-endian integer
+
+Note that the `frame-size` of compressed messages refers to the compressed size of
+`msg-data`. Since compressed messages may inflate to a very large size after
+decompression, implementations should check for the uncompressed size of the data before
+decoding the message. This is possible because the [snappy format] contains a length
+header. Messages carrying uncompressed data larger than 16 MiB should be rejected by
+closing the connection.
 
 ## Message ID-based Multiplexing
 
@@ -342,3 +347,4 @@ Creative Commons Attribution-NonCommercial-ShareAlike
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
 [EIP-706]: https://eips.ethereum.org/EIPS/eip-706
 [RLP]: https://github.com/ethereum/wiki/wiki/RLP
+[snappy format]: https://github.com/google/snappy/blob/master/format_description.txt
