@@ -11,8 +11,9 @@ utilises [Canonical Hash Tries] \(CHTs), which are also described in the LES doc
 Unlike LES, a PIP CHT is generated once every 2048 blocks. One 32-byte trie root is stored
 for every range of 2048 blocks.
 
-The current version is **pip/1**. The original proposal and some information on design
-rationale can be found in the [Parity PIP page].
+The current version is **pip/1**. This specification was derived from the official
+specification at <https://wiki.parity.io>. However, the official specification has since
+been deleted.
 
 ## Notation
 
@@ -144,8 +145,8 @@ PIP batches may contain multiple messages of different types. The [Request Batch
 to send messages of the types described below to the server.
 
 Each message type also specifies its corresponding response message (referred to as
-*outputs* on the [Parity PIP page]. Response messages are sent as a [Response Batch] by
-the server when requests have executed.
+*outputs*). Response messages are sent as a [Response Batch] by the server when requests
+have executed.
 
 PIP tries to further optimise client-server round trips by allowing the individual
 requests in the batch to include references to what their responses would contain if
@@ -345,7 +346,6 @@ Request for Merkle proofs of a contract execution.
 
 [LES specification]: ./les.md
 [ETH]: ./eth.md
-[Parity PIP page]: https://wiki.parity.io/The-Parity-Light-Protocol-(PIP)
 [Cost Table]: #cost-table
 [Canonical Hash Tries]: ./les.md#canonical-hash-trie
 [token-bucket rate limiter]: https://en.wikipedia.org/wiki/Token_bucket
