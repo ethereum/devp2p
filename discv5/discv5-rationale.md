@@ -423,7 +423,7 @@ also possible to implement a feedback system between trusted clients and servers
 
 - Atul Singh, Tsuen-Wan “Johnny” Ngan, Peter Druschel, Dan S. Wallach.
   *Eclipse Attacks on Overlay Networks: Threats and Defenses*. 2006.\
-  <https://www.cs.rice.edu/~druschel/publications/Eclipse-Infocom.pdf>
+  <https://www.cs.rice.edu/~dwallach/pub/eclipse-infocom06.pdf>
 
 - Ingmar Baumgart and Sebastian Mies.
   *S/Kademlia: A Practicable Approach Towards Secure Key-Based Routing.* 2007.\
