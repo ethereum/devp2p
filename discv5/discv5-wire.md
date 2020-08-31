@@ -130,9 +130,11 @@ and signature sizes depend on the ENR identity scheme. For the "v4" identity sch
 assume 64-byte signature size and 33 bytes of (compressed) public key size.
 
 `authdata` starts with a fixed-size `authdata-head` component, followed by the ID
-signature, ephemeral public key and optional node record. The `record` field may be
-omitted if the `enr-seq` of WHOAREYOU is recent enough, i.e. when it matches the current
-sequence number of the sending node.
+signature, ephemeral public key and optional node record.
+
+The `record` field may be omitted if the `enr-seq` of WHOAREYOU is recent enough, i.e.
+when it matches the current sequence number of the sending node. If `enr-seq` is zero, the
+record must be sent.
 
     authdata      = authdata-head || id-signature || eph-pubkey || record
     authdata-size = 15 + sig-size + eph-key-size + len(record)
