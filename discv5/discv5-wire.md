@@ -185,7 +185,7 @@ PONG is the reply to PING.
 
 ### FINDNODE Request (0x03)
 
-    message-data = [request-id, distance₁, distance₂, ..., distanceₙ]
+    message-data = [request-id, [distance₁, distance₂, ..., distanceₙ]]
     message-type = 0x03
     distanceₙ    = requested log2 distance, a positive integer
 
