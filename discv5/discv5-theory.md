@@ -59,18 +59,18 @@ If no keys are known, it initiates the handshake by sending a packet with random
     A -> B   FINDNODE encrypted with unknown key or random-packet
 
 Node B receives the initial packet, extracts the source node ID from the packet (see
-[encoding section]), and continues the handshake by responding with WHOAREYOU. The
-WHOAREYOU packet contains a nonce value to be signed by A as well as the highest known ENR
-sequence number of node A's record.
+[encoding section]), and continues the handshake by responding with [WHOAREYOU]. The
+WHOAREYOU packet contains the id-nonce value to be signed by A as well as the highest
+known ENR sequence number of node A's record.
 
     A <- B   WHOAREYOU including id-nonce, enr-seq
 
-Node A now knows that node B is alive and can send it's initial packet again. Alongside
-the encrypted packet, node A includes an ephemeral public key in the cryptosystem used by
-B's identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the
-"v4" scheme).
+Node A now knows that node B is alive and is ready to perform the handshake. The handshake
+proceeds by re-sending the original request message in a [handshake packet].
 
-The ephemeral key is used to perform Diffie-Hellman key agreement with B's static public
+The handshake packet includes an ephemeral public key in the cryptosystem used by B's
+identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the "v4"
+scheme). This key is used to perform Diffie-Hellman key agreement with B's static public
 key and the session keys are derived from it using the HKDF key derivation function.
 
     ephemeral-key    = random private key
@@ -82,17 +82,24 @@ key and the session keys are derived from it using the HKDF key derivation funct
 
     initiator-key, recipient-key, auth-resp-key = HKDF-Expand(prk, info)
 
-The authentication header also contains a signature over `id-nonce` as well as node A's
-record if the local sequence number is higher than `enr-seq`. The signature proves that
-node A controls the identity key which signed the record and also prevents replay of the
+The handshake packet also contains a signature over `id-nonce` as well as node A's record
+if the local sequence number is higher than `enr-seq`. The signature proves that node A
+controls the identity key which signed the record and also prevents replay of the
 handshake.
 
-    A -> B   FINDNODE with handshake header, encrypted with new initiator-key
+    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-pubkey)
+    id-signature     = id_sign(id-nonce-input)
 
-Node B receives the packet and performs key agreement/derivation with its static private
-key and the `ephemeral-key`. It can now verify that the signature over `id-nonce` was
-created by node A's public key. To verify the signature it looks at node A's record which
+The request is now re-sent:
+
+    A -> B   FINDNODE as handshake packet, message encrypted with new initiator-key
+
+Node B receives the handshake packet and verifies that the signature over `id-nonce` was
+created by node A's public key. To verify the signature, it looks at node A's record which
 it either already has a copy of or which was received in the header.
+
+Node B then performs key agreement/derivation using its own static private key and
+`ephemeral-pubkey`.
 
 If the `id-nonce` signature is valid, Node B considers the new session keys valid,
 decrypts the message contained in the packet and responds to it. In our example case, the
@@ -452,6 +459,8 @@ registration algorithm if the same topic is being registered and searched for.
 
 [EIP-778]: ../enr.md
 [encoding section]: ./discv5-wire.md#packet-encoding
+[handshake packet]: ./discv5-wire.md#handshake-message-packet-flag--2
+[WHOAREYOU]: ./discv5-wire.md#whoareyou-packet-flag--1
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
