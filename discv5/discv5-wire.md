@@ -18,6 +18,9 @@ Here we present the notation that is used throughout this document.
     means binary XOR of `a` and `b`\
 `sha256(x)`\
     is the SHA256 digest of `x`\
+`aesctr_encrypt(key, iv, pt)`\
+    is unauthenticated AES/CTR symmetric encryption with the given `key` and `iv`.\
+    Size of `key` and `iv` is 16 bytes (AES-128).\
 `aesgcm_encrypt(key, nonce, pt, ad)`\
     is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
     authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
@@ -50,7 +53,6 @@ the request.
 
 ## Packet Encoding
 
-
 The discv5 protocol deals with three distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
@@ -61,26 +63,43 @@ The discv5 protocol deals with three distinct kinds of packets:
   message.
 
 In the following definitions, we assume that the sender of a packet has knowledge of its
-own 256bit node ID (`src-id`) and the node ID of the packet destination (`dest-id`). When
+own 256-bit node ID (`src-id`) and the node ID of the packet destination (`dest-id`). When
 sending any packet except WHOAREYOU, the sender also generates a unique 96-bit `nonce`
 value.
 
-All packets start with a fixed-size `header`, followed by a variable-length `authdata`
-section, followed by the encrypted/authenticated `message`.
+### Protocol Header
 
-    packet        = header || authdata || message
-    header        = protocol-id || src-id || flag || authdata-size
+All discovery packets contain a header followed by an optional encrypted and authenticated
+message.
+
+Header information is 'masked' using symmetric encryption in order to avoid static
+identification of the protocol by firewalls.
+
+    packet        = iv || masked-header || message
+    iv            = uint128   -- random data unique to packet
+    masked-header = aesctr_encrypt(masking-key, iv, header)
+    masking-key   = dest-id[:16]
+
+The `masked-header` contains the actual packet header, which starts with a fixed-size
+`static-header`, followed by a variable-length `authdata` section (of size `authdata-size`).
+
+    header        = type-header || authdata
+    static-header = protocol-id || src-id || flag || authdata-size
     message       = aesgcm_encrypt(initiator-key, nonce, message-plaintext, header || authdata)
     protocol-id   = "discv5  "
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
 
-The recipient may then verify whether the packet is truly a discv5 packet sent to the
-correct node. If the `checksum` doesn't match, the recipient should simply ignore the
-packet.
+Decrypting the masked header data works as follows: The recipient constructs an AES/CTR
+stream cipher using its own node ID (`dest-id`) as the key and taking the IV from the
+packet. It can then decrypt the `static-header` and verify that `protocol-id` matches. If
+it does, the recipient can read `authdata-size` and finally decrypt the remaining
+`authdata`.
 
-The `flag` field identifies the kind of packet and determines the encoding of `authdata`,
-which differs depending on the packet type.
+Implementations should not respond to a packet with mismatching `protocol-id`.
+
+The `flag` field of the header identifies the kind of packet and determines the encoding
+of `authdata`, which differs depending on the packet type.
 
 ### Ordinary Message Packet (`flag = 0`)
 
