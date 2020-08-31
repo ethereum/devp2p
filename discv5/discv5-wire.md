@@ -134,7 +134,10 @@ signature, ephemeral public key and optional node record.
 
 The `record` field may be omitted if the `enr-seq` of WHOAREYOU is recent enough, i.e.
 when it matches the current sequence number of the sending node. If `enr-seq` is zero, the
-record must be sent.
+record must be sent. Node records are encoded and verified as specified in [EIP-778].
+
+Please refer to the [handshake section] for more information about the content of the
+handshake packet.
 
     authdata      = authdata-head || id-signature || eph-pubkey || record
     authdata-size = 15 + sig-size + eph-key-size + len(record)
@@ -144,8 +147,6 @@ record must be sent.
     eph-key-size  = uint8     -- value: 33 for ID scheme "v4"
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
-
-Node records are encoded and verified as specified in [EIP-778].
 
 ## Protocol Messages
 
@@ -292,7 +293,7 @@ topic.
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
-[handshake section]: #handshake
+[handshake section]: ./discv5-theory.md#handshake
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
