@@ -214,9 +214,9 @@ received nodes match the requested distances.
 TALKREQ sends an application-level request. The purpose of this message is pre-negotiating
 connections made through another application-specific protocol identified by `protocol`.
 
-If `request-id` is non-zero, the recipient must respond with a TALKRESP message containing
-the response to the request. If the `protocol` is unknown to the recipient, it must
-respond with an empty TALKRESP response.
+The recipient must respond with a TALKRESP message containing the response to the request.
+If the `protocol` is unknown to the recipient, it must respond with an empty TALKRESP
+response.
 
 ### TALKRESP Response (0x06)
 
