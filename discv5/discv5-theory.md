@@ -14,7 +14,7 @@ UDP port (`"udp"` key) in order to have it's record relayed in the DHT.
 Node records are signed according to an 'identity scheme'. Any scheme can be used with
 Node Discovery Protocol, and nodes using different schemes can communicate.
 
-The identity scheme of a node record defines how a 32-byte 'node ID' 	is derived from the
+The identity scheme of a node record defines how a 32-byte 'node ID' is derived from the
 information contained in the record. The 'distance' between two node IDs is the bitwise
 XOR of the IDs, taken as the number.
 
@@ -455,6 +455,6 @@ registration algorithm if the same topic is being registered and searched for.
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
-[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x05
-[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x07
-[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x08
+[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
+[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x09
+[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x10
