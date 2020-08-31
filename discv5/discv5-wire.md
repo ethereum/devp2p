@@ -186,10 +186,13 @@ PONG is the reply to PING.
     message-type = 0x03
     distanceₙ    = requested log2 distance, a positive integer
 
-FINDNODE queries for nodes at the given logarithmic distances from the recipient's node ID.
-The recipient should create a result set containing nodes from its local node table.
+FINDNODE queries for nodes at the given logarithmic distances from the recipient's node
+ID. When distance `0` is requested, the result set should contain the recipient's current
+record.
 
-A request with distance `0` should return the recipient's current record as the only result.
+The recipient should create the result set by collecting nodes from its local node table
+according to the requested distances. Implementations should limit the number of nodes in
+the result set. The recommended result limit for FINDNODE queries is 16 nodes.
 
 ### NODES Response (0x04)
 
