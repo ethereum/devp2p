@@ -83,7 +83,7 @@ identification of the protocol by firewalls.
 The `masked-header` contains the actual packet header, which starts with a fixed-size
 `static-header`, followed by a variable-length `authdata` section (of size `authdata-size`).
 
-    header        = type-header || authdata
+    header        = static-header || authdata
     static-header = protocol-id || src-id || flag || authdata-size
     message       = aesgcm_encrypt(initiator-key, nonce, message-plaintext, header || authdata)
     protocol-id   = "discv5  "
