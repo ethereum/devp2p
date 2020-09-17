@@ -10,8 +10,6 @@ Here we present the notation that is used throughout this document.
 
 `[ .. , .. , .. ]`\
     is recursive encoding as an RLP list\
-`rlp_bytes(x)`\
-    is the RLP encoding of the byte array `x`\
 `a || b`\
     means binary concatenation of `a` and `b`\
 `xor(a, b)`\
