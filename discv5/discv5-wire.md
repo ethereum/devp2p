@@ -85,7 +85,6 @@ The `masked-header` contains the actual packet header, which starts with a fixed
 
     header        = static-header || authdata
     static-header = protocol-id || src-id || flag || authdata-size
-    message       = aesgcm_encrypt(initiator-key, nonce, message-plaintext, header || authdata)
     protocol-id   = "discv5  "
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
@@ -96,7 +95,14 @@ packet. It can then decrypt the `static-header` and verify that `protocol-id` ma
 it does, the recipient can read `authdata-size` and finally decrypt the remaining
 `authdata`.
 
-Implementations should not respond to a packet with mismatching `protocol-id`.
+Implementations should not respond to packets with mismatching `protocol-id`.
+
+In ordinary message packets and handshake message packets, the packet contains an
+authenticated message after the authdata section. For WHOAREYOU packets, the `message` is
+empty. Implementations must generate a unique `nonce` value for every packet.
+
+    message       = aesgcm_encrypt(initiator-key, nonce, message-pt, header)
+    message-pt    = message-type || message-data
 
 The `flag` field of the header identifies the kind of packet and determines the encoding
 of `authdata`, which differs depending on the packet type.
