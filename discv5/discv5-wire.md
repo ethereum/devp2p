@@ -215,10 +215,11 @@ received nodes match the requested distances.
 
 TALKREQ sends an application-level request. The purpose of this message is pre-negotiating
 connections made through another application-specific protocol identified by `protocol`.
+`protocol` and `request` are RLP byte arrays.
 
 The recipient must respond with a TALKRESP message containing the response to the request.
-If the `protocol` is unknown to the recipient, it must respond with an empty TALKRESP
-response.
+If the `protocol` is unknown to the recipient, it must respond with a TALKRESP response
+containing empty `response` data.
 
 ### TALKRESP Response (0x06)
 
@@ -226,7 +227,8 @@ response.
     message-type = 0x06
     request-id   = request-id of TALKREQ
 
-TALKRESP is the response to TALKREQ.
+TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
+response data.
 
 ### REGTOPIC Request (0x07)
 
