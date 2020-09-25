@@ -50,23 +50,23 @@ the handshake.
 Since every node participating in the network acts as both client and server, a handshake
 can be initiated by either side of communication at any time. In the following
 definitions, we assume that node A wishes to communicate with node B, e.g. to send a
-FINDNODE query.
+FINDNODE message.
 
 Node A must have a node record for node B and know B's node ID to communicate with it. If
 node A has session keys from prior communication, it encrypts its request with those keys.
 If no keys are known, it initiates the handshake by sending a packet with random content.
 
-    A -> B   FINDNODE encrypted with unknown key or random-packet
+    A -> B   FINDNODE message packet encrypted with unknown key
 
 Node B receives the initial packet, extracts the source node ID from the packet (see
 [encoding section]), and continues the handshake by responding with [WHOAREYOU]. The
 WHOAREYOU packet contains the id-nonce value to be signed by A as well as the highest
 known ENR sequence number of node A's record.
 
-    A <- B   WHOAREYOU including id-nonce, enr-seq
+    A <- B   WHOAREYOU packet including id-nonce, enr-seq
 
 Node A now knows that node B is alive and is ready to perform the handshake. The handshake
-proceeds by re-sending the original request message in a [handshake packet].
+proceeds by re-sending the FINDNODE request in a [handshake packet].
 
 The handshake packet includes an ephemeral public key in the cryptosystem used by B's
 identity scheme (e.g. an elliptic curve key on the secp256k1 curve if node B uses the "v4"
@@ -92,18 +92,18 @@ handshake.
 
 The request is now re-sent:
 
-    A -> B   FINDNODE as handshake packet, message encrypted with new initiator-key
+    A -> B   FINDNODE message as handshake packet, encrypted with new initiator-key
 
 Node B receives the handshake packet and verifies that the signature over `id-nonce` was
 created by node A's public key. To verify the signature, it looks at node A's record which
 it either already has a copy of or which was received in the header.
 
 Node B then performs key agreement/derivation using its own static private key and
-`ephemeral-pubkey`.
+`ephemeral-pubkey`. It can now decrypt the FINDNODE message.
 
-If the `id-nonce` signature is valid, Node B considers the new session keys valid,
-decrypts the message contained in the packet and responds to it. In our example case, the
-response is a `NODES` message:
+If the `id-nonce` signature is valid, and the message could be decrypted, Node B considers
+the new session keys valid and responds to the request. In our example case, the response
+is a `NODES` message:
 
     A <- B   NODES encrypted with new recipient-key
 
