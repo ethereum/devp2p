@@ -157,16 +157,11 @@ handshake packet.
 This section lists all defined messages which can be sent and received. The hexadecimal
 value in parentheses is the `message-type`.
 
-The first element of every `message-data` list is the request ID. For requests, this value
-is assigned by the requester. The recipient of a message must mirror the value in the
-request ID element of the response.
-
-The value selected as request ID must allow for concurrent conversations. Using a
-timestamp can result in parallel conversations with the same id, so this should be
-avoided. Request IDs also prevent replay of responses. Using a simple counter would be
-fine if the implementation could ensure that restarts or even re-installs would increment
-the counter based on previously saved state in all circumstances. The easiest to implement
-is a random number.
+The first element of every `message-data` list is the request ID. `request-id` is an RLP
+byte array of length of 4 bytes or less. For requests, this value is assigned by the
+requester. The recipient of a message must mirror the value in the `request-id` element of
+the response. The selection of appropriate values for request IDs is left to the
+implementation.
 
 ### PING Request (0x01)
 
