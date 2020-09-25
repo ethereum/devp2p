@@ -84,11 +84,11 @@ key and the session keys are derived from it using the HKDF key derivation funct
 
 The handshake packet also contains a signature over `id-nonce` as well as node A's record
 if the local sequence number is higher than `enr-seq`. The signature proves that node A
-controls the identity key which signed the record and also prevents replay of the
+controls the identity key which signed its record and also prevents replay of the
 handshake.
 
-    id-nonce-input   = sha256("discovery-id-nonce" || id-nonce || ephemeral-pubkey)
-    id-signature     = id_sign(id-nonce-input)
+    id-sig-input     = "discovery-id-nonce" || id-nonce || ephemeral-pubkey || node-id-B
+    id-signature     = id_sign(sha256(id-sig-input)
 
 The request is now re-sent:
 
