@@ -216,7 +216,7 @@ received nodes match the requested distances.
 ### TALKREQ Request (0x05)
 
     message-data = [request-id, protocol, request]
-    message-type = 0x09
+    message-type = 0x05
 
 TALKREQ sends an application-level request. The purpose of this message is pre-negotiating
 connections made through another application-specific protocol identified by `protocol`.
@@ -228,7 +228,7 @@ response.
 ### TALKRESP Response (0x06)
 
     message-data = [request-id, response]
-    message-type = 0x10
+    message-type = 0x06
     request-id   = request-id of TALKREQ
 
 TALKRESP is the response to TALKREQ.
@@ -258,7 +258,7 @@ confirmation to be sent.
 **Implementations should not respond to or send these messages.**
 
     message-data = [request-id, ticket, wait-time]
-    message-type = 0x06
+    message-type = 0x08
     ticket       = an opaque byte array representing the ticket
     wait-time    = time to wait before registering, in seconds
 
@@ -272,20 +272,20 @@ more information.
 **Implementations should not respond to or send these messages.**
 
     message-data = [request-id, topic]
-    message-type = 0x07
+    message-type = 0x09
     request-id   = request-id of REGTOPIC
 
 REGCONFIRMATION notifies the recipient about a successful registration for the given
 topic. This call is sent by the advertisement medium after the time window for
 registration has elapsed on a topic queue.
 
-### TOPICQUERY Request (0x10)
+### TOPICQUERY Request (0x0A)
 
 **NOTE: the content and semantics of this message are not final.**
 **Implementations should not respond to or send these messages.**
 
     message-data = [request-id, topic]
-    message-type = 0x07
+    message-type = 0x0a
     topic        = 32-byte topic hash
 
 TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
