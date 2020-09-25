@@ -158,10 +158,9 @@ This section lists all defined messages which can be sent and received. The hexa
 value in parentheses is the `message-type`.
 
 The first element of every `message-data` list is the request ID. `request-id` is an RLP
-byte array of length of 4 bytes or less. For requests, this value is assigned by the
-requester. The recipient of a message must mirror the value in the `request-id` element of
-the response. The selection of appropriate values for request IDs is left to the
-implementation.
+byte array of length <= 8 bytes. For requests, this value is assigned by the requester.
+The recipient of a message must mirror the value in the `request-id` element of the
+response. The selection of appropriate values for request IDs is left to the implementation.
 
 ### PING Request (0x01)
 
