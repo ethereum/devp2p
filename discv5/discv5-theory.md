@@ -466,4 +466,4 @@ registration algorithm if the same topic is being registered and searched for.
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
 [REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x09
-[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x10
+[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x0a
