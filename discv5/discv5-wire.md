@@ -27,11 +27,7 @@ Here we present the notation that is used throughout this document.
 
 Node discovery messages are sent as UDP datagrams. Since UDP is a lossy transport, packets
 may be received in any order or not at all. Implementations should not re-send packets if
-the recipient doesn't respond, though there are exceptions to this general rule. If
-multiple requests are pending while performing the handshake, the requests may be re-sent
-with new keys (see [handshake section]). If a node's liveness has been verified many
-times, implementations may consider occasional non-responsiveness permissible and assume
-the node is live.
+the recipient doesn't respond.
 
 The maximum size of any packet is 1280 bytes. Implementations should not generate or
 process packets larger than this size. Most messages are smaller than this limit by
@@ -42,6 +38,9 @@ FINDNODE response records would be at least 4800 bytes, not including additional
 as the header. To stay below the size limit, NODES responses are sent as multiple messages
 and specify the total number of responses in the message.
 
+The minimum size of any Discovery v5 packet is 90 bytes. Implementations should reject
+packets smaller than this size.
+
 Since low-latency communication is expected, implementations should place short timeouts
 on request/response interactions. Good timeout values are 500ms for a single
 request/response and 1s for the handshake.
@@ -51,7 +50,7 @@ the request.
 
 ## Packet Encoding
 
-The discv5 protocol deals with three distinct kinds of packets:
+The protocol deals with three distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
 - WHOAREYOU packets, which are sent when the recipient of an ordinary message packet

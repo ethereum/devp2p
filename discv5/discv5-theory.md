@@ -270,6 +270,9 @@ bucket addition and occasionally verify that a random node in a random bucket is
 sending [PING]. When the PONG response indicates that a new version of the node record is
 available, the liveness check should pull the new record and update it in the local table.
 
+If a node's liveness has been verified many times, implementations may consider occasional
+non-responsiveness permissible and assume the node is live.
+
 When responding to FINDNODE, implementations must avoid relaying any nodes whose liveness
 has not been verified. This is easy to achieve by storing an additional flag per node in
 the table, tracking whether the node has ever successfully responded to a PING request.
