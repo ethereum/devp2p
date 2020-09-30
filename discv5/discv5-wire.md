@@ -19,9 +19,9 @@ Here we present the notation that is used throughout this document.
 `aesctr_encrypt(key, iv, pt)`\
     is unauthenticated AES/CTR symmetric encryption with the given `key` and `iv`.\
     Size of `key` and `iv` is 16 bytes (AES-128).\
-`aesgcm_encrypt(key, nonce, pt, ad)`\
-    is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
-    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
+`aesgcm_encrypt(key, nonce, pt)`\
+    is AES-GCM encryption/authentication with the given `key` and `nonce`.\
+    Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
 ## UDP Communication
 
@@ -73,10 +73,10 @@ message.
 Header information is 'masked' using symmetric encryption in order to avoid static
 identification of the protocol by firewalls.
 
-    packet        = iv || masked-header || message
-    iv            = uint128   -- random data unique to packet
-    masked-header = aesctr_encrypt(masking-key, iv, header)
+    packet        = masking-iv || masked-header || message
+    masked-header = aesctr_encrypt(masking-key, masking-iv, header)
     masking-key   = dest-id[:16]
+    masking-iv    = uint128   -- random data unique to packet
 
 The `masked-header` contains the actual packet header, which starts with a fixed-size
 `static-header`, followed by a variable-length `authdata` section (of size `authdata-size`).
@@ -100,7 +100,7 @@ In ordinary message packets and handshake message packets, the packet contains a
 authenticated message after the authdata section. For WHOAREYOU packets, the `message` is
 empty. Implementations must generate a unique `nonce` value for every packet.
 
-    message       = aesgcm_encrypt(initiator-key, nonce, message-pt, header)
+    message       = aesgcm_encrypt(initiator-key, nonce, message-pt)
     message-pt    = message-type || message-data
 
 The `flag` field of the header identifies the kind of packet and determines the encoding
@@ -121,9 +121,9 @@ In WHOAREYOU packets, the `authdata` section contains information for the verifi
 procedure. The `message` field of WHOAREYOU packets is always empty.
 
     authdata      = request-nonce || id-nonce || enr-seq
-    authdata-size = 52
+    authdata-size = 36
     request-nonce = uint96    -- nonce of request packet that couldn't be decrypted
-    id-nonce      = uint256   -- random bytes
+    id-nonce      = uint128   -- random bytes
     enr-seq       = uint64    -- ENR sequence number of the requesting node
 
 ![whoareyou packet layout](./img/whoareyou-packet-layout.png)
@@ -293,7 +293,7 @@ topic.
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
-[handshake section]: ./discv5-theory.md#handshake
+[handshake section]: ./discv5-theory.md#handshake-steps
 [topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
