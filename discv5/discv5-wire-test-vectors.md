@@ -1,174 +1,100 @@
 # Test Vectors
 
-This document provides a collection of test vectors for the discovery v5 wire
-protocol aimed to aid new implementations conform to the specification.
+This document provides a collection of test vectors for the Discovery v5 wire protocol
+aimed to aid new implementations conform to the specification.
 
 ## Packet Encodings
 
-This section provides test vectors for each individual packet type. These tests
-primarily test for correct RLP encoding in the packet types.
-
-### Random Packet
-
-#### Input Parameters
-
-    tag: 0x0101010101010101010101010101010101010101010101010101010101010101
-    auth-tag: 0x020202020202020202020202
-    random-data: 0x0404040404040404040404040404040404040404040404040404040404040404040404040404040404040404
-
-#### Expected Output
-
-    random-packet-rlp: 0x01010101010101010101010101010101010101010101010101010101010101018c0202020202020202020202020404040404040404040404040404040404040404040404040404040404040404040404040404040404040404
-
-### WHOAREYOU Packet
-
-#### Input Parameters
-
-    magic: 0x0101010101010101010101010101010101010101010101010101010101010101
-    token: 0x020202020202020202020202
-    id-nonce: 0x0303030303030303030303030303030303030303030303030303030303030303
-    enr-seq: 0x01
-
-#### Expected Output
-
-    whoareyou-packet-rlp: 0101010101010101010101010101010101010101010101010101010101010101ef8c020202020202020202020202a0030303030303030303030303030303030303030303030303030303030303030301
-
-### Authenticated Message Packet
-
-#### Input Parameters
-
-    tag: 0x93a7400fa0d6a694ebc24d5cf570f65d04215b6ac00757875e3f3a5f42107903
-    auth-tag: 0x27b5af763c446acd2749fe8e
-    id-nonce: 0xe551b1c44264ab92bc0b3c9b26293e1ba4fed9128f3c3645301e8e119f179c65
-    ephemeral-pubkey: 0xb35608c01ee67edff2cffa424b219940a81cf2fb9b66068b1cf96862a17d353e22524fbdcdebc609f85cbd58ebe7a872b01e24a3829b97dd5875e8ffbc4eea81
-    auth-resp-ciphertext: 0x570fbf23885c674867ab00320294a41732891457969a0f14d11c995668858b2ad731aa7836888020e2ccc6e0e5776d0d4bc4439161798565a4159aa8620992fb51dcb275c4f755c8b8030c82918898f1ac387f606852
-    message-ciphertext: 0xa5d12a2d94b8ccb3ba55558229867dc13bfa3648
-
-#### Expected Output
-
-    auth-message-rlp: 0x93a7400fa0d6a694ebc24d5cf570f65d04215b6ac00757875e3f3a5f42107903f8cc8c27b5af763c446acd2749fe8ea0e551b1c44264ab92bc0b3c9b26293e1ba4fed9128f3c3645301e8e119f179c658367636db840b35608c01ee67edff2cffa424b219940a81cf2fb9b66068b1cf96862a17d353e22524fbdcdebc609f85cbd58ebe7a872b01e24a3829b97dd5875e8ffbc4eea81b856570fbf23885c674867ab00320294a41732891457969a0f14d11c995668858b2ad731aa7836888020e2ccc6e0e5776d0d4bc4439161798565a4159aa8620992fb51dcb275c4f755c8b8030c82918898f1ac387f606852a5d12a2d94b8ccb3ba55558229867dc13bfa3648
-
-### Message Packet
-
-#### Input Parameters
-
-    tag: 0x93a7400fa0d6a694ebc24d5cf570f65d04215b6ac00757875e3f3a5f42107903
-    auth-tag: 0x27b5af763c446acd2749fe8e
-    message-ciphertext: 0xa5d12a2d94b8ccb3ba55558229867dc13bfa3648
-
-#### Expected Output
-
-    message-rlp: 0x93a7400fa0d6a694ebc24d5cf570f65d04215b6ac00757875e3f3a5f421079038c27b5af763c446acd2749fe8ea5d12a2d94b8ccb3ba55558229867dc13bfa3648
-
-## Protocol Message Encodings
-
-This section provides test vectors for individual protocol messages defined in
-the wire protocol. These tests primarily verify the RLP encoding of each
-protocol message.
-
-### Ping Request
-
-#### Input Parameters
-
-    id: 0x01
-    enr-seq: 0x01
-
-#### Expected Output
-
-    ping-rlp: 0x01c20101
-
-### Pong Response
-
-#### Input Parameters
-
-    id: 0x01
-    enr-seq: 0x01
-    recipient-ip: "127.0.0.1"
-    recipient-port: 5000
-
-#### Expected Output
-
-    pong-rlp: 0x02ca0101847f000001821388
-
-### FindNode Request
-
-#### Input Parameters
-
-    id: 0x01
-    distance: 0x0100 (decimal 256)
-
-#### Expected Output
-
-    find-node-rlp: 0x03c401820100
-
-### Nodes Response (Empty)
-
-#### Input Parameters
-
-    id: 0x01
-    total: 0x01
-    enr: []
-
-#### Expected Output
-
-    nodes-response-rlp: 04c30101c0
-
-### Nodes Response (multiple)
-
-#### Input Parameters
-
-    id: 0x01
-    total: 0x01
-    enr-1: "enr:-HW4QBzimRxkmT18hMKaAL3IcZF1UcfTMPyi3Q1pxwZZbcZVRI8DC5infUAB_UauARLOJtYTxaagKoGmIjzQxO2qUygBgmlkgnY0iXNlY3AyNTZrMaEDymNMrg1JrLQB2KTGtv6MVbcNEVv0AHacwUAPMljNMTg"
-    enr-2: "enr:-HW4QNfxw543Ypf4HXKXdYxkyzfcxcO-6p9X986WldfVpnVTQX1xlTnWrktEWUbeTZnmgOuAY_KUhbVV1Ft98WoYUBMBgmlkgnY0iXNlY3AyNTZrMaEDDiy3QkHAxPyOgWbxp5oF1bDdlYE6dLCUUp8xfVw50jU"
-
-#### Expected Output
-
-    nodes-response-rlp: 0x04f8f20101f8eef875b8401ce2991c64993d7c84c29a00bdc871917551c7d330fca2dd0d69c706596dc655448f030b98a77d4001fd46ae0112ce26d613c5a6a02a81a6223cd0c4edaa53280182696482763489736563703235366b31a103ca634cae0d49acb401d8a4c6b6fe8c55b70d115bf400769cc1400f3258cd3138f875b840d7f1c39e376297f81d7297758c64cb37dcc5c3beea9f57f7ce9695d7d5a67553417d719539d6ae4b445946de4d99e680eb8063f29485b555d45b7df16a1850130182696482763489736563703235366b31a1030e2cb74241c0c4fc8e8166f1a79a05d5b0dd95813a74b094529f317d5c39d235
-
-### Ticket Request
-
-#### Input Parameters
-
-    id: 0x01
-    topic-hash: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
-
-#### Expected Output
-
-    request-ticket-rlp: 0x05e201a0fb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
-
-### RegisterTopic Request
-
-#### Input Parameters
-
-    id: 0x01
-    ticket: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
-
-#### Expected Output
-
-    register-ticket-rlp: 0x07e201a0fb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
-
-### RegisterTopic Response
-
-#### Input Parameters
-
-    id: 0x01
-    registered: true
-
-#### Expected Output
-
-    register-ticket-response-rlp: 0x08c20101
-
-### TopicQuery Request
-
-#### Input Parameters
-
-    id: 0x01
-    topic-hash: 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
-
-#### Expected Output
-
-    topic-query-rlp: 0x09e201a0fb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
+This section provides test vectors for the different packet types. Your implementation
+should load the `node-b-key` and then be able to decrypt and authenticate these as-is.
+
+The secp256k1 private keys used here are:
+
+    node-a-key = 0xeef77acb6c6a6eebc5b363a475ac583ec7eccdb42b6481424c60f59aa326547f
+    node-b-key = 0x66fb62bfbd66b9177a138c1e5cddbe4f7c30c343e94e68df8769459cb1cde628
+
+Ping message packet (flag 0):
+
+    # src-node-id = 0xaaaa8419e9f49d0083561b48287df592939a8d19947d8c0ef88f2a4856a69fbb
+    # dest-node-id = 0xbbbb9d047f0488c0b5a93c1c3f2d8bafc7c8ff337024a55434a0d0555de64db9
+    # nonce = 0xffffffffffffffffffffffff
+    # read-key = 0x00000000000000000000000000000000
+    # ping.req-id = 0x00000001
+    # ping.enr-seq = 2
+
+    00000000000000000000000000000000088b3d4342774649325f313964a39e55
+    ea96c005ad52be8c7560413a7008f16c9e6d2f43bbea8814a546b7409ce783d3
+    4c4f53245d08dab84102ed931f66d1db57c785865ffccae8689057103acb15
+
+WHOAREYOU packet (flag 1):
+
+    # dest-node-id = 0xbbbb9d047f0488c0b5a93c1c3f2d8bafc7c8ff337024a55434a0d0555de64db9
+    # whoareyou.iv = 0x00000000000000000000000000000000
+    # whoareyou.authdata = 0x0102030405060708090a0b0c0d0e0f100000000000000000
+    # whoareyou.request-nonce = 0x0102030405060708090a0b0c
+    # whoareyou.id-nonce = 0x0102030405060708090a0b0c0d0e0f10
+    # whoareyou.enr-seq = 0
+
+    00000000000000000000000000000000088b3d434277464933a1ccc59f5967ad
+    1d6035f15e528627dde75cd68292f9e6c27d6b66c8100a873fcbaed4e16b8d
+
+Ping handshake packet (flag 2):
+
+    # src-node-id = 0xaaaa8419e9f49d0083561b48287df592939a8d19947d8c0ef88f2a4856a69fbb
+    # dest-node-id = 0xbbbb9d047f0488c0b5a93c1c3f2d8bafc7c8ff337024a55434a0d0555de64db9
+    # nonce = 0xffffffffffffffffffffffff
+    # read-key = 0xf901161aebd1298aa813621ad0c05343
+    # ping.req-id = 0x00000001
+    # ping.enr-seq = 1
+    #
+    # handshake inputs:
+    #
+    # whoareyou.iv = 0x00000000000000000000000000000000
+    # whoareyou.authdata = 0x0102030405060708090a0b0c0d0e0f100000000000000001
+    # whoareyou.request-nonce = 0x0102030405060708090a0b0c
+    # whoareyou.id-nonce = 0x0102030405060708090a0b0c0d0e0f10
+    # whoareyou.enr-seq = 1
+    # ephemeral-key = 0x0288ef00023598499cb6c940146d050d2b1fb914198c327f76aad590bead68b6
+    # ephemeral-pubkey = 0x039a003ba6517b473fa0cd74aefe99dadfdb34627f90fec6362df85803908f53a5
+
+    00000000000000000000000000000000088b3d4342774649305f313964a39e55
+    ea96c005ad521d8c7560413a7008f16c9e6d2f43bbea8814a546b7409ce783d3
+    4c4f53245d08da4bb265bd5b8f27e00bcb6f1b193f52eb737dbb3033ee890cab
+    bd2728dfa01b3613a2a3a6edc1e2b4359f45c4823db4e5a91132d68606508845
+    772fbdd366664b350f5796706adff216ab862a9186875f9494150c4ae06fa4d1
+    f0396c93f215fa4ef524dc394f221e162100550a011363be21154c6b42e3816f
+    0a38
+
+Ping handshake message packet (flag 2, with ENR):
+
+    # src-node-id = 0xaaaa8419e9f49d0083561b48287df592939a8d19947d8c0ef88f2a4856a69fbb
+    # dest-node-id = 0xbbbb9d047f0488c0b5a93c1c3f2d8bafc7c8ff337024a55434a0d0555de64db9
+    # nonce = 0xffffffffffffffffffffffff
+    # read-key = 0xf901161aebd1298aa813621ad0c05343
+    # ping.req-id = 0x00000001
+    # ping.enr-seq = 1
+    #
+    # handshake inputs:
+    #
+    # whoareyou.iv = 0x00000000000000000000000000000000
+    # whoareyou.authdata = 0x0102030405060708090a0b0c0d0e0f100000000000000000
+    # whoareyou.request-nonce = 0x0102030405060708090a0b0c
+    # whoareyou.id-nonce = 0x0102030405060708090a0b0c0d0e0f10
+    # whoareyou.enr-seq = 0
+    # ephemeral-key = 0x0288ef00023598499cb6c940146d050d2b1fb914198c327f76aad590bead68b6
+    # ephemeral-pubkey = 0x039a003ba6517b473fa0cd74aefe99dadfdb34627f90fec6362df85803908f53a5
+
+    00000000000000000000000000000000088b3d4342774649305f313964a39e55
+    ea96c005ad539c8c7560413a7008f16c9e6d2f43bbea8814a546b7409ce783d3
+    4c4f53245d08da4bb2f6dcb382c5d8d278b57f348cdc967ebf060aca235dd420
+    9711826d77482afb37b6106070af606add9d8a8bb052a35eeed1d9cf829d2d73
+    821b4b506b5600498c5796706adff216ab862a9186875f9494150c4ae06fa4d1
+    f0396c93f215fa4ef524e0ed04c3c21e39b1868e1ca8105e585ec17315e755e6
+    cfc4dd6cb7fd8e1a1f55e49b4b5eb024221482105346f3c82b15fdaae36a3bb1
+    2a494683b4a3c7f2ae41306252fed84785e2bbff3b022812d0882f06978df84a
+    80d443972213342d04b9048fc3b1d5fcb1df0f822152eced6da4d3f6df27e70e
+    4539717307a0208cd2dc394f221e162100550a011363be21154c6b42e3816f0a
+    38
 
 ## Cryptographic Primitives
 
