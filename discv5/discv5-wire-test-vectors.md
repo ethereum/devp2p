@@ -110,7 +110,7 @@ private key. The wire protocol describes this process.
 
 This output is the result of the ECDH function which will be used by the KDF.
 
-    shared-secret: 0x033b11a2a1f214567e1537ce5e509ffd9b21373247f2a3ff6841f4976f53165e7e
+    shared-secret = 0x033b11a2a1f214567e1537ce5e509ffd9b21373247f2a3ff6841f4976f53165e7e
 
 ### Key Derivation
 
@@ -130,8 +130,8 @@ The expected outputs, resulting from the HKDF-EXPAND function.
 
 ### ID Nonce Signing
 
-This test vector checks the ID signature as used by the handshake. The `static-key` is the
-secp256k1 private key used to sign the nonce.
+This test vector checks the ID signature as used by the handshake.\
+The `static-key` is the secp256k1 private key used for signing.
 
     static-key = 0xfb757dc581730490a1d7a00deea65e9b1936924caaea8f44d476014856b68736
     masking-iv = 0x01010101010101010101010101010101
@@ -140,7 +140,7 @@ secp256k1 private key used to sign the nonce.
     node-id-B = 0xbbbb9d047f0488c0b5a93c1c3f2d8bafc7c8ff337024a55434a0d0555de64db9
 
 The expected output is the `id-signature`. You can also apply this test vector in reverse
-to validate the signature.
+by verifying the signature against the inputs above.
 
     id-signature = 0xd82364cfffb18101355371de84ee0def3dca31191b9add79b21a14f4442b6df02dc26df6278f71c83d43645da13071881cacdb43b0aea1e256cdec73a73faf01
 
