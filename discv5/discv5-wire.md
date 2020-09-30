@@ -38,7 +38,7 @@ FINDNODE response records would be at least 4800 bytes, not including additional
 as the header. To stay below the size limit, NODES responses are sent as multiple messages
 and specify the total number of responses in the message.
 
-The minimum size of any Discovery v5 packet is 90 bytes. Implementations should reject
+The minimum size of any Discovery v5 packet is 63 bytes. Implementations should reject
 packets smaller than this size.
 
 Since low-latency communication is expected, implementations should place short timeouts
@@ -81,11 +81,12 @@ The `masked-header` contains the actual packet header, which starts with a fixed
 `static-header`, followed by a variable-length `authdata` section (of size `authdata-size`).
 
     header        = static-header || authdata
-    static-header = protocol-id || version || src-id || flag || authdata-size
+    static-header = protocol-id || version || flag || nonce || authdata-size
     protocol-id   = "discv5"
     version       = 0x0001
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
+    nonce         = uint96    -- nonce of message
 
 Decrypting the masked header data works as follows: The recipient constructs an AES/CTR
 stream cipher using its own node ID (`dest-id`) as the key and taking the IV from the
@@ -96,8 +97,8 @@ remaining `authdata`.
 Implementations should not respond to packets with mismatching `protocol-id`.
 
 In ordinary message packets and handshake message packets, the packet contains an
-authenticated message after the authdata section. For WHOAREYOU packets, the `message` is
-empty. Implementations must generate a unique `nonce` value for every packet.
+authenticated message after the `authdata` section. For WHOAREYOU packets, the `message`
+is empty. Implementations must generate a unique `nonce` value for every message packet.
 
     message       = aesgcm_encrypt(initiator-key, nonce, message-pt)
     message-pt    = message-type || message-data
@@ -107,21 +108,22 @@ of `authdata`, which differs depending on the packet type.
 
 ### Ordinary Message Packet (`flag = 0`)
 
-For message packets, the `authdata` section is just the 96-bit AES/GCM nonce:
+For message packets, the `authdata` section is just the source node ID.
 
-    authdata      = nonce
-    authdata-size = 12
+    authdata      = src-id
+    authdata-size = 32
 
 ![message packet layout](./img/message-packet-layout.png)
 
 ### WHOAREYOU Packet (`flag = 1`)
 
-In WHOAREYOU packets, the `authdata` section contains information for the verification
-procedure. The `message` field of WHOAREYOU packets is always empty.
+In WHOAREYOU packets, the `authdata` section contains information for the identity
+verification procedure. The `message` part of WHOAREYOU packets is always empty. The
+`nonce` part of the packet must be set to the `nonce` of the message packet that caused
+the WHOAREYOU response.
 
-    authdata      = request-nonce || id-nonce || enr-seq
-    authdata-size = 36
-    request-nonce = uint96    -- nonce of request packet that couldn't be decrypted
+    authdata      = id-nonce || enr-seq
+    authdata-size = 24
     id-nonce      = uint128   -- random bytes
     enr-seq       = uint64    -- ENR sequence number of the requesting node
 
@@ -144,8 +146,8 @@ Please refer to the [handshake section] for more information about the content o
 handshake packet.
 
     authdata      = authdata-head || id-signature || eph-pubkey || record
-    authdata-size = 14 + sig-size + eph-key-size + len(record)
-    authdata-head = nonce || sig-size || eph-key-size
+    authdata-head = src-id || sig-size || eph-key-size
+    authdata-size = 34 + sig-size + eph-key-size + len(record)
     sig-size      = uint8     -- value: 64 for ID scheme "v4"
     eph-key-size  = uint8     -- value: 33 for ID scheme "v4"
 
