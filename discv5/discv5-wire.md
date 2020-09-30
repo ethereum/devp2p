@@ -82,16 +82,17 @@ The `masked-header` contains the actual packet header, which starts with a fixed
 `static-header`, followed by a variable-length `authdata` section (of size `authdata-size`).
 
     header        = static-header || authdata
-    static-header = protocol-id || src-id || flag || authdata-size
-    protocol-id   = "discv5  "
+    static-header = protocol-id || version || src-id || flag || authdata-size
+    protocol-id   = "discv5"
+    version       = 0x0001
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
 
 Decrypting the masked header data works as follows: The recipient constructs an AES/CTR
 stream cipher using its own node ID (`dest-id`) as the key and taking the IV from the
-packet. It can then decrypt the `static-header` and verify that `protocol-id` matches. If
-it does, the recipient can read `authdata-size` and finally decrypt the remaining
-`authdata`.
+packet. It can then decrypt the `static-header` and verify that `protocol-id` matches the
+expected string. If it does, the recipient can read `authdata-size` and unmask the
+remaining `authdata`.
 
 Implementations should not respond to packets with mismatching `protocol-id`.
 
@@ -144,9 +145,8 @@ Please refer to the [handshake section] for more information about the content o
 handshake packet.
 
     authdata      = authdata-head || id-signature || eph-pubkey || record
-    authdata-size = 15 + sig-size + eph-key-size + len(record)
-    authdata-head = version || nonce || sig-size || eph-key-size
-    version       = uint8     -- value: 1
+    authdata-size = 14 + sig-size + eph-key-size + len(record)
+    authdata-head = nonce || sig-size || eph-key-size
     sig-size      = uint8     -- value: 64 for ID scheme "v4"
     eph-key-size  = uint8     -- value: 33 for ID scheme "v4"
 
