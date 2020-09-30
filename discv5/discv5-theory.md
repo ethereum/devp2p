@@ -128,7 +128,7 @@ its own record into the handshake message packet.
 
 The request is now re-sent, with the message encrypted using the new session keys.
 
-    A -> B   FINDNODE message as handshake packet, encrypted with new initiator-key
+    A -> B   FINDNODE handshake message packet, encrypted with new initiator-key
 
 #### Step 4: Node B receives handshake message
 
