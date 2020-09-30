@@ -118,7 +118,8 @@ function.
 Node A creates the `id-signature`, which proves that it controls the private key which
 signed its node record. The signature also prevents replay of the handshake.
 
-    id-signature-input = "discovery-id-nonce" || challenge-id-input || ephemeral-pubkey || node-id-B
+    id-signature-text  = "discovery v5 identity proof"
+    id-signature-input = id-signature-text || challenge-id-input || ephemeral-pubkey || node-id-B
     id-signature       = id_sign(sha256(id-signature-input))
 
 Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own
