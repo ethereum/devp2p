@@ -75,8 +75,8 @@ checks if it has a copy of node A's record. If it does, it also includes the seq
 number of this record in the challenge packet, otherwise it sets the `enr-seq` field to
 zero.
 
-Node B must also store the WHOAREYOU challenge and A's record for a short duration after
-sending it to node A because they will be needed again in step 4.
+Node B must also store the A's record and the WHOAREYOU challenge for a short duration
+after sending it to node A because they will be needed again in step 4.
 
     A <- B   WHOAREYOU packet including id-nonce, enr-seq
 
@@ -124,7 +124,7 @@ signed its node record. The signature also prevents replay of the handshake.
 
 Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own
 node record sequence number. If the sequence number in the challenge is lower, it includes
-its own record into the handshake message packet.
+its record into the handshake message packet.
 
 The request is now re-sent, with the message encrypted using the new session keys.
 
@@ -132,8 +132,8 @@ The request is now re-sent, with the message encrypted using the new session key
 
 #### Step 4: Node B receives handshake message
 
-When node B receives the handshake message packet, it first loads the WHOAREYOU challenge
-and node record which it stored earlier.
+When node B receives the handshake message packet, it first loads the node record and
+WHOAREYOU challenge which it sent and stored earlier.
 
 If node B did not have the node record of node A, the handshake message packet must
 contain a node record. A record may also be present if node A determined that its record
