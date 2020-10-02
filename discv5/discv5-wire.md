@@ -19,9 +19,9 @@ Here we present the notation that is used throughout this document.
 `aesctr_encrypt(key, iv, pt)`\
     is unauthenticated AES/CTR symmetric encryption with the given `key` and `iv`.\
     Size of `key` and `iv` is 16 bytes (AES-128).\
-`aesgcm_encrypt(key, nonce, pt)`\
-    is AES-GCM encryption/authentication with the given `key` and `nonce`.\
-    Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
+`aesgcm_encrypt(key, nonce, pt, ad)`\
+    is AES-GCM encryption/authentication with the given `key`, `nonce` and additional\
+    authenticated data `ad`. Size of `key` is 16 bytes (AES-128), size of `nonce` 12 bytes.
 
 ## UDP Communication
 
@@ -100,8 +100,9 @@ In ordinary message packets and handshake message packets, the packet contains a
 authenticated message after the `authdata` section. For WHOAREYOU packets, the `message`
 is empty. Implementations must generate a unique `nonce` value for every message packet.
 
-    message       = aesgcm_encrypt(initiator-key, nonce, message-pt)
+    message       = aesgcm_encrypt(initiator-key, nonce, message-pt, message-ad)
     message-pt    = message-type || message-data
+    message-ad    = masking-iv || header
 
 The `flag` field of the header identifies the kind of packet and determines the encoding
 of `authdata`, which differs depending on the packet type.
