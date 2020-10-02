@@ -90,10 +90,9 @@ Node A proceeds with the handshake by re-sending the FINDNODE request as a [hand
 message packet]. This packet contains three parts in addition to the message:
 `id-signature`, `ephemeral-pubkey` and `record`.
 
-Creating the handshake packet requires information from the received WHOAREYOU packet:
+The handshake uses the unmasked WHOAREYOU challenge as an input:
 
-    challenge-id-input = masking-iv || id-nonce
-    challenge-salt     = masking-iv || authdata
+    challenge-data     = masking-iv || static-header || authdata
 
 Node A can now derive the new session keys. To do so, it first generates an ephemeral key
 pair on the elliptic curve used by node B's identity scheme. As an example, let's assume
@@ -110,7 +109,7 @@ function.
     dest-pubkey        = public key corresponding to node B's static private key
     secret             = ecdh(ephemeral-key, dest-pubkey)
     kdf-info           = "discovery v5 key agreement" || node-id-A || node-id-B
-    prk                = HKDF-Extract(secret, challenge-salt)
+    prk                = HKDF-Extract(secret, challenge-data)
     key-data           = HKDF-Expand(prk, kdf-info)
     initiator-key      = key-data[:16]
     recipient-key      = key-data[16:]
@@ -119,7 +118,7 @@ Node A creates the `id-signature`, which proves that it controls the private key
 signed its node record. The signature also prevents replay of the handshake.
 
     id-signature-text  = "discovery v5 identity proof"
-    id-signature-input = id-signature-text || challenge-id-input || ephemeral-pubkey || node-id-B
+    id-signature-input = id-signature-text || challenge-data || ephemeral-pubkey || node-id-B
     id-signature       = id_sign(sha256(id-signature-input))
 
 Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own
