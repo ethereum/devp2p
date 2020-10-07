@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Rationale
 
-**Draft of October 2019**
+**Protocol version v5.1**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
