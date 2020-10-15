@@ -11,6 +11,7 @@ Ethereum.
   - [Ethereum Snapshot Protocol] (version 1)
   - [Light Ethereum Subprotocol] (version 3)
   - [Parity Light Protocol] (version 1)
+  - [Ethereum Witness Protocol] (version 0)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
@@ -77,6 +78,7 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Ethereum Snapshot Protocol]: ./caps/snap.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Light Ethereum Subprotocol]: ./caps/les.md
+[Ethereum Witness Protocol]: ./caps/wit.md
 [Ethereum Node Records]: ./enr.md
 [Node Discovery Protocol v4]: ./discv4.md
 [Node Discovery Protocol v5]: ./discv5/discv5.md
