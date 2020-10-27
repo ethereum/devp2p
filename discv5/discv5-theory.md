@@ -68,7 +68,7 @@ message data. If decryption and authentication of the message succeeds, there is
 for a handshake and node B can simply respond to the request.
 
 If node B does not have session keys or decryption is not successful, it must initiate a
-handshake by by responding with a [WHOAREYOU packet].
+handshake by responding with a [WHOAREYOU packet].
 
 It first generates a unique `id-nonce` value and includes it in the packet. Node B also
 checks if it has a copy of node A's record. If it does, it also includes the sequence
