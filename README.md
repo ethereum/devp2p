@@ -8,6 +8,7 @@ Ethereum.
 - [Node Discovery Protocol v5] **(Draft Specification)**
 - [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
   - [Ethereum Wire Protocol] (version 65)
+  - [Ethereum Snapshot Protocol] (version 1)
   - [Light Ethereum Subprotocol] (version 3)
   - [Parity Light Protocol] (version 1)
 
@@ -73,6 +74,7 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [Ethereum Wire Protocol]: ./caps/eth.md
+[Ethereum Snapshot Protocol]: ./caps/snap.md
 [Gitter channel]: https://gitter.im/ethereum/devp2p
 [Light Ethereum Subprotocol]: ./caps/les.md
 [Ethereum Node Records]: ./enr.md
