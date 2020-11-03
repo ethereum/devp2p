@@ -4,7 +4,7 @@ The `snap` protocol runs on top of [RLPx](../rlpx.md), facilitating the exchange
 
 The current version is `snap/1`.
 
-### Overview
+## Overview
 
 The `snap` protocol is designed for semi real-time data retrieval. It's goal is to make dynamic snapshots of recent states available for peers. The `snap` protocol does not take part in chain maintenance (block and transaction propagation); and it is **meant to be run side-by-side with the `eth` protocol**, not standalone (e.g. chain progression is announced via `eth`).
 
@@ -18,13 +18,29 @@ The `snap` protocol permits downloading the entire Ethereum state without having
 - Egress bandwidth is reduced from `O(accounts * log account + SUM(states * log states)) * 32 bytes` (Merkle trie node hashes) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
 - Round trip time is reduced from `O(accounts * log account + SUM(states * log states)) / 384` (states retrieval packets) to `O(accounts + SUM(states)) / 100000 bytes` (number of 100KB chucks to cover the state).
 
-To put some numbers on the orders of magnitudes, synchronizing Ethereum mainnet state (i.e. ignoring blocks and receipts, as those are the same) at block #X with `eth` vs. the `snap` protocol:
+### Expected results
 
-| Metric  | `eth` | `snap` |
-|:-------:|:-----:|:------:|
-| Ingress |       |        |
-| Egress  |       |        |
-| Packets |       |        |
+To put some numbers on the above abstract orders of magnitudes, synchronizing Ethereum mainnet state (i.e. ignoring blocks and receipts, as those are the same) with `eth` vs. the `snap` protocol:
+
+Block ~#11,177,000:
+
+- Accounts: 107,598,788 @ 19.70GiB
+- Byte codes: 319,654 @ 1.48GiB
+- Storage slots: 365,787,020 @ 49.88GiB
+- Trie nodes: 617,045,138
+
+|        | Time  | Upload | Download | Packets | Serving disk reads* |
+|:------:|:-----:|:------:|:--------:|:------:|:---:|
+| `eth` | 10h50m | 20.38GB | 43.8GB | 1607M | 15.68TB |
+| `snap` | 2h6m | 0.15GB | 20.44GB | 0.099M | 0.096TB |
+|        | -80.6% | -99.26% | -53.33% | -99.993% | -99.39% |
+
+*\*Also accounts for other peer requests during the time span.*
+
+Post snap state heal:
+
+- Additional trie nodes: 541,260 @ 160.44MiB
+- Additional byte codes: 34 @ 234.98KiB
 
 ## Relation to `eth`
 
@@ -230,6 +246,6 @@ Returns a number of requested state trie nodes. The order is the same as in the 
 
 ## Change Log
 
-### snap/1 ([EIP-XXXX](https://eips.ethereum.org/EIPS/eip-XXXX), September 2020)
+### snap/1 ([EIP-XXXX](https://eips.ethereum.org/EIPS/eip-XXXX), November 2020)
 
 Version 1 was the introduction of the snapshot protocol.
