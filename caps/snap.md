@@ -29,11 +29,11 @@ Block ~#11,177,000:
 - Storage slots: 365,787,020 @ 49.88GiB
 - Trie nodes: 617,045,138
 
-|        | Time  | Upload | Download | Packets | Serving disk reads* |
-|:------:|:-----:|:------:|:--------:|:------:|:---:|
-| `eth` | 10h50m | 20.38GB | 43.8GB | 1607M | 15.68TB |
-| `snap` | 2h6m | 0.15GB | 20.44GB | 0.099M | 0.096TB |
-|        | -80.6% | -99.26% | -53.33% | -99.993% | -99.39% |
+|        | Time   | Upload  | Download | Packets  | Serving disk reads* |
+|:------:|:------:|:-------:|:--------:|:--------:|:-------------------:|
+| `eth`  | 10h50m | 20.38GB | 43.8GB   | 1607M    | 15.68TB             |
+| `snap` | 2h6m   | 0.15GB  | 20.44GB  | 0.099M   | 0.096TB             |
+|        | -80.6% | -99.26% | -53.33%  | -99.993% | -99.39%             |
 
 *\*Also accounts for other peer requests during the time span.*
 
