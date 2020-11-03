@@ -1,8 +1,8 @@
 # Ethereum Snapshot Protocol (SNAP)
 
-The `snap` protocol runs on top of [RLPx](../rlpx.md), facilitating the exchange of
-Ethereum state snapshots between peers. The protocol is an optional extension for peers
-supporting (or caring about) the dynamic snapshot format.
+The `snap` protocol runs on top of [RLPx], facilitating the exchange of Ethereum state
+snapshots between peers. The protocol is an optional extension for peers supporting (or
+caring about) the dynamic snapshot format.
 
 The current version is `snap/1`.
 
@@ -107,10 +107,8 @@ The gotcha of the snapshot synchronization is that serving nodes need to be able
 provide **fast** iterable access to the state of the most recent `N` (128) blocks.
 Iterating the Merkle trie itself might be functional, but it's not viable (iterating the
 state trie at the time of writing takes 9h 30m on an idle machine). Geth introduced
-support for [dynamic snapshots](https://github.com/ethereum/go-ethereum/pull/20152), which
-allows iterating all the accounts in 7m (see [blog for
-more](https://blog.ethereum.org/2020/07/17/ask-about-geth-snapshot-acceleration/)). Some
-important properties of the dynamic snapshots:
+support for [dynamic snapshots], which allows iterating all the accounts in 7m
+(see [blog for more]). Some important properties of the dynamic snapshots:
 
 - Serving a contiguous range of accounts or storage slots take `O(n)` operations, and more
   importantly, it's the same for disk access too, being stored contiguously on disk (not
@@ -409,3 +407,7 @@ but there might be fewer is QoS limits are reached.
 ### snap/1 (November 2020)
 
 Version 1 was the introduction of the snapshot protocol.
+
+[RLPx]: ../rlpx.md
+[dynamic snapshots]: https://github.com/ethereum/go-ethereum/pull/20152
+[blog for more]: https://blog.ethereum.org/2020/07/17/ask-about-geth-snapshot-acceleration/
