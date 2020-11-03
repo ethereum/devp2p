@@ -406,6 +406,6 @@ but there might be fewer is QoS limits are reached.
 
 ## Change Log
 
-### snap/1 ([EIP-XXXX](https://eips.ethereum.org/EIPS/eip-XXXX), November 2020)
+### snap/1 (November 2020)
 
 Version 1 was the introduction of the snapshot protocol.
