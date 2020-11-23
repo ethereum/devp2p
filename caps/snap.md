@@ -206,7 +206,7 @@ account.
 
 - `reqID`: ID of the request this is a response for
 - `accounts`: List of consecutive accounts from the trie
-  - `accHash`: Hash of the account
+  - `accHash`: Hash of the account address (trie path)
   - `accBody`: Account body in slim format
 - `proof`: List of trie nodes proving the account range
 
@@ -287,7 +287,7 @@ slots.
 
 - `reqID`: ID of the request this is a response for
 - `slots`: List of list of consecutive slots from the trie (one list per account)
-  - `slotHash`: Hash of the storage slot
+  - `slotHash`: Hash of the storage slot key (trie path)
   - `slotData`: Data content of the slot
 - `proof`: List of trie nodes proving the slot range
 
