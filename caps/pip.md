@@ -12,7 +12,7 @@ Unlike LES, a PIP CHT is generated once every 2048 blocks. One 32-byte trie root
 for every range of 2048 blocks.
 
 The current version is **pip/1**. This specification was derived from the official
-specification at <https://wiki.parity.io>. However, the official specification has since
+specification at `https://wiki.parity.io`. However, the official specification has since
 been deleted.
 
 ## Notation
