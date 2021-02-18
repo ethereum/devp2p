@@ -36,7 +36,7 @@ during the execution of a particular block. This includes the following data:
 The trie node hashes which are generated at the end of the block from existing data are
 *not* included. For example, the final state root hash is not included.
 
-## Relation to `eth`
+### Relation to `eth`
 
 The `wit` protocol follows the same pattern as `snap`. It is a *dependent satellite* of
 `eth` (i.e. to run `wit`, you need to run `eth` too), not a fully standalone protocol.
@@ -59,7 +59,7 @@ not be suitable for all clients. Keeping `wit` as a separate protocol permits ev
 to decide to pursue it or not, without hindering their capacity to participate in the
 `eth` protocol.
 
-## Accelerating Beam Sync
+### Accelerating Beam Sync
 
 At its most naive, Beam Sync needs to download any missing state one trie node at a time.
 According to a recent test, after Beam Syncing for 22 hours, the median block still
