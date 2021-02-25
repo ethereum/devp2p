@@ -184,7 +184,7 @@ the ingress frame. This should be done before decrypting `header-ciphertext` and
 All messages following the initial handshake are associated with a 'capability'. Any
 number of capabilities can be used concurrently on a single RLPx connection.
 
-A capability is identified by a short ASCII name and version number. The capabilities
+A capability is identified by a short ASCII name (max eight characters) and version number. The capabilities
 supported on either side of the connection are exchanged in the [Hello] message belonging
 to the 'p2p' capability which is required to be available on all connections.
 
