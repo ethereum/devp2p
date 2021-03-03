@@ -6,7 +6,7 @@ They provide full functionality in terms of safely accessing the blockchain, but
 mine and therefore do not take part in the consensus process. Full and archive nodes can
 also support the 'les' protocol besides 'eth' in order to be able to serve light nodes.
 
-The current protocol version is **les/3**. See end of document for a list of changes in
+The current protocol version is **les/4**. See end of document for a list of changes in
 past protocol versions. Some of the les protocol messages are similar to of the [Ethereum
 Wire Protocol], with the addition of a few new fields.
 
@@ -172,6 +172,11 @@ are required (value types are noted after the key string):
 - `"headHash"` `B_32`: the hash of the best (i.e. highest TD) known block.
 - `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
 - `"genesisHash"` `B_32`: the hash of the Genesis block.
+- `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**. 
+  The value identifies the chain/fork the node is operating on.
+- `"recentTxLookup"` `P`: announced by servers since **les/4**. Transaction status
+  is served for transactions included in the N-1 most recent blocks (N=1 means that
+  mined transactions are not served at all). N=0 means all transactions are available.
 
 There are several optional key/value pairs which can be set:
 
@@ -436,6 +441,10 @@ Implementer's note: this message can be used to handle transient server overload
 Update flow control buffer and allow sending requests again. Note that the requests not answered before [StopMsg] were permanently canceled and will not be answered after [ResumeMsg]. If a [ResumeMsg] is received without a preceding [StopMsg] then it should be treated as a simple flow control buffer update (assuming that the server has already deducted the cost of the previously answered messages).
 
 ## Change Log
+
+### les/4 (March 2021)
+
+- Keys `"forkID"` and `"recentTxLookup"` were added to the [Status] message.
 
 ### les/3 (May 2019)
 
