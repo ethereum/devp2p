@@ -172,8 +172,11 @@ are required (value types are noted after the key string):
 - `"headHash"` `B_32`: the hash of the best (i.e. highest TD) known block.
 - `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
 - `"genesisHash"` `B_32`: the hash of the Genesis block.
-- `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**. The value identifies the chain/fork the node is operating on.
-- `"recentTxLookup"` `P`: announced by servers since **les/4**. Transaction status is served for transactions included in the N-1 most recent blocks (N=1 means that mined transactions are not served at all). N=0 means all transactions are available.
+- `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**. 
+   The value identifies the chain/fork the node is operating on.
+- `"recentTxLookup"` `P`: announced by servers since **les/4**. Transaction status
+  is served for transactions included in the N-1 most recent blocks (N=1 means that
+  mined transactions are not served at all). N=0 means all transactions are available.
 
 There are several optional key/value pairs which can be set:
 
@@ -439,7 +442,7 @@ Update flow control buffer and allow sending requests again. Note that the reque
 
 ## Change Log
 
-### les/4 (Mar 2021)
+### les/4 (March 2021)
 
 - Keys `"forkID"` and `"recentTxLookup"` were added to the [Status] message.
 
