@@ -173,7 +173,7 @@ are required (value types are noted after the key string):
 - `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
 - `"genesisHash"` `B_32`: the hash of the Genesis block.
 - `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**. 
-   The value identifies the chain/fork the node is operating on.
+  The value identifies the chain/fork the node is operating on.
 - `"recentTxLookup"` `P`: announced by servers since **les/4**. Transaction status
   is served for transactions included in the N-1 most recent blocks (N=1 means that
   mined transactions are not served at all). N=0 means all transactions are available.
