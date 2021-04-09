@@ -167,12 +167,12 @@ the connection is established and prior to any other LES messages. The following
 are required (value types are noted after the key string):
 
 - `"protocolVersion"` `P`: is 1 for protocol version one.
-- `"networkId"` `P`: should be 0 for testnet, 1 for mainnet.
+- `"networkId"` `P`: specifies the network ID of the chain, as in the [Ethereum Wire Protocol].
 - `"headTd"` `P`: Total Difficulty of the best chain. Integer, as found in block header.
 - `"headHash"` `B_32`: the hash of the best (i.e. highest TD) known block.
 - `"headNum"` `P`: the number of the best (i.e. highest TD) known block.
 - `"genesisHash"` `B_32`: the hash of the Genesis block.
-- `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**. 
+- `"forkID"` `[crc32, nextFork: P]`: mandatory since **les/4**.
   The value identifies the chain/fork the node is operating on.
 - `"recentTxLookup"` `P`: announced by servers since **les/4**. Transaction status
   is served for transactions included in the N-1 most recent blocks (N=1 means that
