@@ -59,16 +59,16 @@ incrementally by requesting the root node, its children, grandchildren, ... usin
 
 Newly-mined blocks must be relayed to all nodes. This happens through block propagation,
 which is a two step process. When a [NewBlock] announcement message is received from a
-peer, the client first verifies the basic validity of the block and checks that the
-proof-of-work value is valid. It then sends the block to a small fraction of connected
+peer, the client first verifies the basic header validity of the block, checking whether
+the proof-of-work value is valid. It then sends the block to a small fraction of connected
 peers (usually the square root of the total number of peers) using the [NewBlock] message.
 
-After the proof-of-work check, the client imports the block into its local chain by
+After the header validity check, the client imports the block into its local chain by
 executing all transactions contained in the block, computing the block's 'post state'. The
-block's state root hash must match the computed post state root. Once the block is fully
-processed the client sends a [NewBlockHashes] message about the block to all peers which
-it didn't notify earlier. Those peers may request the full block later if they fail to
-receive it via [NewBlock] from anyone else.
+block's `state-root` hash must match the computed post state root. Once the block is fully
+processed, and considered valid, the client sends a [NewBlockHashes] message about the
+block to all peers which it didn't notify earlier. Those peers may request the full block
+later if they fail to receive it via [NewBlock] from anyone else.
 
 A node should never send a block announcement back to a peer which previously announced
 the same block. This is usually achieved by remembering a large set of block hashes
@@ -108,22 +108,173 @@ relayed by the peer.
 Transactions must be validated before re-propagating them. Relaying an invalid transaction
 results in peer disconnection.
 
+### Transaction Encoding and Validity
+
+Transaction objects exchanged by peers have one of two encodings, which are identical to
+the encodings used by Ethereum consensus. In definitions across this specification, we
+refer to transaction objects of either encoding using the identifier `txₙ`.
+
+    tx = {legacy-tx, typed-tx}
+
+Untyped, legacy transactions are given as an RLP list.
+
+    legacy-tx = [
+        nonce: P,
+        gas-price: P,
+        gas-limit: P,
+        recipient: {B_0, B_20},
+        value: P,
+        data: B,
+        V: P,
+        R: P,
+        S: P,
+    ]
+
+[EIP-2718] typed transactions are encoded as RLP byte arrays where the first byte is the
+transaction type (`tx-type`) and the remaining bytes are opaque type-specific data.
+
+    typed-tx = rlp(tx-type || tx-data)
+
+Transactions must be validated when they are received. Validity depends on the Ethereum
+chain state. While the encoding of typed transactions is opaque, it is assumed that the
+encoding of `tx-data` provides values for `nonce`, `gas-price`, `gas-limit`, and that the
+sender account of the transaction can be determined from the signature.
+
+Transactions must be validated according to these rules:
+
+- If the transaction is typed, the `tx-type` must be one of the types considered
+  acceptable at the current block height.
+- The signature (`V`, `R`, `S` values) must be valid according to the signature schemes
+  supported by the chain. At this time, the two schemes in active use are the basic
+  'Homestead' scheme where `V`, `R`, `S` are simply the components of a secp256k1
+  signature; and the [EIP-155] scheme, where the signature values include a 'chain ID' to
+  prevent replay of the transaction on a different chain.
+- The `gas-limit` must cover the 'intrinsic gas' of the transaction, i.e. the base fee and
+  fee for the data size.
+- The sender account of the transaction, which is derived from the signature, must have
+  sufficient ether balance to cover the cost (`gas-limit * gas-price + value`) of the
+  transaction.
+- The `nonce` of the transaction must be equal or greater than the current nonce of the
+  sender account.
+- When considering the transaction for inclusion in the local pool, is up to
+  implementations to determine how many 'future' transactions with nonce greater than the
+  current account nonce are valid, and to which degree 'nonce gaps' are acceptable.
+
+Implementations may enforce other validation rules for transactions. For example, it is
+common practice to reject encoded transactions larger than 128 kB.
+
+### Block Encoding and Validity
+
+Ethereum blocks are encoded as follows:
+
+    block = [header, transactions, ommers]
+    transactions = [tx₁, tx₂, ...]
+    ommers = [header₁, header₂, ...]
+    header = [
+        parent-hash: B_32,
+        ommers-hash: B_32,
+        coinbase: B_20,
+        state-root: B_32,
+        txs-root: B_32,
+        receipts-root: B_32,
+        bloom: B_256,
+        difficulty: P,
+        number: P,
+        gas-limit: P,
+        gas-used: P,
+        time: P,
+        extradata: B,
+        mix-digest: B_32,
+        block-nonce: B_8
+    ]
+
+In certain protocol messages, the transaction and ommer lists are relayed together as a
+single item called the 'block body'.
+
+    block-body = [transactions, ommers]
+
+The validity of block headers depends on the context in which they are used. For a single
+block header, only the validity of the proof-of-work seal (`mix-digest`, `block-nonce`)
+can be verified. When a header is used to extend the client's local chain, or multiple
+headers are processed in sequence during chain synchronization, the following rules apply:
+
+- Headers must form a chain where block numbers are consecutive and the `parent-hash` of
+  each header matches the hash of the preceding header.
+- When extending the locally-stored chain, implementations must also verify that the
+  values of `difficulty`, `gas-limit` and `time` are within the bounds of protocol rules
+  given in the [Yellow Paper].
+- The `gas-used` field of a block header must be less than or equal to the `gas-limit`.
+
+For complete blocks, we distinguish between the validity of the block's EVM state
+transition, and the (weaker) formal validity of the block body data. The definition of
+state transition validity is not dealt with in this specification. To determine the formal
+validity of a block, it must be validated against these rules:
+
+- The block header fields must be valid according to the definition above.
+- The `transactions` contained in the block must be valid according to the validation
+  rules given earlier.
+- The sum of the `gas-limit`s of all transactions must not exceed the `gas-limit` of the
+  block.
+- The `transactions` of the block must be verified against the `txs-root` by computing and
+  comparing the merkle trie hash of the transactions list.
+- The `ommers` list may contain at most two headers.
+- `keccak256(ommers)` must match the `ommers-hash` of the block header.
+- The headers contained in the `ommers` list must be valid headers. Their block number
+  must not be greater than that of the block they are included in. The parent hash of an
+  ommer header must refer to an ancestor of depth 7 or less of its including block, and it
+  must not have been included in any earlier block contained in this ancestor set.
+
+### Receipt Encoding and Validity
+
+Receipts are the output of the EVM state transition of a block. Like transactions,
+receipts have two distinct encodings and we will refer to either encoding using the
+identifier `receiptₙ`.
+
+    receipt = {legacy-receipt, typed-receipt}
+
+Untyped, legacy receipts are encoded as follows:
+
+    legacy-receipt = [
+        post-state-or-status: {{0, 1}, B_32},
+        cumulative-gas: P
+        bloom: B_256,
+        logs: [log₁, log₂, ...]
+    ]
+    log = [
+        contract-address: B_20,
+        topics: [topic₁: B, topic₂: B, ...],
+        data: B
+    ]
+
+[EIP-2718] typed receipts are encoded as RLP byte arrays where the first byte gives the
+receipt type (matching `tx-type`) and the remaining bytes are opaque data specific to the
+type.
+
+    typed-receipt = rlp(tx-type || receipt-data)
+
+In the Ethereum Wire Protocol, receipts are always transferred as the complete list of all
+receipts contained in a block. It is also assumed that the block containing the receipts
+is valid and known. When a list of block receipts is received by a peer, it must be
+verified by computing and comparing the merkle trie hash of the list against the
+`receipts-root` of the block. Since the valid list of receipts is determined by the EVM
+state transition, it is not necessary to define any further validity rules for receipts in
+this specification.
+
 ## Protocol Messages
 
 ### Status (0x00)
 
-`[protocolVersion: P, networkId: P, td: P, bestHash: B_32, genesisHash: B_32, forkID]`
+`[version: P, networkid: P, td: P, blockhash: B_32, genesis: B_32, forkid]`
 
 Inform a peer of its current state. This message should be sent just after the connection
 is established and prior to any other eth protocol messages.
 
-- `protocolVersion`: the current protocol version
-- `networkId`: Integer identifying the blockchain, see table below
+- `version`: the current protocol version
+- `networkid`: integer identifying the blockchain, see table below
 - `td`: total difficulty of the best chain. Integer, as found in block header.
-- `bestHash`: The hash of the best (i.e. highest TD) known block.
-- `genesisHash`: The hash of the Genesis block.
-- `number`: The block number of the latest block in the chain.
-- `forkID`: An [EIP-2124] fork identifier, encoded as `[forkHash, forkNext]`.
+- `blockhash`: the hash of the best (i.e. highest TD) known block
+- `genesis`: the hash of the genesis block
+- `forkid`: An [EIP-2124] fork identifier, encoded as `[fork-hash, fork-next]`.
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
@@ -142,7 +293,7 @@ For a community curated list of chain IDs, see <https://chainid.network>.
 
 ### NewBlockHashes (0x01)
 
-`[[hash_0: B_32, number_0: P], [hash_1: B_32, number_1: P], ...]`
+`[[blockhash₁: B_32, number₁: P], [blockhash₂: B_32, number₂: P], ...]`
 
 Specify one or more new blocks which have appeared on the network. To be maximally
 helpful, nodes should inform peers of all blocks that they may not be aware of. Including
@@ -155,7 +306,7 @@ of the sending node.
 
 ### Transactions (0x02)
 
-`[[nonce: P, receivingAddress: B_20, value: P, ...], ...]`
+`[tx₁, tx₂, ...]`
 
 Specify transactions that the peer should make sure is included on its transaction queue.
 The items in the list are transactions in the format described in the main Ethereum
@@ -169,20 +320,19 @@ have already been sent or received.
 
 ### GetBlockHeaders (0x03)
 
-`[block: {P, B_32}, maxHeaders: P, skip: P, reverse: P in {0, 1}]`
+`[startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]`
 
 Require peer to return a [BlockHeaders] message. Reply must contain a number of block
 headers, of rising number when `reverse` is `0`, falling when `1`, `skip` blocks apart,
-beginning at block `block` (denoted by either number or hash) in the canonical chain, and
-with at most `maxHeaders` items.
+beginning at block `startblock` (denoted by either number or hash) in the canonical chain,
+and with at most `limit` items.
 
 ### BlockHeaders (0x04)
 
-`[blockHeader_0, blockHeader_1, ...]`
+`[header₁, header₂, ...]`
 
-Reply to [GetBlockHeaders]. The items in the list (following the message ID) are block
-headers in the format described in the main Ethereum specification, previously asked for
-in a GetBlockHeaders message. This may validly contain no block headers if none of the
+Reply to [GetBlockHeaders]. The items in the list are block headers, previously asked for
+in a GetBlockHeaders message. The list may contain no block headers if none of the
 requested block headers were found. The number of headers that can be requested in a
 single message may be subject to implementation-defined limits.
 
@@ -190,7 +340,7 @@ The recommended soft limit for BlockHeaders responses is 2 MiB.
 
 ### GetBlockBodies (0x05)
 
-`[hash_0: B_32, hash_1: B_32, ...]`
+`[blockhash₁: B_32, blockhash₂: B_32, ...]`
 
 Require peer to return a [BlockBodies] message. Specify the set of blocks that we're
 interested in with the hashes. The number of blocks that can be requested in a single
@@ -198,28 +348,24 @@ message may be subject to implementation-defined limits.
 
 ### BlockBodies (0x06)
 
-`[[transactions_0, uncles_0] , ...]`
+`[block-body₁, block-body₂, ...]`
 
-Reply to [GetBlockBodies]. The items in the list are some of the blocks, minus the header,
-in the format described in the main Ethereum specification, previously asked for in a
-GetBlockBodies message. This may be empty if no blocks were available for the last
-GetBlockBodies query.
+Reply to [GetBlockBodies]. The items in the list contain the block bodies of the requested
+blocks. The list may be empty if none of the requested blocks were available.
 
 The recommended soft limit for BlockBodies responses is 2 MiB.
 
 ### NewBlock (0x07)
 
-`[[blockHeader, transactionList, uncleList], totalDifficulty]`
+`[block, total-difficulty: P]`
 
-Specify a single block that the peer should know about. The composite item in the list
-(following the message ID) is a block in the format described in the main Ethereum
-specification.
-
-- `totalDifficulty` is the total difficulty of the block (aka score).
+Specify a single complete block that the peer should know about. `total-difficulty` is the
+total difficulty of the block, i.e. the sum of all block difficulties up to and including
+this block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[hash_0: B_32, hash_1: B_32, ...]`
+`[txhash₁: B_32, txhash₂: B_32, ...]`
 
 This message announces one or more transactions that have appeared in the network and
 which have not yet been included in a block. To be maximally helpful, nodes should inform
@@ -233,7 +379,7 @@ gap in the pool.
 
 ### GetPooledTransactions (0x09)
 
-`[hash_0: B_32, hash_1: B_32, ...]`
+`[txhash₁: B_32, txhash₂: B_32, ...]`
 
 This message requests transactions from the recipient's transaction pool by hash.
 
@@ -243,7 +389,7 @@ must not be considered a protocol violation.
 
 ### PooledTransactions (0x0a)
 
-`[[nonce: P, receivingAddress: B_20, value: P, ...], ...]`
+`[tx₁, tx₂...]`
 
 This is the response to GetPooledTransactions, returning the requested transactions from
 the local pool. The items in the list are transactions in the format described in the main
@@ -265,18 +411,18 @@ pool.
 
 ### GetNodeData (0x0d)
 
-`[hash_0: B_32, hash_1: B_32, ...]`
+`[hash₁: B_32, hash₂: B_32, ...]`
 
 Require peer to return a [NodeData] message containing state tree nodes or contract code
 matching the requested hashes.
 
 ### NodeData (0x0e)
 
-`[value_0: B, value_1: B, ...]`
+`[value₁: B, value₂: B, ...]`
 
 Provide a set of state tree nodes or contract code blobs which correspond to previously
-requested hashes from [GetNodeData]. Does not need to contain all; best effort is fine. This
-message may be an empty list if the peer doesn't know about any of the previously
+requested hashes from [GetNodeData]. Does not need to contain all; best effort is fine.
+This message may be an empty list if the peer doesn't know about any of the previously
 requested hashes. The number of items that can be requested in a single message may be
 subject to implementation-defined limits.
 
@@ -284,7 +430,7 @@ The recommended soft limit for NodeData responses is 2 MiB.
 
 ### GetReceipts (0x0f)
 
-`[blockHash_0: B_32, blockHash_1: B_32, ...]`
+`[blockhash₁: B_32, blockhash₂: B_32, ...]`
 
 Require peer to return a [Receipts] message containing the receipts of the given block
 hashes. The number of receipts that can be requested in a single message may be subject to
@@ -292,7 +438,7 @@ implementation-defined limits.
 
 ### Receipts (0x10)
 
-`[[receipt_0, receipt_1], ...]`
+`[[receipt₁, receipt₂], ...]`
 
 Provide a set of receipts which correspond to block hashes in a previous [GetReceipts]
 message.
@@ -300,6 +446,13 @@ message.
 The recommended soft limit for Receipts responses is 2 MiB.
 
 ## Change Log
+
+### eth/65 with typed transactions ([EIP-2976], April 2021)
+
+When typed transactions were introduced by [EIP-2718], client implementers decided to
+accept the new transaction and receipt formats in the wire protocol without increasing the
+protocol version. This specification update also added definitions for the encoding of all
+consensus objects instead of referring to the Yellow Paper.
 
 ### eth/65 ([EIP-2464], January 2020)
 
@@ -333,11 +486,11 @@ message was removed.
 
 Previous encodings of the reassigned/removed message codes were:
 
-- GetBlockHashes (0x03): `[hash: B_32, maxBlocks: P]`
-- BlockHashes (0x04): `[hash_0: B_32, hash_1: B_32, ...]`
-- GetBlocks (0x05): `[hash_0: B_32, hash_1: B_32, ...]`
-- Blocks (0x06): `[[blockHeader, transactionList, uncleList], ...]`
-- BlockHashesFromNumber (0x08): `[number: P, maxBlocks: P]`
+- GetBlockHashes (0x03): `[hash: B_32, max-blocks: P]`
+- BlockHashes (0x04): `[hash₁: B_32, hash₂: B_32, ...]`
+- GetBlocks (0x05): `[hash₁: B_32, hash₂: B_32, ...]`
+- Blocks (0x06): `[[header, transactions, ommers], ...]`
+- BlockHashesFromNumber (0x08): `[number: P, max-blocks: P]`
 
 ### eth/61 (2015)
 
@@ -372,6 +525,10 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [Rinkeby]: https://rinkeby.io
+[EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
 [EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
 [EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
+[EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
+[EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
