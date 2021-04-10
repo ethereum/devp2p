@@ -235,7 +235,7 @@ identifier `receiptₙ`.
 Untyped, legacy receipts are encoded as follows:
 
     legacy-receipt = [
-        post-state-or-status: {{0, 1}, B_32},
+        post-state-or-status: {B_32, {0, 1}},
         cumulative-gas: P
         bloom: B_256,
         logs: [log₁, log₂, ...]
