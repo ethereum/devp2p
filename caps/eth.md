@@ -211,8 +211,8 @@ state transition validity is not dealt with in this specification. To determine 
 validity of a block, it must be validated against these rules:
 
 - The block header fields must be valid according to the definition above.
-- The `transactions` contained in the block must be valid according to the validation
-  rules given earlier.
+- The `transactions` contained in the block must be valid according to the rules given
+  earlier.
 - The sum of the `gas-limit`s of all transactions must not exceed the `gas-limit` of the
   block.
 - The `transactions` of the block must be verified against the `txs-root` by computing and
