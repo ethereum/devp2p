@@ -49,11 +49,11 @@ Protocol versions eth/63 and later also allow synchronizing transaction executio
 transactions but comes at the expense of some security.
 
 State synchronization typically proceeds by downloading the chain of block headers,
-verifying their proof-of-work values. Block bodies are requested as in the Chain
-Synchronization section but block transactions aren't executed. Instead, the client picks
-a block near the head of the chain and downloads merkle tree nodes and contract code
-incrementally by requesting the root node, its children, grandchildren, ... using
-[GetNodeData] until the entire tree is synchronized.
+verifying their validity. Block bodies are requested as in the Chain Synchronization
+section but block transactions aren't executed, only their 'data validity' is verified.
+The client picks a block near the head of the chain and downloads merkle tree nodes and
+contract code incrementally by requesting the root node, its children, grandchildren, ...
+using [GetNodeData] until the entire tree is synchronized.
 
 ### Block Propagation
 
@@ -105,14 +105,10 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
-Transactions must be validated before re-propagating them. Relaying an invalid transaction
-results in peer disconnection.
-
 ### Transaction Encoding and Validity
 
-Transaction objects exchanged by peers have one of two encodings, which are identical to
-the encodings used by Ethereum consensus. In definitions across this specification, we
-refer to transaction objects of either encoding using the identifier `txₙ`.
+Transaction objects exchanged by peers have one of two encodings. In definitions across
+this specification, we refer to transactions of either encoding using the identifier `txₙ`.
 
     tx = {legacy-tx, typed-tx}
 
@@ -136,19 +132,23 @@ transaction type (`tx-type`) and the remaining bytes are opaque type-specific da
     typed-tx = rlp(tx-type || tx-data)
 
 Transactions must be validated when they are received. Validity depends on the Ethereum
-chain state. While the encoding of typed transactions is opaque, it is assumed that the
-encoding of `tx-data` provides values for `nonce`, `gas-price`, `gas-limit`, and that the
-sender account of the transaction can be determined from the signature.
+chain state. The specific kind of validity this specification is concerned with is not
+whether the transaction can be executed successfully by the EVM, but only whether it is
+acceptable for temporary storage in the local pool and for exchange with other peers.
 
-Transactions must be validated according to these rules:
+Transactions must be validated according to the rules below. While the encoding of typed
+transactions is opaque, it is assumed that their `tx-data` provides values for `nonce`,
+`gas-price`, `gas-limit`, and that the sender account of the transaction can be determined
+from their signature.
 
-- If the transaction is typed, the `tx-type` must be one of the types considered
-  acceptable at the current block height.
+- If the transaction is typed, the `tx-type` must be known to the implementation. Defined
+  transaction types may be considered valid even before they become acceptable for
+  inclusion in a block. Implementations should disconnect peers sending transactions of
+  unknown type.
 - The signature (`V`, `R`, `S` values) must be valid according to the signature schemes
-  supported by the chain. At this time, the two schemes in active use are the basic
-  'Homestead' scheme where `V`, `R`, `S` are simply the components of a secp256k1
-  signature; and the [EIP-155] scheme, where the signature values include a 'chain ID' to
-  prevent replay of the transaction on a different chain.
+  supported by the chain. For typed transactions, signature handling is defined by the EIP
+  introducing the type. For legacy transactions, the two schemes in active use are the
+  basic 'Homestead' scheme and the [EIP-155] scheme.
 - The `gas-limit` must cover the 'intrinsic gas' of the transaction, i.e. the base fee and
   fee for the data size.
 - The sender account of the transaction, which is derived from the signature, must have
@@ -156,12 +156,16 @@ Transactions must be validated according to these rules:
   transaction.
 - The `nonce` of the transaction must be equal or greater than the current nonce of the
   sender account.
-- When considering the transaction for inclusion in the local pool, is up to
+- When considering the transaction for inclusion in the local pool, it is up to
   implementations to determine how many 'future' transactions with nonce greater than the
   current account nonce are valid, and to which degree 'nonce gaps' are acceptable.
 
 Implementations may enforce other validation rules for transactions. For example, it is
 common practice to reject encoded transactions larger than 128 kB.
+
+Unless noted otherwise, implementations must not disconnect peers for sending invalid
+transactions, and should simply discard them instead. This is because the peer might be
+operating under slightly different validation rules.
 
 ### Block Encoding and Validity
 
@@ -206,13 +210,17 @@ headers are processed in sequence during chain synchronization, the following ru
 - The `gas-used` field of a block header must be less than or equal to the `gas-limit`.
 
 For complete blocks, we distinguish between the validity of the block's EVM state
-transition, and the (weaker) formal validity of the block body data. The definition of
-state transition validity is not dealt with in this specification. To determine the formal
-validity of a block, it must be validated against these rules:
+transition, and the (weaker) 'data validity' of the block. The definition of state
+transition rules is not dealt with in this specification. We require data validity of the
+block for the purposes of immediate [block propagation] and during [state synchronization].
 
-- The block header fields must be valid according to the definition above.
-- The `transactions` contained in the block must be valid according to the rules given
-  earlier.
+To determine the data validity of a block, use the rules below.
+
+- The block `header` must be valid.
+- The `transactions` contained in the block must be valid for inclusion into the chain at
+  the block's number. This means that, in addition to the transaction validation rules
+  given earlier, validating whether the `tx-type` is permitted at the block number is
+  required, and validation of transaction gas must take the block number into account.
 - The sum of the `gas-limit`s of all transactions must not exceed the `gas-limit` of the
   block.
 - The `transactions` of the block must be verified against the `txs-root` by computing and
@@ -508,7 +516,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 - `0x17` for PoC-5
 - `0x1c` for PoC-6
 
-[RLPx]: ../rlpx.md
+[block propagation]: #block-propagation
+[state synchronization]: #state-synchronization-aka-fast-sync
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
 [Transactions]: #transactions-0x02
@@ -524,6 +533,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [NodeData]: #nodedata-0x0e
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
+[RLPx]: ../rlpx.md
 [Rinkeby]: https://rinkeby.io
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
