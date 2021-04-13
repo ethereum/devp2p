@@ -214,7 +214,8 @@ transition, and the (weaker) 'data validity' of the block. The definition of sta
 transition rules is not dealt with in this specification. We require data validity of the
 block for the purposes of immediate [block propagation] and during [state synchronization].
 
-To determine the data validity of a block, use the rules below.
+To determine the data validity of a block, use the rules below. Implementations should
+disconnect peers sending invalid blocks.
 
 - The block `header` must be valid.
 - The `transactions` contained in the block must be valid for inclusion into the chain at
