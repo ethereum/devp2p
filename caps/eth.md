@@ -365,11 +365,11 @@ The recommended soft limit for BlockBodies responses is 2 MiB.
 
 ### NewBlock (0x07)
 
-`[block, total-difficulty: P]`
+`[block, td: P]`
 
-Specify a single complete block that the peer should know about. `total-difficulty` is the
-total difficulty of the block, i.e. the sum of all block difficulties up to and including
-this block.
+Specify a single complete block that the peer should know about. `td` is the total
+difficulty of the block, i.e. the sum of all block difficulties up to and including this
+block.
 
 ### NewPooledTransactionHashes (0x08)
 
