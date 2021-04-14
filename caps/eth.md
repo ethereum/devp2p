@@ -129,7 +129,7 @@ Untyped, legacy transactions are given as an RLP list.
 [EIP-2718] typed transactions are encoded as RLP byte arrays where the first byte is the
 transaction type (`tx-type`) and the remaining bytes are opaque type-specific data.
 
-    typed-tx = rlp(tx-type || tx-data)
+    typed-tx = tx-type || tx-data
 
 Transactions must be validated when they are received. Validity depends on the Ethereum
 chain state. The specific kind of validity this specification is concerned with is not
@@ -258,7 +258,7 @@ Untyped, legacy receipts are encoded as follows:
 receipt type (matching `tx-type`) and the remaining bytes are opaque data specific to the
 type.
 
-    typed-receipt = rlp(tx-type || receipt-data)
+    typed-receipt = tx-type || receipt-data
 
 In the Ethereum Wire Protocol, receipts are always transferred as the complete list of all
 receipts contained in a block. It is also assumed that the block containing the receipts
