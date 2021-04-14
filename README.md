@@ -1,17 +1,21 @@
 <p align="center"><img src="etherdog.png"></p>
 
 This repository contains specifications for the peer-to-peer networking protocols used by
-Ethereum.
+Ethereum. We have several specifications for low-level protocols:
 
-- [Ethereum Node Records], our node metadata format.
+- [Ethereum Node Records]
 - [Node Discovery Protocol v4]
 - [Node Discovery Protocol v5]
-- [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
-  - [Ethereum Wire Protocol] (eth/66)
-  - [Ethereum Snapshot Protocol] (snap/1)
-  - [Light Ethereum Subprotocol] (les/4)
-  - [Parity Light Protocol] (pip/1)
-  - [Ethereum Witness Protocol] (wit/0)
+- [RLPx protocol]
+
+The repository also contains specifications of many RLPx-based application-level
+protocols:
+
+- [Ethereum Wire Protocol] (eth/66)
+- [Ethereum Snapshot Protocol] (snap/1)
+- [Light Ethereum Subprotocol] (les/4)
+- [Parity Light Protocol] (pip/1)
+- [Ethereum Witness Protocol] (wit/0)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
@@ -83,5 +87,5 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Node Discovery Protocol v4]: ./discv4.md
 [Node Discovery Protocol v5]: ./discv5/discv5.md
 [Parity Light Protocol]: ./caps/pip.md
-[RLPx transport protocol]: ./rlpx.md
+[RLPx protocol]: ./rlpx.md
 [libp2p]: https://libp2p.io
