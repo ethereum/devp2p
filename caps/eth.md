@@ -462,7 +462,7 @@ The recommended soft limit for Receipts responses is 2 MiB.
 
 Version 66 added the `request-id` element in messages [GetBlockHeaders], [BlockHeaders],
 [GetBlockBodies], [BlockBodies], [GetPooledTransactions], [PooledTransactions],
-[GetNodeData] [NodeData], [GetReceipts], [Receipts].
+[GetNodeData], [NodeData], [GetReceipts], [Receipts].
 
 ### eth/65 with typed transactions ([EIP-2976], April 2021)
 
