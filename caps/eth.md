@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/65**. See end
+blockchain information between peers. The current protocol version is **eth/66**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -270,6 +270,10 @@ this specification.
 
 ## Protocol Messages
 
+In most messages, the first element of the message data list is the `request-id`. For
+requests, this is a 64-bit integer value chosen by the requesting peer. The responding
+peer must mirror the value in the `request-id` element of the response message.
+
 ### Status (0x00)
 
 `[version: P, networkid: P, td: P, blockhash: B_32, genesis: B_32, forkid]`
@@ -328,38 +332,36 @@ have already been sent or received.
 
 ### GetBlockHeaders (0x03)
 
-`[startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]`
+`[request-id: P, [startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]]`
 
-Require peer to return a [BlockHeaders] message. Reply must contain a number of block
+Require peer to return a BlockHeaders message. The response must contain a number of block
 headers, of rising number when `reverse` is `0`, falling when `1`, `skip` blocks apart,
 beginning at block `startblock` (denoted by either number or hash) in the canonical chain,
 and with at most `limit` items.
 
 ### BlockHeaders (0x04)
 
-`[header₁, header₂, ...]`
+`[request-id: P, [header₁, header₂, ...]]`
 
-Reply to [GetBlockHeaders]. The items in the list are block headers, previously asked for
-in a GetBlockHeaders message. The list may contain no block headers if none of the
-requested block headers were found. The number of headers that can be requested in a
-single message may be subject to implementation-defined limits.
+This is the response to GetBlockHeaders, containing the requested headers. The header list
+may be empty if none of the requested block headers were found. The number of headers that
+can be requested in a single message may be subject to implementation-defined limits.
 
 The recommended soft limit for BlockHeaders responses is 2 MiB.
 
 ### GetBlockBodies (0x05)
 
-`[blockhash₁: B_32, blockhash₂: B_32, ...]`
+`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a [BlockBodies] message. Specify the set of blocks that we're
-interested in with the hashes. The number of blocks that can be requested in a single
-message may be subject to implementation-defined limits.
+This message requests block body data by hash. The number of blocks that can be requested
+in a single message may be subject to implementation-defined limits.
 
 ### BlockBodies (0x06)
 
-`[block-body₁, block-body₂, ...]`
+`[request-id: P, [block-body₁, block-body₂, ...]]`
 
-Reply to [GetBlockBodies]. The items in the list contain the block bodies of the requested
-blocks. The list may be empty if none of the requested blocks were available.
+This is the response to GetBlockBodies. The items in the list contain the body data of the
+requested blocks. The list may be empty if none of the requested blocks were available.
 
 The recommended soft limit for BlockBodies responses is 2 MiB.
 
@@ -387,7 +389,7 @@ gap in the pool.
 
 ### GetPooledTransactions (0x09)
 
-`[txhash₁: B_32, txhash₂: B_32, ...]`
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...]]`
 
 This message requests transactions from the recipient's transaction pool by hash.
 
@@ -397,7 +399,7 @@ must not be considered a protocol violation.
 
 ### PooledTransactions (0x0a)
 
-`[tx₁, tx₂...]`
+`[request-id: P, [tx₁, tx₂...]]`
 
 This is the response to GetPooledTransactions, returning the requested transactions from
 the local pool. The items in the list are transactions in the format described in the main
@@ -419,14 +421,14 @@ pool.
 
 ### GetNodeData (0x0d)
 
-`[hash₁: B_32, hash₂: B_32, ...]`
+`[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
 
 Require peer to return a [NodeData] message containing state tree nodes or contract code
 matching the requested hashes.
 
 ### NodeData (0x0e)
 
-`[value₁: B, value₂: B, ...]`
+`[request-id: P, [value₁: B, value₂: B, ...]]`
 
 Provide a set of state tree nodes or contract code blobs which correspond to previously
 requested hashes from [GetNodeData]. Does not need to contain all; best effort is fine.
@@ -438,22 +440,29 @@ The recommended soft limit for NodeData responses is 2 MiB.
 
 ### GetReceipts (0x0f)
 
-`[blockhash₁: B_32, blockhash₂: B_32, ...]`
+`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a [Receipts] message containing the receipts of the given block
+Require peer to return a Receipts message containing the receipts of the given block
 hashes. The number of receipts that can be requested in a single message may be subject to
 implementation-defined limits.
 
 ### Receipts (0x10)
 
-`[[receipt₁, receipt₂], ...]`
+`[request-id: P, [[receipt₁, receipt₂], ...]]`
 
-Provide a set of receipts which correspond to block hashes in a previous [GetReceipts]
-message.
+This is the response to GetReceipts, providing the requested block receipts. Each element
+in the response list corresponds to a block hash of the GetReceipts request, and must
+contain the complete list of receipts of the block.
 
 The recommended soft limit for Receipts responses is 2 MiB.
 
 ## Change Log
+
+### eth/66 ([EIP-2481], April 2021)
+
+Version 66 added the `request-id` element in messages [GetBlockHeaders], [BlockHeaders],
+[GetBlockBodies], [BlockBodies], [GetPooledTransactions], [PooledTransactions],
+[GetNodeData], [NodeData], [GetReceipts], [Receipts].
 
 ### eth/65 with typed transactions ([EIP-2976], April 2021)
 
@@ -539,6 +548,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
 [EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
 [EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
+[EIP-2481]: https://eips.ethereum.org/EIPS/eip-2481
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
