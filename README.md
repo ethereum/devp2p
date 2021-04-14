@@ -1,27 +1,26 @@
 <p align="center"><img src="etherdog.png"></p>
 
 This repository contains specifications for the peer-to-peer networking protocols used by
-Ethereum. We have several specifications for low-level protocols:
+Ethereum. The issue tracker here is for discussions of protocol changes. It's also OK to
+open an issue if you just have a question.
+
+Protocol level security issues are valuable! Please report serious issues responsibly
+through the [Ethereum Foundation Bounty Program].
+
+We have several specifications for low-level protocols:
 
 - [Ethereum Node Records]
 - [Node Discovery Protocol v4]
 - [Node Discovery Protocol v5]
 - [RLPx protocol]
 
-The repository also contains specifications of many RLPx-based application-level
-protocols:
+The repository also contains specifications of many RLPx-based application-level protocols:
 
 - [Ethereum Wire Protocol] (eth/66)
 - [Ethereum Snapshot Protocol] (snap/1)
 - [Light Ethereum Subprotocol] (les/4)
 - [Parity Light Protocol] (pip/1)
 - [Ethereum Witness Protocol] (wit/0)
-
-The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
-you just have a question. You can also get in touch through our [Gitter channel].
-
-Protocol level security issues are valuable! Please report serious issues responsibly
-through the [Ethereum Foundation Bounty Program].
 
 ### The Mission
 
@@ -80,7 +79,6 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [Ethereum Wire Protocol]: ./caps/eth.md
 [Ethereum Snapshot Protocol]: ./caps/snap.md
-[Gitter channel]: https://gitter.im/ethereum/devp2p
 [Light Ethereum Subprotocol]: ./caps/les.md
 [Ethereum Witness Protocol]: ./caps/wit.md
 [Ethereum Node Records]: ./enr.md
