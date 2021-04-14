@@ -136,7 +136,7 @@ chain state. The specific kind of validity this specification is concerned with 
 whether the transaction can be executed successfully by the EVM, but only whether it is
 acceptable for temporary storage in the local pool and for exchange with other peers.
 
-Transactions must be validated according to the rules below. While the encoding of typed
+Transactions are validated according to the rules below. While the encoding of typed
 transactions is opaque, it is assumed that their `tx-data` provides values for `nonce`,
 `gas-price`, `gas-limit`, and that the sender account of the transaction can be determined
 from their signature.
@@ -145,12 +145,11 @@ from their signature.
   transaction types may be considered valid even before they become acceptable for
   inclusion in a block. Implementations should disconnect peers sending transactions of
   unknown type.
-- The signature (`V`, `R`, `S` values) must be valid according to the signature schemes
-  supported by the chain. For typed transactions, signature handling is defined by the EIP
-  introducing the type. For legacy transactions, the two schemes in active use are the
-  basic 'Homestead' scheme and the [EIP-155] scheme.
-- The `gas-limit` must cover the 'intrinsic gas' of the transaction, i.e. the base fee and
-  fee for the data size.
+- The signature must be valid according to the signature schemes supported by the chain.
+  For typed transactions, signature handling is defined by the EIP introducing the type.
+  For legacy transactions, the two schemes in active use are the basic 'Homestead' scheme
+  and the [EIP-155] scheme.
+- The `gas-limit` must cover the 'intrinsic gas' of the transaction.
 - The sender account of the transaction, which is derived from the signature, must have
   sufficient ether balance to cover the cost (`gas-limit * gas-price + value`) of the
   transaction.
