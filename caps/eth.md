@@ -334,7 +334,7 @@ have already been sent or received.
 
 `[request-id: P, [startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]]`
 
-Require peer to return a [BlockHeaders] message. Reply must contain a number of block
+Require peer to return a BlockHeaders message. The response must contain a number of block
 headers, of rising number when `reverse` is `0`, falling when `1`, `skip` blocks apart,
 beginning at block `startblock` (denoted by either number or hash) in the canonical chain,
 and with at most `limit` items.
@@ -343,10 +343,9 @@ and with at most `limit` items.
 
 `[request-id: P, [header₁, header₂, ...]]`
 
-Response to [GetBlockHeaders]. The items in the list are block headers, previously asked
-for in a GetBlockHeaders message. The list may contain no block headers if none of the
-requested block headers were found. The number of headers that can be requested in a
-single message may be subject to implementation-defined limits.
+This is the response to GetBlockHeaders, containing the requested headers. The header list
+may be empty if none of the requested block headers were found. The number of headers that
+can be requested in a single message may be subject to implementation-defined limits.
 
 The recommended soft limit for BlockHeaders responses is 2 MiB.
 
@@ -354,16 +353,15 @@ The recommended soft limit for BlockHeaders responses is 2 MiB.
 
 `[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a [BlockBodies] message. Specify the set of blocks that we're
-interested in with the hashes. The number of blocks that can be requested in a single
-message may be subject to implementation-defined limits.
+This message requests block body data by hash. The number of blocks that can be requested
+in a single message may be subject to implementation-defined limits.
 
 ### BlockBodies (0x06)
 
 `[request-id: P, [block-body₁, block-body₂, ...]]`
 
-Reply to [GetBlockBodies]. The items in the list contain the block bodies of the requested
-blocks. The list may be empty if none of the requested blocks were available.
+This is the response to GetBlockBodies. The items in the list contain the body data of the
+requested blocks. The list may be empty if none of the requested blocks were available.
 
 The recommended soft limit for BlockBodies responses is 2 MiB.
 
