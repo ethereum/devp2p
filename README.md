@@ -5,13 +5,13 @@ Ethereum.
 
 - [Ethereum Node Records], our node metadata format.
 - [Node Discovery Protocol v4]
-- [Node Discovery Protocol v5] **(Draft Specification)**
+- [Node Discovery Protocol v5]
 - [RLPx transport protocol] (version 5) and several RLPx-based capabilities:
-  - [Ethereum Wire Protocol] (version 65)
-  - [Ethereum Snapshot Protocol] (version 1)
-  - [Light Ethereum Subprotocol] (version 3)
-  - [Parity Light Protocol] (version 1)
-  - [Ethereum Witness Protocol] (version 0)
+  - [Ethereum Wire Protocol] (eth/66)
+  - [Ethereum Snapshot Protocol] (snap/1)
+  - [Light Ethereum Subprotocol] (les/4)
+  - [Parity Light Protocol] (pip/1)
+  - [Ethereum Witness Protocol] (wit/0)
 
 The issue tracker here is for discussions of protocol changes. It's OK to open an issue if
 you just have a question. You can also get in touch through our [Gitter channel].
