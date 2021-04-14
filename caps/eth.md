@@ -550,6 +550,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
 [EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
 [EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
+[EIP-2481]: https://eips.ethereum.org/EIPS/eip-2481
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
