@@ -444,7 +444,7 @@ The recommended soft limit for NodeData responses is 2 MiB.
 
 `[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a [Receipts] message containing the receipts of the given block
+Require peer to return a Receipts message containing the receipts of the given block
 hashes. The number of receipts that can be requested in a single message may be subject to
 implementation-defined limits.
 
@@ -452,8 +452,9 @@ implementation-defined limits.
 
 `[request-id: P, [[receipt₁, receipt₂], ...]]`
 
-Provide a set of receipts which correspond to block hashes in a previous [GetReceipts]
-message.
+This is the response to GetReceipts, providing the requested block receipts. Each element
+in the response list corresponds to a block hash of the GetReceipts request, and must
+contain the complete list of receipts of the block.
 
 The recommended soft limit for Receipts responses is 2 MiB.
 
