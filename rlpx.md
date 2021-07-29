@@ -222,7 +222,7 @@ reception of the [Hello] message, both peers have equivalent information about w
 capabilities they share (including versions) and are able to form consensus over the
 composition of message ID space.
 
-Message IDs are assumed to be compact from ID 0x11 onwards (0x00-0x10 is reserved for the
+Message IDs are assumed to be compact from ID 0x10 onwards (0x00-0x0f is reserved for the
 "p2p" capability) and given to each shared (equal-version, equal-name) capability in
 alphabetic order. Capability names are case-sensitive. Capabilities which are not shared
 are ignored. If multiple versions are shared of the same (equal name) capability, the
