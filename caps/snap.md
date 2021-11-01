@@ -172,7 +172,7 @@ Notes:
   128 blocks.
 - The responding node is allowed to return **less** data than requested (own QoS limits),
   but the node **must** return at least one account. If no accounts exist between `startingHash` and `limitHash`, then
-  the first (if any) account _after_ `limitHash` must be provided. 
+  the first (if any) account **after** `limitHash` must be provided. 
 - The responding node **must** Merkle prove the starting hash (even if it does not exist)
   and the last returned account (if any exists after the starting hash).
 
