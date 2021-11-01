@@ -232,7 +232,7 @@ locally.
 - `rootHash`: Root hash of the account trie to serve
 - `accountHashes`: Account hashes of the storage tries to serve
 - `startingHash`: Storage slot hash of the first to retrieve
-- `limitHash`: Storage slot hash, after which to stop serving
+- `limitHash`: Storage slot hash after which to stop serving
 - `responseBytes`: Soft limit at which to stop returning data
 
 Notes:
