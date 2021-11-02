@@ -151,7 +151,7 @@ the network.
 
 ### GetAccountRange (0x00)
 
-`[reqID: P, rootHash: B_32, startingHash: B_32, responseBytes: P]`
+`[reqID: P, rootHash: B_32, startingHash: B_32, limitHash: B_32, responseBytes: P]`
 
 Requests an unknown number of accounts from a given account trie, starting at the
 specified account hash and capped by the maximum allowed response size in bytes. The
@@ -161,6 +161,7 @@ remote node and reconstruct a state subtrie locally.
 - `reqID`: Request ID to match up responses with
 - `rootHash`: Root hash of the account trie to serve
 - `startingHash`: Account hash of the first to retrieve
+- `limitHash`: Account hash after which to stop serving data
 - `responseBytes`: Soft limit at which to stop returning data
 
 Notes:
@@ -170,8 +171,8 @@ Notes:
   an empty reply. It is the responsibility of the caller to query an state not older than
   128 blocks.
 - The responding node is allowed to return **less** data than requested (own QoS limits),
-  but the node **must** return at least one account, unless no account exists in the
-  requested range.
+  but the node **must** return at least one account. If no accounts exist between `startingHash` and `limitHash`, then
+  the first (if any) account **after** `limitHash` must be provided. 
 - The responding node **must** Merkle prove the starting hash (even if it does not exist)
   and the last returned account (if any exists after the starting hash).
 
@@ -188,7 +189,7 @@ Rationale:
 Caveats:
 
 - When requesting accounts from a starting hash, malicious nodes may skip ahead and return
-  a gaped reply. Such a reply would cause sync to finish early with a lot of missing data.
+  a gapped reply. Such a reply would cause sync to finish early with a lot of missing data.
   Proof of non-existence for the starting hash prevents this attack, completely covering
   the range from start to end.
 - No special signaling is needed if there are no more accounts after the last returned
@@ -219,7 +220,7 @@ Notes:
 
 ### GetStorageRanges (0x02)
 
-`[reqID: P, rootHash: B_32, accountHashes: [B_32], startingHash: B, responseBytes: P]`
+`[reqID: P, rootHash: B_32, accountHashes: [B_32], startingHash: B, limitHash: B, responseBytes: P]`
 
 Requests the storage slots of multiple accounts' storage tries. Since certain contracts
 have huge state, the method can also request storage slots from a single account, starting
@@ -231,6 +232,7 @@ locally.
 - `rootHash`: Root hash of the account trie to serve
 - `accountHashes`: Account hashes of the storage tries to serve
 - `startingHash`: Storage slot hash of the first to retrieve
+- `limitHash`: Storage slot hash after which to stop serving
 - `responseBytes`: Soft limit at which to stop returning data
 
 Notes:
