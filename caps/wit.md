@@ -17,7 +17,7 @@ progression is announced via `eth`). (like the `snap` protocol)
 Despite the name, version 0 will not provide actual witnesses. It will provide meta-data
 about the witness, which can be used to download the witness over the `eth` protocol.
 
-For now, the known use case is to assist [Beam Syncing] peers. By requesting witness
+For now, the known use case is to assist Beam Syncing peers. By requesting witness
 metadata, these peers will keep up with the tip of the network and become fully-synced
 nodes faster.
 
@@ -115,4 +115,3 @@ the given block.
 Version 0 was the introduction of the witness protocol.
 
 [RLPx]: ../rlpx.md
-[Beam Syncing]: https://github.com/ethereum/stateless-ethereum-specs/blob/master/beam-sync-phase0.md
