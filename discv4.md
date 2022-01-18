@@ -132,7 +132,7 @@ optional.
     packet-data = [target, expiration, ...]
 
 A FindNode packet requests information about nodes close to `target`. The `target` is a
-65-byte secp256k1 public key. When FindNode is received, the recipient should reply with
+64-byte secp256k1 public key. When FindNode is received, the recipient should reply with
 [Neighbors] packets containing the closest 16 nodes to target found in its local table.
 
 To guard against traffic amplification attacks, Neighbors replies should only be sent if
