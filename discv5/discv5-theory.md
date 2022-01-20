@@ -16,7 +16,7 @@ Node Discovery Protocol, and nodes using different schemes can communicate.
 
 The identity scheme of a node record defines how a 32-byte 'node ID' is derived from the
 information contained in the record. The 'distance' between two node IDs is the bitwise
-XOR of the IDs, taken as the number.
+XOR of the IDs, taken as the big-endian number.
 
     distance(n₁, n₂) = n₁ XOR n₂
 
