@@ -209,7 +209,7 @@ maximum for `total`. If exceeded, additional responses may be ignored.
 
 When handling NODES as a response to FINDNODE, the recipient should verify that the
 received nodes match the requested distances. 
-When handling NODES as a response to FINDNODE, the recipient might verify the validity of th e ENR record. 
+When handling NODES as a response to FINDNODE, the recipient might verify the validity of the ENR records. 
 In case any of the ENR record is malformed or it has invalid signature the recipient might ignore this specific ENR record.
 
 ### TALKREQ Request (0x05)
