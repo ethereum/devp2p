@@ -66,9 +66,12 @@ cryptosystem used by Node Discovery v4.
   the EVM) to `content`, then create a signature of the hash. The resulting 64-byte
   signature is encoded as the concatenation of the `r` and `s` signature values (the
   recovery ID `v` is omitted).
+
 - To verify a record, check that the signature was made by the public key in the
   "secp256k1" key/value pair of the record.
-- To derive a node address, take the keccak256 hash of the uncompressed public key.
+
+- To derive a node address, take the keccak256 hash of the uncompressed public key, i.e.
+  `keccak256(x || y)`. Note that `x` and `y` must be zero-padded to up length 32.
 
 ## Rationale
 
