@@ -71,7 +71,7 @@ cryptosystem used by Node Discovery v4.
   "secp256k1" key/value pair of the record.
 
 - To derive a node address, take the keccak256 hash of the uncompressed public key, i.e.
-  `keccak256(x || y)`. Note that `x` and `y` must be zero-padded to up length 32.
+  `keccak256(x || y)`. Note that `x` and `y` must be zero-padded up to length 32.
 
 ## Rationale
 
