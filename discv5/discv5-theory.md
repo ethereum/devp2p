@@ -107,7 +107,7 @@ public key and the session keys are derived from it using the HKDF key derivatio
 function.
 
     dest-pubkey        = public key corresponding to node B's static private key
-    secret             = ecdh(ephemeral-key, dest-pubkey)
+    secret             = ecdh(dest-pubkey, ephemeral-key)
     kdf-info           = "discovery v5 key agreement" || node-id-A || node-id-B
     prk                = HKDF-Extract(secret, challenge-data)
     key-data           = HKDF-Expand(prk, kdf-info)
@@ -227,7 +227,7 @@ store a limited number of sessions in an in-memory LRU cache.
 To prevent IP spoofing attacks, implementations must ensure that session secrets and the
 handshake are tied to a specific UDP endpoint. This is simple to implement by using the
 node ID and IP/port as the 'key' into the in-memory session cache. When a node switches
-endpoints, e.g. when roaming between different wireless networks, sessions will to be
+endpoints, e.g. when roaming between different wireless networks, sessions will have to be
 re-established by handshaking again. This requires no effort on behalf of the roaming node
 because the recipients of protocol messages will simply refuse to decrypt messages from
 the new endpoint and reply with WHOAREYOU.
@@ -278,7 +278,7 @@ the table, tracking whether the node has ever successfully responded to a PING r
 
 In order to keep all k-bucket positions occupied even when bucket members fail liveness
 checks, it is strongly recommended to maintain a 'replacement cache' alongside each
-bucket. This cache holds recently-seen node which would fall into the corresponding bucket
+bucket. This cache holds recently-seen nodes which would fall into the corresponding bucket
 but cannot become a member of the bucket because it is already at capacity. Once a bucket
 member becomes unresponsive, a replacement can be chosen from the cache.
 
@@ -472,19 +472,19 @@ Since every node may act as an advertisement medium for any topic, advertisers a
 looking for ads must agree on a scheme by which ads for a topic are distributed. When the
 number of nodes advertising a topic is at least a certain percentage of the whole
 discovery network (rough estimate: at least 1%), ads may simply be placed on random nodes
-because searching for the topic on randomly selected will locate the ads quickly enough.
+because searching for the topic on randomly selected nodes will locate the ads quickly enough.
 
 However, topic search should be fast even when the number of advertisers for a topic is
 much smaller than the number of all live nodes. Advertisers and searchers must agree on a
 subset of nodes to serve as advertisement media for the topic. This subset is simply a
-region of node ID address space, consisting of nodes whose Kademlia address is within a
+region of the node ID address space, consisting of nodes whose Kademlia address is within a
 certain distance to the topic hash `sha256(T)`. This distance is called the 'topic
 radius'.
 
 Example: for a topic `f3b2529e...` with a radius of 2^240, the subset covers all nodes
 whose IDs have prefix `f3b2...`. A radius of 2^256 means the entire network, in which case
 advertisements are distributed uniformly among all nodes. The diagram below depicts a
-region of address space with the topic hash `t` in the middle and several nodes close to
+region of the address space with topic hash `t` in the middle and several nodes close to
 `t` surrounding it. Dots above the nodes represent entries in the node's queue for the
 topic.
 
