@@ -20,7 +20,7 @@ XOR of the IDs, taken as the big-endian number.
 
     distance(n₁, n₂) = n₁ XOR n₂
 
-In many situations, the logarithmic distance (i.e. length of common prefix in bits) is
+In many situations, the logarithmic distance (i.e. length of differing suffix in bits) is
 used in place of the actual distance.
 
     logdistance(n₁, n₂) = log2(distance(n₁, n₂))
