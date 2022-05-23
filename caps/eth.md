@@ -533,8 +533,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [NewPooledTransactionHashes]: #newpooledtransactionhashes-0x08
 [GetPooledTransactions]: #getpooledtransactions-0x09
 [PooledTransactions]: #pooledtransactions-0x0a
-[GetNodeData]: #getnodedata-0x0d
-[NodeData]: #nodedata-0x0e
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [RLPx]: ../rlpx.md
