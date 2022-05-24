@@ -188,7 +188,8 @@ Ethereum blocks are encoded as follows:
         time: P,
         extradata: B,
         mix-digest: B_32,
-        block-nonce: B_8
+        block-nonce: B_8,
+        basefee-per-gas: P,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -206,7 +207,11 @@ headers are processed in sequence during chain synchronization, the following ru
 - When extending the locally-stored chain, implementations must also verify that the
   values of `difficulty`, `gas-limit` and `time` are within the bounds of protocol rules
   given in the [Yellow Paper].
-- The `gas-used` field of a block header must be less than or equal to the `gas-limit`.
+- The `gas-used` header field must be less than or equal to the `gas-limit`.
+- The `basefee-per-gas` header field must be present for blocks after the [London hard
+  fork]. Note that `basefee-per-gas` must be absent for earlier blocks. This rule was
+  added implicity by [EIP-1559], which added the field into the definition of the Ethereum
+  block hash.
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -545,10 +550,12 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [RLPx]: ../rlpx.md
 [Rinkeby]: https://rinkeby.io
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
+[EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
 [EIP-2364]: https://eips.ethereum.org/EIPS/eip-2364
 [EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
 [EIP-2481]: https://eips.ethereum.org/EIPS/eip-2481
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
