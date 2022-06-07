@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/66**. See end
+blockchain information between peers. The current protocol version is **eth/67**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -44,16 +44,15 @@ concurrently.
 
 ### State Synchronization (a.k.a. "fast sync")
 
-Protocol versions eth/63 and later also allow synchronizing transaction execution results
-(i.e. state tree and receipts). This may be faster than re-executing all historical
-transactions but comes at the expense of some security.
+Protocol versions eth/63 through eth/66 also allowed synchronizing the state tree. Since
+protocol version eth/67, the Ethereum state tree can no longer be retrieved using the eth
+protocol, and state downloads are provided by the auxiliary [snap protocol] instead.
 
 State synchronization typically proceeds by downloading the chain of block headers,
 verifying their validity. Block bodies are requested as in the Chain Synchronization
-section but block transactions aren't executed, only their 'data validity' is verified.
-The client picks a block near the head of the chain and downloads merkle tree nodes and
-contract code incrementally by requesting the root node, its children, grandchildren, ...
-using [GetNodeData] until the entire tree is synchronized.
+section but transactions aren't executed, only their 'data validity' is verified. The
+client picks a block near the head of the chain (the 'pivot block') and downloads the
+state of that block.
 
 ### Block Propagation
 
@@ -424,25 +423,6 @@ request.
 A peer may respond with an empty list iff none of the hashes match transactions in its
 pool.
 
-### GetNodeData (0x0d)
-
-`[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
-
-Require peer to return a [NodeData] message containing state tree nodes or contract code
-matching the requested hashes.
-
-### NodeData (0x0e)
-
-`[request-id: P, [value₁: B, value₂: B, ...]]`
-
-Provide a set of state tree nodes or contract code blobs which correspond to previously
-requested hashes from [GetNodeData]. Does not need to contain all; best effort is fine.
-This message may be an empty list if the peer doesn't know about any of the previously
-requested hashes. The number of items that can be requested in a single message may be
-subject to implementation-defined limits.
-
-The recommended soft limit for NodeData responses is 2 MiB.
-
 ### GetReceipts (0x0f)
 
 `[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
@@ -462,6 +442,15 @@ contain the complete list of receipts of the block.
 The recommended soft limit for Receipts responses is 2 MiB.
 
 ## Change Log
+
+### eth/67 ([EIP-4938], March 2022)
+
+Version 67 removed the GetNodeData and NodeData messages.
+
+- GetNodeData (0x0d)
+  `[request_id: P, [hash_0: B_32, hash_1: B_32, ...]]`
+- NodeData (0x0e)
+  `[request_id: P, [value_0: B, value_1: B, ...]]`
 
 ### eth/66 ([EIP-2481], April 2021)
 
@@ -532,6 +521,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 
 [block propagation]: #block-propagation
 [state synchronization]: #state-synchronization-aka-fast-sync
+[snap protocol]: ./snap.md
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
 [Transactions]: #transactions-0x02
@@ -543,8 +533,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [NewPooledTransactionHashes]: #newpooledtransactionhashes-0x08
 [GetPooledTransactions]: #getpooledtransactions-0x09
 [PooledTransactions]: #pooledtransactions-0x0a
-[GetNodeData]: #getnodedata-0x0d
-[NodeData]: #nodedata-0x0e
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [RLPx]: ../rlpx.md
@@ -557,5 +545,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2481]: https://eips.ethereum.org/EIPS/eip-2481
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
