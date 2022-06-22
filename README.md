@@ -16,7 +16,7 @@ We have several specifications for low-level protocols:
 
 The repository also contains specifications of many RLPx-based application-level protocols:
 
-- [Ethereum Wire Protocol] (eth/66)
+- [Ethereum Wire Protocol] (eth/67)
 - [Ethereum Snapshot Protocol] (snap/1)
 - [Light Ethereum Subprotocol] (les/4)
 - [Parity Light Protocol] (pip/1)
