@@ -31,8 +31,8 @@ from the response.
 ## Kademlia Table
 
 Nodes in the Discovery Protocol keep information about other nodes in their neighborhood.
-Neighbor nodes are stored in a routing table consisting of 'k-buckets'. For each `0 ≤ i <
-256`, every node keeps a k-bucket for nodes of distance between `2i` and `2i+1` from
+Neighbor nodes are stored in a routing table consisting of 'k-buckets'. For each `0 < i ≤
+256`, every node keeps a k-bucket of nodes with distance `[2i-1, 2i]` from
 itself.
 
 The Node Discovery Protocol uses `k = 16`, i.e. every k-bucket contains up to 16 node
