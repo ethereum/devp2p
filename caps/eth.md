@@ -456,7 +456,7 @@ Version 67 removed the GetNodeData and NodeData messages.
 
 Version 66 added the `request-id` element in messages [GetBlockHeaders], [BlockHeaders],
 [GetBlockBodies], [BlockBodies], [GetPooledTransactions], [PooledTransactions],
-[GetNodeData], [NodeData], [GetReceipts], [Receipts].
+GetNodeData, NodeData, [GetReceipts], [Receipts].
 
 ### eth/65 with typed transactions ([EIP-2976], April 2021)
 
@@ -484,7 +484,7 @@ blockchain.
 
 ### eth/63 (2016)
 
-Version 63 added the [GetNodeData], [NodeData], [GetReceipts] and [Receipts] messages
+Version 63 added the GetNodeData, NodeData, [GetReceipts] and [Receipts] messages
 which allow synchronizing transaction execution results.
 
 ### eth/62 (2015)
