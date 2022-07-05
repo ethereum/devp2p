@@ -203,12 +203,17 @@ the result set. The recommended result limit for FINDNODE queries is 16 nodes.
     message-type = 0x04
     total        = total number of responses to the request
 
-NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
-sent as responses to a single query. Implementations may place a limit on the allowed
+NODES is the response to a FINDNODE, TOPICQUERY or REGTOPIC message. Multiple NODES messages 
+may be sent as responses to a single query. Implementations may place a limit on the allowed
 maximum for `total`. If exceeded, additional responses may be ignored.
 
-When handling NODES as a response to FINDNODE, the recipient should verify that the
-received nodes match the requested distances.
+When handling NODES response the recipient should verify that the received nodes match 
+the requested distances in the FINDNODE request or the distance ±1 of the topic in the 
+TOPICQUERY or REGTOPIC request from the sender's node id.
+
+The nodes in a NODES response are used to populate the local routing table in the case of a
+FINDNODE request and the topic specific kbuckets in the case of a TOPICQUERY or REGTOPIC 
+request.
 
 ### TALKREQ Request (0x05)
 
@@ -242,14 +247,15 @@ response data.
     node-record  = current node record of sender
     ticket       = byte array containing ticket content
 
-REGTOPIC attempts to register the sender for the given topic. If the requesting node has a
-ticket from a previous registration attempt, it must present the ticket. Otherwise
-`ticket` is the empty byte array (RLP: `0x80`). The ticket must be valid and its waiting
-time must have elapsed before using the ticket.
+REGTOPIC attempts to register the sender for the given topic and requests nodes to populate
+the kbucktes of the topic. If the requesting node has a ticket from a previous registration 
+attempt, it must present the ticket. Otherwise `ticket` is the empty byte array (RLP: `0x80`). 
+The ticket must be valid and its waiting time must have elapsed before using the ticket.
 
-REGTOPIC is always answered by a TICKET response. The requesting node may also receive a
-REGCONFIRMATION response when registration is successful. It may take up to 10s for the
-confirmation to be sent.
+REGTOPIC is always answered by a TICKET and one or more NODES messages containing node records 
+at the distance ±1 of the given topic from the recipient's node id. The requesting node may 
+also receive a REGCONFIRMATION response when registration is successful. It may take up to 10s 
+for the confirmation to be sent.
 
 ### TICKET Response (0x08)
 
@@ -287,9 +293,23 @@ registration has elapsed on a topic queue.
     message-type = 0x0a
     topic        = 32-byte topic hash
 
-TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
-request must send one or more NODES messages containing node records registered for the
-topic.
+TOPICQUERY requests nodes in the [topic queue] of the given topic, and nodes to populate 
+the kbuckets of the topic. The recipient of this request must send one or more ADNODES 
+messages containing node records registered for the topic, and one or more NODES messages
+containing node records at the distance ±1 of the given topic from its node id.
+
+### ADNODES Response (0x0B)
+
+**NOTE: the content and semantics of this message are not final.**
+**Implementations should not respond to or send these messages.**
+
+    message-data = [request-id, total, [ENR, ...]]
+    message-type = 0x0B
+    total        = total number of responses to the request
+
+ADNODES is the response to a TOPICQUERY. Apart from the message-type this message is
+identical to a NODES response. ADNODES contains node records registered for the topic
+at the node that receives the TOPICQUERY. 
 
 ## Test Vectors
 
