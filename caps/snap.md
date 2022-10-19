@@ -410,6 +410,4 @@ but there might be fewer is QoS limits are reached.
 
 Version 1 was the introduction of the snapshot protocol.
 
-[RLPx]: ../rlpx.md
-[dynamic snapshots]: https://github.com/ethereum/go-ethereum/pull/20152
 [blog for more]: https://blog.ethereum.org/2020/07/17/ask-about-geth-snapshot-acceleration/
