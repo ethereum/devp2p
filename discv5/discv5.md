@@ -4,6 +4,8 @@
 
 Welcome to the Node Discovery Protocol v5 specification!
 
+The current protocol version is [v4](https://github.com/ethereum/devp2p/blob/master/discv4.md).
+
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
 
