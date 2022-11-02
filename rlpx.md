@@ -346,5 +346,5 @@ Creative Commons Attribution-NonCommercial-ShareAlike
 [Capability Messaging]: #capability-messaging
 [EIP-8]: https://eips.ethereum.org/EIPS/eip-8
 [EIP-706]: https://eips.ethereum.org/EIPS/eip-706
-[RLP]: https://eth.wiki/en/fundamentals/rlp
+[RLP]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
 [snappy format]: https://github.com/google/snappy/blob/master/format_description.txt
