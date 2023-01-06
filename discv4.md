@@ -32,7 +32,7 @@ from the response.
 
 Nodes in the Discovery Protocol keep information about other nodes in their neighborhood.
 Neighbor nodes are stored in a routing table consisting of 'k-buckets'. For each `0 ≤ i <
-256`, every node keeps a k-bucket for nodes of distance between `2i` and `2i+1` from
+256`, every node keeps a k-bucket for nodes of distance between `2^i` and `2^(i+1)` from
 itself.
 
 The Node Discovery Protocol uses `k = 16`, i.e. every k-bucket contains up to 16 node
