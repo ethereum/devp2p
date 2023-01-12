@@ -21,8 +21,8 @@ used in the RLPx handshake. The cryptosystem used by RLPx is
 - `MAC(k, m)`: HMAC using the SHA-256 hash function.
 - `AES(k, iv, m)`: the AES-128 encryption function in CTR mode.
 
-Alice wants to send an encrypted message that can be decrypted by Bobs static private key
-<code>k<sub>B</sub></code>. Alice knows about Bobs static public key
+Alice wants to send an encrypted message that can be decrypted by Bob's static private key
+<code>k<sub>B</sub></code>. Alice knows about Bob's static public key
 <code>K<sub>B</sub></code>.
 
 To encrypt the message `m`, Alice generates a random number `r` and corresponding elliptic
