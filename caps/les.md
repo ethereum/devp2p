@@ -76,7 +76,7 @@ the generated vectors in a trie. Parts of this trie can be retrieved with the
 [GetHelperTrieProofs] message. Currently the trie root is part of the trusted syncing
 checkpoint but trustless validation of the BloomBits trie is part of the development
 plans. The trie consists of the compressed bit vectors as values stored at keys
-constructed from the the bloom bit index encoded as a 2-byte big endian, followed by the
+constructed from the bloom bit index encoded as a 2-byte big endian, followed by the
 section index encoded as an 8-byte big endian. Since all-zero bit vectors have a zero
 length when compressed, these vectors are not added to the trie at all.
 
@@ -85,7 +85,7 @@ adding the vectors belonging to the latest section index to the previous trie.
 
 ## Client Side Flow Control
 
-Any node which takes on a server role in the the LES protocol needs to be able to somehow
+Any node which takes on a server role in the LES protocol needs to be able to somehow
 limit the amount of work it does for each client peer during a given time period. They can
 always just serve requests slowly if they are overloaded, but it is beneficial to give
 some sort of flow control feedback to the clients. This way, clients could (and would have
