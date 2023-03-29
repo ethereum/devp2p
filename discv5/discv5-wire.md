@@ -153,6 +153,10 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
+### Notification Packet (`flag = 3`)
+
+Aside from the flag value, this container is identical to a [message packet](#ordinary-message-packet).
+
 ## Protocol Messages
 
 This section lists all defined messages which can be sent and received. The hexadecimal
