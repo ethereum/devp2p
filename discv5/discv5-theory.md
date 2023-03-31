@@ -582,7 +582,7 @@ of `entry-lifetime`.
 
 From here on it's business as usual. See [Sessions].
 
-### Redundancy of enrs in NODES responses and connectivity status assumptions about Relay and Bob
+### Redundancy of ENRs in NODES responses and connectivity status assumptions about Relay and Bob
 
 Often the same peers get passed around in NODES responses by different peers. The chance
 of seeing a peer received in a NODES response again in another NODES response is high as
