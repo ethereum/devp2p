@@ -109,8 +109,6 @@ of `authdata`, which differs depending on the packet type.
 ### Ordinary Message Packet (`flag = 0`)
 
 For message packets, the `authdata` section is just the source node ID.
-[Protocol messages](#protocol-messages) of type request are transported in the
-`message` field of this packet.
 
     authdata      = src-id
     authdata-size = 32
@@ -155,18 +153,21 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
-### Notification Packet (`flag = 3`)
+### Session Message Packet (`flag = 3`)
 
-Aside from the flag value, this container is identical to a
-[message packet](#ordinary-message-packet). Contrary to a message packet, failing to
-decrypt a notification packet should not trigger a handshake.
-[Protocol messages](#protocol-messages) of type response and notification are transported
-in the `message` field of this packet.
+Aside from the packet type, this container is identical to a
+[message packet](#ordinary-message-packet). A session message packet differs itself from a
+[message packet](#ordinary-message-packet) in the way it handles sessions, or rather the
+absence thereof. On failure to encrypt or decrypt a session message packet, the packet should
+be dropped, not trigger a handshake.
 
 ## Protocol Messages
 
 This section lists all defined messages which can be sent and received. The hexadecimal
 value in parentheses is the `message-type`.
+
+Request messages are transported in a [message packet](#ordinary-message-packet). Response
+and notification messages are transported in a [session message packet](#session-message-packet).
 
 For request and response messages, the first element of every `message-data` list is the
 request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this value
