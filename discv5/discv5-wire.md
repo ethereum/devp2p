@@ -153,13 +153,13 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
-### Session Message Packet (`flag = 3`)
+### Notification Packet (`flag = 3`)
 
 Aside from the packet type, this container is identical to a
-[message packet](#ordinary-message-packet). A session message packet differs itself from a
+[message packet](#ordinary-message-packet). A notification packet differs itself from a
 [message packet](#ordinary-message-packet) in the way it handles sessions, or rather the
-absence thereof. On failure to encrypt or decrypt a session message packet, the packet should
-be dropped, not trigger a handshake.
+absence thereof. On failure to encrypt or decrypt a notification packet, the packet should
+be dropped, not trigger a whoareyou response.
 
 ## Protocol Messages
 
@@ -167,7 +167,7 @@ This section lists all defined messages which can be sent and received. The hexa
 value in parentheses is the `message-type`.
 
 Request messages are transported in a [message packet](#ordinary-message-packet). Response
-and notification messages are transported in a [session message packet](#session-message-packet).
+and notification messages are transported in a [notification packet](#notification-packet).
 
 For request and response messages, the first element of every `message-data` list is the
 request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this value
