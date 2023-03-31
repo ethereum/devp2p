@@ -553,7 +553,8 @@ containers, these are abbreviated in the sequence diagram below as follows:
         Alice-->>Bob: hm(FINDNODE)
 ```
 Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together and Bob
-has sent a packet to Relay in the last ~20 seconds[^1].
+has sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's
+NAT[^1].
 
 As part of a periodic recursive query to fill its kbuckets, Alice sends a [FINDNODE]
 request to Bob, who's ENR it received from Relay. By making an outgoing request to
