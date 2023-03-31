@@ -82,7 +82,7 @@ The `masked-header` contains the actual packet header, which starts with a fixed
     header        = static-header || authdata
     static-header = protocol-id || version || flag || nonce || authdata-size
     protocol-id   = "discv5"
-    version       = 0x0001
+    version       = 0x0002
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
     nonce         = uint96    -- nonce of message
