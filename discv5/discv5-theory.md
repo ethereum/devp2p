@@ -556,9 +556,9 @@ Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together an
 has sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's
 NAT[^1].
 
-As part of a periodic recursive query to fill its kbuckets, Alice sends a [FINDNODE]
-request to Bob, who's ENR it received from Relay. By making an outgoing request to
-Bob, if Alice is behind a NAT, Alice's NAT adds the filtering rule
+As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's
+ENR it received from Relay. By making an outgoing request to Bob, if Alice is behind a
+NAT, Alice's NAT adds the filtering rule
 `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip, Bob's-WAN-port, entry-lifetime)` to
 it's UDP session table[^2][^3]. This means a hole now is punched for Bob in Alice's NAT
 for the duration of `entry-lifetime`. The request to Bob times out as Bob is behind a NAT.
