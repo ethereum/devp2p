@@ -246,7 +246,7 @@ response data.
 ### RELAYINIT Notification (0x07)
 
     message-data      = [inr-enr, tgt-id, nonce]
-    notification-type = 0x01
+    notification-type = 0x07
     inr-enr           = initiator ENR
     tgt-id            = 256-bit node ID of target
     nonce             = uint96    -- nonce of timed out request
@@ -260,7 +260,7 @@ and `nonce` to the target in a REALYMSG notification.
 ### RELAYMSG Notification (0x08)
 
     message-data      = [inr-enr, nonce]
-    notification-type = 0x02
+    notification-type = 0x08
     inr-enr           = initiator ENR
     nonce             = uint96    -- nonce of timed out request
 
