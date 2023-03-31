@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 This document explains the algorithms and data structures used by the protocol.
 

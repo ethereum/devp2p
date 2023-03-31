@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Wire Protocol
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 This document specifies the wire protocol of Node Discovery v5.
 

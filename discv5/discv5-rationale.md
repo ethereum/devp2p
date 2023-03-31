@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Rationale
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
