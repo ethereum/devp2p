@@ -243,7 +243,7 @@ containing empty `response` data.
 TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
 response data.
 
-### RELAYINIT Notification (0x0B)
+### RELAYINIT Notification (0x07)
 
     message-data      = [inr-enr, tgt-id, nonce]
     notification-type = 0x01
@@ -251,12 +251,22 @@ response data.
     tgt-id            = 256-bit node ID of target
     nonce             = uint96    -- nonce of timed out request
 
-### RELAYMSG Notification (0x0C)
+RELAYINIT is a notification sent from the initiator of a hole punch attempt to a relay.
+The sender sets the `inr-enr` to its own enr.
+
+The relay looks up the ENR of `tgt-id` in its kbuckets and if it exists relays the `inr-enr`
+and `nonce` to the target in a REALYMSG notification.
+
+### RELAYMSG Notification (0x08)
 
     message-data      = [inr-enr, nonce]
     notification-type = 0x02
     inr-enr           = initiator ENR
     nonce             = uint96    -- nonce of timed out request
+
+RELAYMSG is a notification from the relay in a hole punch attempt to the target. The
+receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet](#whoareyou-packet)
+using the `inr-enr` to address it.
 
 ## Test Vectors
 
