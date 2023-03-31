@@ -32,11 +32,10 @@ the recipient doesn't respond.
 The maximum size of any packet is 1280 bytes. Implementations should not generate or
 process packets larger than this size. Most messages are smaller than this limit by
 definition, the exception being the NODES message. FINDNODE returns up to 16 records, plus
-other data, and TOPICQUERY may also distribute a significantly long list of ENRs. As per
-specification the maximum size of an ENR is 300 bytes. A NODES message containing all
-FINDNODE response records would be at least 4800 bytes, not including additional data such
-as the header. To stay below the size limit, NODES responses are sent as multiple messages
-and specify the total number of responses in the message.
+other data. As per specification the maximum size of an ENR is 300 bytes. A NODES message
+containing all FINDNODE response records would be at least 4800 bytes, not including
+additional data such as the header. To stay below the size limit, NODES responses are sent
+as multiple messages and specify the total number of responses in the message.
 
 The minimum size of any Discovery v5 packet is 63 bytes. Implementations should reject
 packets smaller than this size.
@@ -203,7 +202,7 @@ the result set. The recommended result limit for FINDNODE queries is 16 nodes.
     message-type = 0x04
     total        = total number of responses to the request
 
-NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
+NODES is the response to a FINDNODE. Multiple NODES messages may be
 sent as responses to a single query. Implementations may place a limit on the allowed
 maximum for `total`. If exceeded, additional responses may be ignored.
 
@@ -232,72 +231,11 @@ containing empty `response` data.
 TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
 response data.
 
-### REGTOPIC Request (0x07)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic, ENR, ticket]
-    message-type = 0x07
-    node-record  = current node record of sender
-    ticket       = byte array containing ticket content
-
-REGTOPIC attempts to register the sender for the given topic. If the requesting node has a
-ticket from a previous registration attempt, it must present the ticket. Otherwise
-`ticket` is the empty byte array (RLP: `0x80`). The ticket must be valid and its waiting
-time must have elapsed before using the ticket.
-
-REGTOPIC is always answered by a TICKET response. The requesting node may also receive a
-REGCONFIRMATION response when registration is successful. It may take up to 10s for the
-confirmation to be sent.
-
-### TICKET Response (0x08)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, ticket, wait-time]
-    message-type = 0x08
-    ticket       = an opaque byte array representing the ticket
-    wait-time    = time to wait before registering, in seconds
-
-TICKET is the response to REGTOPIC. It contains a ticket which can be used to register for
-the requested topic after `wait-time` has elapsed. See the [theory section on tickets] for
-more information.
-
-### REGCONFIRMATION Response (0x09)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic]
-    message-type = 0x09
-    request-id   = request-id of REGTOPIC
-
-REGCONFIRMATION notifies the recipient about a successful registration for the given
-topic. This call is sent by the advertisement medium after the time window for
-registration has elapsed on a topic queue.
-
-### TOPICQUERY Request (0x0A)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic]
-    message-type = 0x0a
-    topic        = 32-byte topic hash
-
-TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
-request must send one or more NODES messages containing node records registered for the
-topic.
-
 ## Test Vectors
 
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
 [handshake section]: ./discv5-theory.md#handshake-steps
-[topic queue]: ./discv5-theory.md#topic-table
-[theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
