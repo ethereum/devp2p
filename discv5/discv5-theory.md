@@ -584,6 +584,16 @@ From here on it's business as usual. See [Sessions].
 
 ### Redundancy of enrs in NODES responses and connectivity status assumptions about Relay and Bob
 
+Often the same peers get passed around in NODES responses by different peers. The chance
+of seeing a peer received in a NODES response again in another NODES response is high as
+kbuckets favour long lived connections to new ones [^4]. This makes the need for a storing
+back up relays for peers small.
+
+Apart from the state that is saved by not storing more than the last peer to send us an
+ENR as its potential relay, the longer time that has passed since a peer sent us an ENR,
+the less guarantee we have that the peer is in fact connected to the owner of that ENR
+and hence of its ability to relay.
+
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
 [message packet]: ./discv5-wire.md#ordinary-message-packet-flag--0
@@ -606,3 +616,4 @@ From here on it's business as usual. See [Sessions].
 [^1]: https://pdos.csail.mit.edu/papers/p2pnat.pdf
 [^2]: https://datatracker.ietf.org/doc/html/rfc4787
 [^3]: https://www.ietf.org/rfc/rfc6146.txt
+[^4]: https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf
