@@ -109,6 +109,8 @@ of `authdata`, which differs depending on the packet type.
 ### Ordinary Message Packet (`flag = 0`)
 
 For message packets, the `authdata` section is just the source node ID.
+[Protocol messages](#protocol-messages) of type request are transported in the
+`message` field of this packet.
 
     authdata      = src-id
     authdata-size = 32
@@ -155,17 +157,22 @@ handshake packet.
 
 ### Notification Packet (`flag = 3`)
 
-Aside from the flag value, this container is identical to a [message packet](#ordinary-message-packet).
+Aside from the flag value, this container is identical to a
+[message packet](#ordinary-message-packet). Contrary to a message packet, failing to
+decrypt a notification packet should not trigger a handshake.
+[Protocol messages](#protocol-messages) of type response and notification are transported
+in the `message` field of this packet.
 
 ## Protocol Messages
 
 This section lists all defined messages which can be sent and received. The hexadecimal
 value in parentheses is the `message-type`.
 
-The first element of every `message-data` list is the request ID. `request-id` is an RLP
-byte array of length <= 8 bytes. For requests, this value is assigned by the requester.
-The recipient of a message must mirror the value in the `request-id` element of the
-response. The selection of appropriate values for request IDs is left to the implementation.
+For request and response messages, the first element of every `message-data` list is the
+request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this value
+is assigned by the requester. The recipient of a message must mirror the value in the
+`request-id` element of the response. The selection of appropriate values for request IDs is
+left to the implementation.
 
 ### PING Request (0x01)
 
@@ -234,6 +241,21 @@ containing empty `response` data.
 
 TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
 response data.
+
+### RELAYINIT Notification (0x0B)
+
+    message-data      = [inr-enr, tgt-id, nonce]
+    notification-type = 0x01
+    inr-enr           = initiator ENR
+    tgt-id            = 256-bit node ID of target
+    nonce             = uint96    -- nonce of timed out request
+
+### RELAYMSG Notification (0x0C)
+
+    message-data      = [inr-enr, nonce]
+    notification-type = 0x02
+    inr-enr           = initiator ENR
+    nonce             = uint96    -- nonce of timed out request
 
 ## Test Vectors
 
