@@ -586,7 +586,7 @@ From here on it's business as usual. See [Sessions].
 
 Often the same peers get passed around in NODES responses by different peers. The chance
 of seeing a peer received in a NODES response again in another NODES response is high as
-kbuckets favour long lived connections to new ones [^4]. This makes the need for a storing
+kbuckets favour long lived connections to new ones[^4]. This makes the need for a storing
 back up relays for peers small.
 
 Apart from the state that is saved by not storing more than the last peer to send us an
