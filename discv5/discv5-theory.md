@@ -338,12 +338,13 @@ repeating the lookup procedure on another, closer node.
 
 ### Message flow
 
-The protocol introduces the notification packet kind. There are 4 total message
-containers, these are abbreviated in the sequence diagram below as follows:
+There are 4 total message containers, these are abbreviated in the sequence diagram below
+as follows:
+
 - m - [message packet]
 - whoareyou - [WHOAREYOU packet]
 - hm - [handshake message packet]
-- n - [notification packet]
+- s - [session message packet]
 
 ```mermaid
     sequenceDiagram
@@ -355,32 +356,32 @@ containers, these are abbreviated in the sequence diagram below as follows:
         Alice->>Bob: m(nonce,FINDNODE)
         Note left of Alice:Hole punched in Alice's NAT for Bob
         Note left of Alice:FINDNODE timed out
-        Alice->>Relay: n(RELAYINIT[nonce])
-        Relay->>Bob:n(RELAYMSG[nonce])
+        Alice->>Relay: s(RELAYINIT[nonce])
+        Relay->>Bob: s(RELAYMSG[nonce])
         Bob-->>Alice: whoareyou(nonce)
         Note right of Bob: Hole punched in Bob's NAT for Alice
         Alice-->>Bob: hm(FINDNODE)
 ```
-Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together and Bob
-has sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's
-NAT[^1].
 
-As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's
-ENR it received from Relay. By making an outgoing request to Bob, if Alice is behind a
-NAT, Alice's NAT adds the filtering rule
-`(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip, Bob's-WAN-port, entry-lifetime)` to
-it's UDP session table[^2][^3]. This means a hole now is punched for Bob in Alice's NAT
-for the duration of `entry-lifetime`. The request to Bob times out as Bob is behind a NAT.
+Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together and Bob has
+sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's NAT[^1].
 
-Alice initiates an attempt to punch a hole in Bob's NAT via Relay. Alice resets the request
-time out on the timed out [FINDNODE] message and wraps the message's nonce in a [RELAYINIT]
-notification and sends it to Relay. The notification also contains its ENR and Bob's node
-id.
+As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's ENR
+it received from Relay. By making an outgoing request to Bob, if Alice is behind a NAT,
+Alice's NAT adds the filtering rule `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
+Bob's-WAN-port, entry-lifetime)` to it's UDP session table[^2][^3]. This means a hole now
+is punched for Bob in Alice's NAT for the duration of `entry-lifetime`. The request to Bob
+times out as Bob is behind a NAT.
 
-Relay disassembles the [RELAYINIT] notification and uses the `tgt-id` to look up Bob's
-ENR in its kbuckets. With high probability, Relay will find Bob's ENR in its kbuckets
-as ~1 second ago, Relay assembled a [NODES] response for Alice containing Bob's ENR (see 
-[UDP Communication] for recommended time out duration). Relay assembles a [RELAYMSG]
+Alice initiates an attempt to punch a hole in Bob's NAT via Relay. Alice resets the
+request time out on the timed out [FINDNODE] message and wraps the message's nonce in a
+[RELAYINIT] notification and sends it to Relay. The notification also contains its ENR and
+Bob's node id.
+
+Relay disassembles the [RELAYINIT] notification and uses the `tgt-id` to look up Bob's ENR
+in its kbuckets. With high probability, Relay will find Bob's ENR in its kbuckets as ~1
+second ago, Relay assembled a [NODES] response for Alice containing Bob's ENR (see [UDP
+Communication] for recommended time out duration). Relay assembles a [RELAYMSG]
 notification with Alice's message nonce and ENR, then sends it to the address in Bob's
 ENR.
 
@@ -401,15 +402,15 @@ back up relays for peers small.
 
 Apart from the state that is saved by not storing more than the last peer to send us an
 ENR as its potential relay, the longer time that has passed since a peer sent us an ENR,
-the less guarantee we have that the peer is in fact connected to the owner of that ENR
-and hence of its ability to relay.
+the less guarantee we have that the peer is in fact connected to the owner of that ENR and
+hence of its ability to relay.
 
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
 [message packet]: ./discv5-wire.md#ordinary-message-packet-flag--0
+[session message packet]: ./discv5-wire.md#session-message-packet-flag--3
 [handshake message packet]: ./discv5-wire.md#handshake-message-packet-flag--2
 [WHOAREYOU packet]: ./discv5-wire.md#whoareyou-packet-flag--1
-[notification packet]: ./discv5-wire.md#notification-packet-flag--3
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
