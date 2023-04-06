@@ -378,18 +378,18 @@ request time out on the timed out [FINDNODE] message and wraps the message's non
 [RELAYINIT] notification and sends it to Relay. The notification also contains its ENR and
 Bob's node id.
 
-Relay disassembles the [RELAYINIT] notification and uses the `tgt-id` to look up Bob's ENR
-in its kbuckets. With high probability, Relay will find Bob's ENR in its kbuckets as ~1
-second ago, Relay assembled a [NODES] response for Alice containing Bob's ENR (see [UDP
+Relay disassembles the [RELAYINIT] notification and uses the `target-id` to look up Bob's
+ENR in its kbuckets. With high probability, Relay will find Bob's ENR in its kbuckets as
+~1 second ago, Relay assembled a [NODES] response for Alice containing Bob's ENR (see [UDP
 Communication] for recommended time out duration). Relay assembles a [RELAYMSG]
 notification with Alice's message nonce and ENR, then sends it to the address in Bob's
 ENR.
 
 Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
-then sends it to Alice using the address in the `inr-enr`. Bob's NAT adds the filtering
-rule `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip, Alice's-WAN-port, entry-lifetime)` to
-it's UDP session table[^2][^3]. A hole is punched in Bob's NAT for Alice for the duration
-of `entry-lifetime`.
+then sends it to Alice using the address in the `initiator-enr`. Bob's NAT adds the
+filtering rule `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip, Alice's-WAN-port,
+entry-lifetime)` to it's UDP session table[^2][^3]. A hole is punched in Bob's NAT for
+Alice for the duration of `entry-lifetime`.
 
 From here on it's business as usual. See [Sessions].
 
