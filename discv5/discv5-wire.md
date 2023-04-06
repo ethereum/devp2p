@@ -49,7 +49,7 @@ the request.
 
 ## Packet Encoding
 
-The protocol deals with three distinct kinds of packets:
+The protocol deals with four distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
 - WHOAREYOU packets, which are sent when the recipient of an ordinary message packet
@@ -57,6 +57,8 @@ The protocol deals with three distinct kinds of packets:
 - Handshake message packets, which are sent following WHOAREYOU. These packets establish a
   new session and carry handshake-related data in addition to the encrypted/authenticated
   message.
+- Notification message packets. These are identical to an ordinary message packets, but
+  cannot trigger a handshake.
 
 In the following definitions, we assume that the sender of a packet has knowledge of its
 own 256-bit node ID (`src-id`) and the node ID of the packet destination (`dest-id`). When
@@ -155,25 +157,32 @@ handshake packet.
 
 ### Notification Packet (`flag = 3`)
 
-Aside from the packet type, this container is identical to a
-[message packet](#ordinary-message-packet). A notification packet differs itself from a
-[message packet](#ordinary-message-packet) in the way it handles sessions, or rather the
-absence thereof. On failure to encrypt or decrypt a notification packet, the packet should
-be dropped, not trigger a whoareyou response.
+The structure of this type is identical to a [ordinary message packet], apart from the
+`flag` value.
 
-## Protocol Messages
+A notification packet differs from a ordinary message packet in the way sessions are
+handled. When a packet with this flag value is received and cannot be decrypted, the
+packet should be dropped, and not trigger a WHOAREYOU response.
 
-This section lists all defined messages which can be sent and received. The hexadecimal
-value in parentheses is the `message-type`.
+## Messages
 
-Request messages are transported in a [message packet](#ordinary-message-packet). Response
-and notification messages are transported in a [notification packet](#notification-packet).
+Messages are the payloads of packets. A message is identified by its `message-type` and
+contain `message-data` specific to each type.
+
+There are three classes of messages:
+
+*Request* messages are sent as a [message packet] or [handshake message packet].
+*Response* and *Notification* messages are sent as a [notification packet], i.e. they can
+only be sent when a session has already been established.
 
 For request and response messages, the first element of every `message-data` list is the
-request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this value
-is assigned by the requester. The recipient of a message must mirror the value in the
-`request-id` element of the response. The selection of appropriate values for request IDs is
-left to the implementation.
+request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this
+value is assigned by the requester. The recipient of a message must mirror the value in
+the `request-id` element of the response. The selection of appropriate values for request
+IDs is left to the implementation.
+
+All defined protocol messages are listed below. The hexadecimal value in parentheses is
+the `message-type`.
 
 ### PING Request (0x01)
 
@@ -265,14 +274,18 @@ and `nonce` to the target in a REALYMSG notification.
     nonce             = uint96    -- nonce of timed out request
 
 RELAYMSG is a notification from the relay in a hole punch attempt to the target. The
-receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet](#whoareyou-packet)
-using the `inr-enr` to address it.
+receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet] using the
+`inr-enr` to address it.
 
 ## Test Vectors
 
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
+[WHOAREYOU packet]: #whoareyou-packet
+[ordinary message packet]: #ordinary-message-packet
+[message packet]: #ordinary-message-packet
+[handshake message packet]: #handshake-message-packet
 [handshake section]: ./discv5-theory.md#handshake-steps
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
