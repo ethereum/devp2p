@@ -282,10 +282,11 @@ receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet] using t
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
-[WHOAREYOU packet]: #whoareyou-packet
-[ordinary message packet]: #ordinary-message-packet
-[message packet]: #ordinary-message-packet
-[handshake message packet]: #handshake-message-packet
+[ordinary message packet]: #ordinary-message-packet-flag--0
+[message packet]: #ordinary-message-packet-flag--0
+[WHOAREYOU packet]: #whoareyou-packet-flag--1
+[handshake message packet]: #handshake-message-packet-flag--2
+[notification packet]: #notification-packet-flag--3
 [handshake section]: ./discv5-theory.md#handshake-steps
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
