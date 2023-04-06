@@ -254,28 +254,26 @@ response data.
 
 ### RELAYINIT Notification (0x07)
 
-    message-data      = [inr-enr, tgt-id, nonce]
+    message-data      = [initiator-enr, target-id, nonce]
     notification-type = 0x07
-    inr-enr           = initiator ENR
-    tgt-id            = 256-bit node ID of target
+    target-id         = 256-bit node ID of target
     nonce             = uint96    -- nonce of timed out request
 
 RELAYINIT is a notification sent from the initiator of a hole punch attempt to a relay.
-The sender sets the `inr-enr` to its own enr.
+The sender sets the `initiator-enr` to its own ENR.
 
-The relay looks up the ENR of `tgt-id` in its kbuckets and if it exists relays the `inr-enr`
-and `nonce` to the target in a REALYMSG notification.
+The relay looks up the ENR of `target-id` in its node table, and if it exists relays the
+`initiator-enr` and `nonce` to the target in a RELAYMSG notification.
 
 ### RELAYMSG Notification (0x08)
 
-    message-data      = [inr-enr, nonce]
+    message-data      = [initiator-enr, nonce]
     notification-type = 0x08
-    inr-enr           = initiator ENR
     nonce             = uint96    -- nonce of timed out request
 
 RELAYMSG is a notification from the relay in a hole punch attempt to the target. The
 receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet] using the
-`inr-enr` to address it.
+`initiator-enr` to address it.
 
 ## Test Vectors
 
