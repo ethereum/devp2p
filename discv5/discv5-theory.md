@@ -415,8 +415,8 @@ hence of its ability to relay.
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [NODES]: ./discv5-wire.md#nodes-response-0x04
-[RELAYINIT]: ./discv5-wire.md#relayinit-0x01
-[RELAYMSG]: ./discv5-wire.md#relaymsg-0x02
+[RELAYINIT]: ./discv5-wire.md#relayinit-notification-0x07
+[RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
 
 [UDP communication]: ./discv5-wire.md#udp-communication
 [Sessions]: ./discv5-theory.md#sessions
