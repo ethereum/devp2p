@@ -334,7 +334,6 @@ the distance to retrieve more nodes from adjacent k-buckets on `B`:
 Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
 repeating the lookup procedure on another, closer node.
 
-
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
 [handshake message packet]: ./discv5-wire.md#handshake-message-packet-flag--2
