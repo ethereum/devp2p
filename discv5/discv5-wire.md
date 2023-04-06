@@ -52,13 +52,13 @@ the request.
 The protocol deals with four distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
+- Session message packets. These are identical to an ordinary message packets, but cannot
+  trigger a handshake.
 - WHOAREYOU packets, which are sent when the recipient of an ordinary message packet
   cannot decrypt/authenticate the packet's message.
 - Handshake message packets, which are sent following WHOAREYOU. These packets establish a
   new session and carry handshake-related data in addition to the encrypted/authenticated
   message.
-- Notification message packets. These are identical to an ordinary message packets, but
-  cannot trigger a handshake.
 
 In the following definitions, we assume that the sender of a packet has knowledge of its
 own 256-bit node ID (`src-id`) and the node ID of the packet destination (`dest-id`). When
@@ -117,6 +117,15 @@ For message packets, the `authdata` section is just the source node ID.
 
 ![message packet layout](./img/message-packet-layout.png)
 
+### Session Message Packet (`flag = 3`)
+
+The structure of this type is identical to an [ordinary message packet], apart from the
+different `flag` value.
+
+Session packets are used to send a message that assumes an existing session. When a packet
+with this flag value is received and cannot be decrypted, the packet should be dropped,
+and not trigger a WHOAREYOU response.
+
 ### WHOAREYOU Packet (`flag = 1`)
 
 In WHOAREYOU packets, the `authdata` section contains information for the identity
@@ -155,15 +164,6 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
-### Notification Packet (`flag = 3`)
-
-The structure of this type is identical to a [ordinary message packet], apart from the
-`flag` value.
-
-A notification packet differs from a ordinary message packet in the way sessions are
-handled. When a packet with this flag value is received and cannot be decrypted, the
-packet should be dropped, and not trigger a WHOAREYOU response.
-
 ## Messages
 
 Messages are the payloads of packets. A message is identified by its `message-type` and
@@ -171,9 +171,9 @@ contain `message-data` specific to each type.
 
 There are three classes of messages:
 
-*Request* messages are sent as a [message packet] or [handshake message packet].
-*Response* and *Notification* messages are sent as a [notification packet], i.e. they can
-only be sent when a session has already been established.
+- *Request* messages are sent as a [message packet] or [handshake message packet].
+- *Responses* are the answers to requests, and are sent using a [session message packet].
+- *Notifications* do not require a response, They are also sent as a [session message packet].
 
 For request and response messages, the first element of every `message-data` list is the
 request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this
@@ -284,7 +284,7 @@ A collection of test vectors for this specification can be found at
 [message packet]: #ordinary-message-packet-flag--0
 [WHOAREYOU packet]: #whoareyou-packet-flag--1
 [handshake message packet]: #handshake-message-packet-flag--2
-[notification packet]: #notification-packet-flag--3
+[session message packet]: #session-message-packet-flag--3
 [handshake section]: ./discv5-theory.md#handshake-steps
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
