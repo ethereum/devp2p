@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 This document explains the algorithms and data structures used by the protocol.
 
@@ -191,7 +191,7 @@ pending when WHOAREYOU is received, as in the following example:
 
     A -> B   FINDNODE
     A -> B   PING
-    A -> B   TOPICQUERY
+    A -> B   TALKREQ
     A <- B   WHOAREYOU (nonce references PING)
 
 When this happens, all buffered requests can be considered invalid (the remote end cannot
