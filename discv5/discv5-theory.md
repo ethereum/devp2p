@@ -197,7 +197,7 @@ pending when WHOAREYOU is received, as in the following example:
 When this happens, all buffered requests can be considered invalid (the remote end cannot
 decrypt them) and the packet referenced by the WHOAREYOU `nonce` (in this example: PING)
 must be re-sent as a handshake. When the response to the re-sent is received, the new
-session is established and other pending requests (example: FINDNODE, TOPICQUERY) may be
+session is established and other pending requests (example: FINDNODE, TALKREQ) may be
 re-sent.
 
 Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
