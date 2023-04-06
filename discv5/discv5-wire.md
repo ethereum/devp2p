@@ -49,9 +49,11 @@ the request.
 
 ## Packet Encoding
 
-The protocol deals with three distinct kinds of packets:
+The protocol deals with four distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
+- Session message packets. These are identical to an ordinary message packets, but cannot
+  trigger a handshake.
 - WHOAREYOU packets, which are sent when the recipient of an ordinary message packet
   cannot decrypt/authenticate the packet's message.
 - Handshake message packets, which are sent following WHOAREYOU. These packets establish a
@@ -115,6 +117,15 @@ For message packets, the `authdata` section is just the source node ID.
 
 ![message packet layout](./img/message-packet-layout.png)
 
+### Session Message Packet (`flag = 3`)
+
+The structure of this type is identical to an [ordinary message packet], apart from the
+different `flag` value.
+
+Session packets are used to send a message that assumes an existing session. When a packet
+with this flag value is received and cannot be decrypted, the packet should be dropped,
+and not trigger a WHOAREYOU response.
+
 ### WHOAREYOU Packet (`flag = 1`)
 
 In WHOAREYOU packets, the `authdata` section contains information for the identity
@@ -153,15 +164,25 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
-## Protocol Messages
+## Messages
 
-This section lists all defined messages which can be sent and received. The hexadecimal
-value in parentheses is the `message-type`.
+Messages are the payloads of packets. A message is identified by its `message-type` and
+contain `message-data` specific to each type.
 
-The first element of every `message-data` list is the request ID. `request-id` is an RLP
-byte array of length <= 8 bytes. For requests, this value is assigned by the requester.
-The recipient of a message must mirror the value in the `request-id` element of the
-response. The selection of appropriate values for request IDs is left to the implementation.
+There are three classes of messages:
+
+- *Request* messages are sent as a [message packet] or [handshake message packet].
+- *Responses* are the answers to requests, and are sent using a [session message packet].
+- *Notifications* do not require a response, They are also sent as a [session message packet].
+
+For request and response messages, the first element of every `message-data` list is the
+request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this
+value is assigned by the requester. The recipient of a message must mirror the value in
+the `request-id` element of the response. The selection of appropriate values for request
+IDs is left to the implementation.
+
+All defined protocol messages are listed below. The hexadecimal value in parentheses is
+the `message-type`.
 
 ### PING Request (0x01)
 
@@ -231,11 +252,39 @@ containing empty `response` data.
 TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
 response data.
 
+### RELAYINIT Notification (0x07)
+
+    message-data      = [initiator-enr, target-id, nonce]
+    notification-type = 0x07
+    target-id         = 256-bit node ID of target
+    nonce             = uint96    -- nonce of timed out request
+
+RELAYINIT is a notification sent from the initiator of a hole punch attempt to a relay.
+The sender sets the `initiator-enr` to its own ENR.
+
+The relay looks up the ENR of `target-id` in its node table, and if it exists relays the
+`initiator-enr` and `nonce` to the target in a RELAYMSG notification.
+
+### RELAYMSG Notification (0x08)
+
+    message-data      = [initiator-enr, nonce]
+    notification-type = 0x08
+    nonce             = uint96    -- nonce of timed out request
+
+RELAYMSG is a notification from the relay in a hole punch attempt to the target. The
+receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet] using the
+`initiator-enr` to address it.
+
 ## Test Vectors
 
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
+[ordinary message packet]: #ordinary-message-packet-flag--0
+[message packet]: #ordinary-message-packet-flag--0
+[WHOAREYOU packet]: #whoareyou-packet-flag--1
+[handshake message packet]: #handshake-message-packet-flag--2
+[session message packet]: #session-message-packet-flag--3
 [handshake section]: ./discv5-theory.md#handshake-steps
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
