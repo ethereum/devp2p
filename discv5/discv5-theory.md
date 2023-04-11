@@ -346,22 +346,22 @@ as follows:
 - hm - [handshake message packet]
 - s - [session message packet]
 
-```mermaid
-    sequenceDiagram
-        participant Alice
-        participant Relay
-        participant Bob
+    ```mermaid
+        sequenceDiagram
+            participant Alice
+            participant Relay
+            participant Bob
 
-        Relay-->>Alice: m(NODES[Bob's ENR])
-        Alice->>Bob: m(nonce,FINDNODE)
-        Note left of Alice:Hole punched in Alice's NAT for Bob
-        Note left of Alice:FINDNODE timed out
-        Alice->>Relay: s(RELAYINIT[nonce])
-        Relay->>Bob: s(RELAYMSG[nonce])
-        Bob-->>Alice: whoareyou(nonce)
-        Note right of Bob: Hole punched in Bob's NAT for Alice
-        Alice-->>Bob: hm(FINDNODE)
-```
+            Relay-->>Alice: m(NODES[Bob's ENR])
+            Alice->>Bob: m(nonce,FINDNODE)
+            Note left of Alice:Hole punched in Alice's NAT for Bob
+            Note left of Alice:FINDNODE timed out
+            Alice->>Relay: s(RELAYINIT[nonce])
+            Relay->>Bob: s(RELAYMSG[nonce])
+            Bob-->>Alice: whoareyou(nonce)
+            Note right of Bob: Hole punched in Bob's NAT for Alice
+            Alice-->>Bob: hm(FINDNODE)
+    ```
 
 Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together and Bob has
 sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's NAT[^1].
@@ -369,7 +369,7 @@ sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's
 As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's ENR
 it received from Relay. By making an outgoing request to Bob, if Alice is behind a NAT,
 Alice's NAT adds the filtering rule `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
-Bob's-WAN-port, entry-lifetime)` to it's UDP session table[^2][^3]. This means a hole now
+Bob's-WAN-port, entry-lifetime)` to it's UDP session table[^2] [^3]. This means a hole now
 is punched for Bob in Alice's NAT for the duration of `entry-lifetime`. The request to Bob
 times out as Bob is behind a NAT.
 
@@ -388,7 +388,7 @@ ENR.
 Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
 then sends it to Alice using the address in the `initiator-enr`. Bob's NAT adds the
 filtering rule `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip, Alice's-WAN-port,
-entry-lifetime)` to it's UDP session table[^2][^3]. A hole is punched in Bob's NAT for
+entry-lifetime)` to it's UDP session table[^2] [^3]. A hole is punched in Bob's NAT for
 Alice for the duration of `entry-lifetime`.
 
 From here on it's business as usual. See [Sessions].
