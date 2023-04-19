@@ -334,62 +334,73 @@ the distance to retrieve more nodes from adjacent k-buckets on `B`:
 Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
 repeating the lookup procedure on another, closer node.
 
-## Hole punch asymmetric NATs
+## Hole-punching Asymmetric NATs
+
+This section explains the hole punching mechanism built into the protocol, which is
+enabled by the [RELAYINIT] and [RELAYMSG] message types. Compared to other protocol
+messages, these require deeper interaction with the session layer in order to ensure the
+hole punching mechanism operates safely.
+
+In the examples below, we assume that node `A` (Alice) has the goal of sending a request
+message (e.g. FINDNODE) to node `B` (Bob).
+
+Bob operates behind a network-adress-translation (NAT) layer, and is unable to receive UDP
+packets from Alice initially. However, Bob has previously communicated with a third node
+`R` (Relay), and is able to receive incoming packets from the Relay node. We further
+assume Bob's NAT is 'asymmetric', i.e. the IP/Port of Bob's packets will be the same
+regardless of the host they are sent to. The hole-punching mechanism does not work for
+'symmetric' NAT where every destination host has a unique mapping.
+
+Node Alice may or may not behind a symmetric NAT.
+
+Finally, it is assumed that a common lower bound on lifetime of NAT mappings is 20
+seconds, and that mappings will be refreshed when any packet is sent through them. For
+more background information about common NAT setups, please consult [RFC4787], [RFC6146]
+and [this paper][natpaper].
 
 ### Message flow
 
-There are 4 total message containers, these are abbreviated in the sequence diagram below
-as follows:
+In the wire protocol, there are four packet types. Since the NAT-related messages require
+deeper integration with the packet/session layer, the packet type is explicitly shown for
+each message in the diagram below. We use these abbreviations:
 
-- m - [message packet]
 - whoareyou - [WHOAREYOU packet]
-- hm - [handshake message packet]
-- s - [session message packet]
+- `m(X)`: [message packet] containing request `X`
+- `H(X)`: [handshake message packet] containing request `X`
+- `s(M)`: [session message packet] containing message `M`
 
-    ```mermaid
-        sequenceDiagram
-            participant Alice
-            participant Relay
-            participant Bob
+![Diagram](./img/nat-hole-punching-flow.svg) <!-- source: ./img/nat-hole-punching-flow.mermaid -->
 
-            Relay-->>Alice: m(NODES[Bob's ENR])
-            Alice->>Bob: m(nonce,FINDNODE)
-            Note left of Alice:Hole punched in Alice's NAT for Bob
-            Note left of Alice:FINDNODE timed out
-            Alice->>Relay: s(RELAYINIT[nonce])
-            Relay->>Bob: s(RELAYMSG[nonce])
-            Bob-->>Alice: whoareyou(nonce)
-            Note right of Bob: Hole punched in Bob's NAT for Alice
-            Alice-->>Bob: hm(FINDNODE)
-    ```
-
-Bob is behind a NAT. Bob is in Relay's kbuckets, they have a session together and Bob has
-sent a packet to Relay in the last ~20 seconds hence Relay can get through Bob's NAT[^1].
+Preconditions: Bob is behind NAT. Bob is contained in Relay's node table, they have an
+established session and Bob has sent a packet to Relay in the last ~20 seconds hence Relay
+can get through Bob's NAT.
 
 As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's ENR
-it received from Relay. By making an outgoing request to Bob, if Alice is behind a NAT,
-Alice's NAT adds the filtering rule `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
-Bob's-WAN-port, entry-lifetime)` to it's UDP session table[^2] [^3]. This means a hole now
-is punched for Bob in Alice's NAT for the duration of `entry-lifetime`. The request to Bob
-times out as Bob is behind a NAT.
+it just received from the Relay. By making an outgoing request to Bob, if Alice is behind
+NAT, Alice's NAT adds a mapping `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
+Bob's-WAN-port, entry-lifetime)`. This means a hole now is punched for Bob in Alice's NAT
+for the duration of `entry-lifetime`. However, Alice's request is not delivered as Bob is
+behind NAT.
 
-Alice initiates an attempt to punch a hole in Bob's NAT via Relay. Alice resets the
-request time out on the timed out [FINDNODE] message and wraps the message's nonce in a
-[RELAYINIT] notification and sends it to Relay. The notification also contains its ENR and
-Bob's node id.
+Alice detects the timeout, and initiates an attempt to punch a hole in Bob's NAT via
+Relay. Alice resets the request time-out on the timed out [FINDNODE] message and wraps the
+message's nonce in a [RELAYINIT] notification and sends it to Relay. The notification also
+contains its ENR and Bob's node ID.
 
-Relay disassembles the [RELAYINIT] notification and uses the `target-id` to look up Bob's
-ENR in its kbuckets. With high probability, Relay will find Bob's ENR in its kbuckets as
-~1 second ago, Relay assembled a [NODES] response for Alice containing Bob's ENR (see [UDP
-Communication] for recommended time out duration). Relay assembles a [RELAYMSG]
-notification with Alice's message nonce and ENR, then sends it to the address in Bob's
-ENR.
+The Relay node validates the [RELAYINIT] notification and uses the `target-id` to look up
+Bob's ENR in its node table. Bob is very likely to be a member of the Relay's table
+because it was just sent to Alice in a [NODES] response. Note that, if Bob is not
+contained in the table, communication ends here.
+
+The Relay sends a [RELAYMSG] notification containing Alice's message nonce and ENR to Bob.
 
 Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
-then sends it to Alice using the address in the `initiator-enr`. Bob's NAT adds the
-filtering rule `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip, Alice's-WAN-port,
-entry-lifetime)` to it's UDP session table[^2] [^3]. A hole is punched in Bob's NAT for
-Alice for the duration of `entry-lifetime`.
+then sends it to Alice. Bob knows about Alice's endpoint from the `initiator-enr` given in
+RELAYMSG.
+
+Bob's NAT adds the mapping `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip,
+Alice's-WAN-port, entry-lifetime)`. A hole is punched in Bob's NAT for Alice for the
+duration of `entry-lifetime`.
 
 From here on it's business as usual. See [Sessions].
 
@@ -397,7 +408,7 @@ From here on it's business as usual. See [Sessions].
 
 Often the same peers get passed around in NODES responses by different peers. The chance
 of seeing a peer received in a NODES response again in another NODES response is high as
-kbuckets favour long lived connections to new ones[^4]. This makes the need for a storing
+k-buckets favour long lived connections to new ones. This makes the need for a storing
 back up relays for peers small.
 
 Apart from the state that is saved by not storing more than the last peer to send us an
@@ -418,10 +429,4 @@ hence of its ability to relay.
 [RELAYINIT]: ./discv5-wire.md#relayinit-notification-0x07
 [RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
 
-[UDP communication]: ./discv5-wire.md#udp-communication
 [Sessions]: ./discv5-theory.md#sessions
-
-[^1]: https://pdos.csail.mit.edu/papers/p2pnat.pdf
-[^2]: https://datatracker.ietf.org/doc/html/rfc4787
-[^3]: https://www.ietf.org/rfc/rfc6146.txt
-[^4]: https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf
