@@ -416,6 +416,63 @@ ENR as its potential relay, the longer time that has passed since a peer sent us
 the less guarantee we have that the peer is in fact connected to the owner of that ENR and
 hence of its ability to relay.
 
+### Job of keeping the hole punched falls on Bob and Bob's incentive to do so
+
+UDP session table entry lifetimes are configurable, though a common lower bound is 20
+seconds. Bob must periodically reset the session table entry for Alice in its NAT to keep
+the hole for Alice punched. If Alice too is behind NAT, it must do the same for Bob.
+Implementations must ensure, when a node behind NAT does not send a packet to a peer
+within the entry lifetime then an empty packet is sent that is dropped by the peer.
+
+NAT hole punching unavoidably creates overhead for all nodes in the network but once a
+hole is punched, keeping it punched requires no interaction between peers. The incentive
+for nodes behind NAT to keep holes for its peers punched is to avoid reestablishing a
+session. If there is no hole for Alice in Bob's NAT when Alice carries out a [liveness
+check], Bob is considered offline and the session to Bob useless. If the node behind NAT
+intends to frequently communicate with a peer, reestablishing the session is more costly
+than managing the interval of sent packets to that peer.
+
+### Discovering if the local node is behind NAT and must keep holes for peers punched
+
+A node may at start-up be assigned an externally reachable socket to advertise as well as
+a listen socket. If those sockets are not equivalent, the node is behind NAT and the
+[mechanism for keeping holes punched] is activated. Like so, a node assumes it is behind
+NAT if an externally reachable socket is omitted from the initial configuration and must
+activate the mechanism for keeping holes punched. The [runtime address discovery]
+mechanism can discovery the external endpoint address used by the local node. Once a new
+externally reachable endpoint is known, implementations will try to bind to its IP address
+at some number of randomly selected ports from a given range of probably unused ports. If
+binding succeeds with any port, the node is not behind NAT and the mechanism for keeping
+holes punched is deactivated.
+
+This solution assumes, in most scenarios where port-forwarding cannot be configured the
+local node host's address is private to the address realm of the device operating the NAT
+level furthest from the local node host. If the host and NAT device use the same IP
+address, binding will always succeed, so this method may give a false negative. However,
+this is not detrimental. A node behind NAT that deactivates the mechanism for keeping
+holes punched will more frequently have to re-establish sessions to its peers.
+
+### Limiting resource consumption of peers behind symmetric NATs, useful for light-clients
+
+Peers with unreachable ENRs do not get inserted into node table buckets. Nodes that are
+behind symmetric NATs will naturally never succeed in pinpointing one external socket for
+peers to reach them on by [runtime address discovery] and therefore their unreachable ENRs
+will never update to reachable ENRs.
+
+This means, these peers will never respond to requests, as only peers in the node table
+are sent requests. This does not cohere with the p2p-model, rather the server-client model
+where the peer with a unreachable ENR acts as the client. This misalignment is especially
+bothersome for well behaving (externally reachable) light-clients operating on limited
+resources. Discv5.2 corrects this side-effect of runtime address discovery by introducing
+a configurable limit to the number of sessions at a time with peers with unreachable ENRs,
+the lower limit being 1. Nodes must accept sessions with at least one peer with a
+unreachable ENR to for runtime address discovery to be enabled on the discv5.2 network.
+
+### Fault tolerance
+
+As was already the case in discv5, if a request to a node times out, (after the configured
+number of retries) that peer is considered unresponsive and the session can be failed.
+
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
 [message packet]: ./discv5-wire.md#ordinary-message-packet-flag--0
@@ -430,6 +487,8 @@ hence of its ability to relay.
 [RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
 
 [Sessions]: ./discv5-theory.md#sessions
+[runtime address discovery]: ./discv5-theory.md#maintaining-the-local-node-record
+[mechanism for keeping holes punched]: ./discv5-theory.md#job-of-keeping-the-hole-punched-falls-on-bob-and-bobs-incentive-to-do-so
 [natpaper]: https://pdos.csail.mit.edu/papers/p2pnat.pdf
 [RFC4787]: https://datatracker.ietf.org/doc/html/rfc4787
 [RFC6146]: https://datatracker.ietf.org/doc/html/rfc6146
