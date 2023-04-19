@@ -334,10 +334,99 @@ the distance to retrieve more nodes from adjacent k-buckets on `B`:
 Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
 repeating the lookup procedure on another, closer node.
 
+## Hole-punching Asymmetric NATs
+
+This section explains the hole punching mechanism built into the protocol, which is
+enabled by the [RELAYINIT] and [RELAYMSG] message types. Compared to other protocol
+messages, these require deeper interaction with the session layer in order to ensure the
+hole punching mechanism operates safely.
+
+In the examples below, we assume that node `A` (Alice) has the goal of sending a request
+message (e.g. FINDNODE) to node `B` (Bob).
+
+Bob operates behind a network-adress-translation (NAT) layer, and is unable to receive UDP
+packets from Alice initially. However, Bob has previously communicated with a third node
+`R` (Relay), and is able to receive incoming packets from the Relay node. We further
+assume Bob's NAT is 'asymmetric', i.e. the IP/Port of Bob's packets will be the same
+regardless of the host they are sent to. The hole-punching mechanism does not work for
+'symmetric' NAT where every destination host has a unique mapping.
+
+Node Alice may or may not behind a symmetric NAT.
+
+Finally, it is assumed that a common lower bound on lifetime of NAT mappings is 20
+seconds, and that mappings will be refreshed when any packet is sent through them. For
+more background information about common NAT setups, please consult [RFC4787], [RFC6146]
+and [this paper][natpaper].
+
+### Message flow
+
+In the wire protocol, there are four packet types. Since the NAT-related messages require
+deeper integration with the packet/session layer, the packet type is explicitly shown for
+each message in the diagram below. We use these abbreviations:
+
+- whoareyou - [WHOAREYOU packet]
+- `m(X)`: [message packet] containing request `X`
+- `H(X)`: [handshake message packet] containing request `X`
+- `s(M)`: [session message packet] containing message `M`
+
+![Diagram](./img/nat-hole-punching-flow.svg) <!-- source: ./img/nat-hole-punching-flow.mermaid -->
+
+Preconditions: Bob is behind NAT. Bob is contained in Relay's node table, they have an
+established session and Bob has sent a packet to Relay in the last ~20 seconds hence Relay
+can get through Bob's NAT.
+
+As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's ENR
+it just received from the Relay. By making an outgoing request to Bob, if Alice is behind
+NAT, Alice's NAT adds a mapping `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
+Bob's-WAN-port, entry-lifetime)`. This means a hole now is punched for Bob in Alice's NAT
+for the duration of `entry-lifetime`. However, Alice's request is not delivered as Bob is
+behind NAT.
+
+Alice detects the timeout, and initiates an attempt to punch a hole in Bob's NAT via
+Relay. Alice resets the request time-out on the timed out [FINDNODE] message and wraps the
+message's nonce in a [RELAYINIT] notification and sends it to Relay. The notification also
+contains its ENR and Bob's node ID.
+
+The Relay node validates the [RELAYINIT] notification and uses the `target-id` to look up
+Bob's ENR in its node table. Bob is very likely to be a member of the Relay's table
+because it was just sent to Alice in a [NODES] response. Note that, if Bob is not
+contained in the table, communication ends here.
+
+The Relay sends a [RELAYMSG] notification containing Alice's message nonce and ENR to Bob.
+
+Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
+then sends it to Alice. Bob knows about Alice's endpoint from the `initiator-enr` given in
+RELAYMSG.
+
+Bob's NAT adds the mapping `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip,
+Alice's-WAN-port, entry-lifetime)`. A hole is punched in Bob's NAT for Alice for the
+duration of `entry-lifetime`.
+
+From here on it's business as usual. See [Sessions].
+
+### Redundancy of ENRs in NODES responses and connectivity status assumptions about Relay and Bob
+
+Often the same peers get passed around in NODES responses by different peers. The chance
+of seeing a peer received in a NODES response again in another NODES response is high as
+k-buckets favour long lived connections to new ones. This makes the need for a storing
+back up relays for peers small.
+
+Apart from the state that is saved by not storing more than the last peer to send us an
+ENR as its potential relay, the longer time that has passed since a peer sent us an ENR,
+the less guarantee we have that the peer is in fact connected to the owner of that ENR and
+hence of its ability to relay.
+
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
+[message packet]: ./discv5-wire.md#ordinary-message-packet-flag--0
+[session message packet]: ./discv5-wire.md#session-message-packet-flag--3
 [handshake message packet]: ./discv5-wire.md#handshake-message-packet-flag--2
 [WHOAREYOU packet]: ./discv5-wire.md#whoareyou-packet-flag--1
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
+[NODES]: ./discv5-wire.md#nodes-response-0x04
+[RELAYINIT]: ./discv5-wire.md#relayinit-notification-0x07
+[RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
+
+[Sessions]: ./discv5-theory.md#sessions
