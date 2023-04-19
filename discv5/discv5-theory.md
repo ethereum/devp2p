@@ -430,3 +430,6 @@ hence of its ability to relay.
 [RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
 
 [Sessions]: ./discv5-theory.md#sessions
+[natpaper]: https://pdos.csail.mit.edu/papers/p2pnat.pdf
+[RFC4787]: https://datatracker.ietf.org/doc/html/rfc4787
+[RFC6146]: https://datatracker.ietf.org/doc/html/rfc6146
