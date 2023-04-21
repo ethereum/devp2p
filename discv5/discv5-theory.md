@@ -468,10 +468,23 @@ a configurable limit to the number of sessions at a time with peers with unreach
 the lower limit being 1. Nodes must accept sessions with at least one peer with a
 unreachable ENR to for runtime address discovery to be enabled on the discv5.2 network.
 
-### Fault tolerance
+### Fault tolerance and connectivity
 
 As was already the case in discv5, if a request to a node times out, (after the configured
 number of retries) that peer is considered unresponsive and the session can be failed.
+Theoretically, peers behind NAT that repeatedly fail at taking responsibility for their
+inconvenient topology, i.e. fail at keeping holes punched in their NAT for their peers,
+could be banned by other peers from re-connecting within a set duration. This would
+certainly add to the incentive for nodes behind NAT to behave, however it can result in
+bad recovery from network-wide failure if many nodes simultaneously get blocked from
+further sessions establishment due to unresponsiveness. 
+
+The relation between two discv5 peers' k-buckets is not necessarily symmetric, one node
+having a peer in its k-buckets doesn't necessarily mean vv is true. Behaving nodes may very
+well have sessions to peers they don't have in their k-buckets. Increasing the frequency of
+discv5's [PING] liveness check for peers in k-buckets is therefore not enough to ensure
+connectivity across discv5.2. To keep NATs open for new incoming connections, packets sent
+to keep holes punched must be sent to all peers which a node has a session with.
 
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
