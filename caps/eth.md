@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/67**. See end
+blockchain information between peers. The current protocol version is **eth/68**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -55,6 +55,11 @@ client picks a block near the head of the chain (the 'pivot block') and download
 state of that block.
 
 ### Block Propagation
+
+**Note: after the PoW-to-PoS transition ([The Merge]), block propagation is no longer
+handled by the 'eth' protocol. The text below only applies to PoW and PoA (clique)
+networks. Block propagation messages (NewBlock, NewBlockHashes...) will be removed from
+the protocol in a future version.**
 
 Newly-mined blocks must be relayed to all nodes. This happens through block propagation,
 which is a two step process. When a [NewBlock] announcement message is received from a
@@ -379,17 +384,19 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[txhash₁: B_32, txhash₂: B_32, ...]`
+`[[txtype₁: P, txtype₂: P, ...], [txsize₁: B_4, txsize₂: B_4, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
 
 This message announces one or more transactions that have appeared in the network and
-which have not yet been included in a block. To be maximally helpful, nodes should inform
-peers of all transactions that they may not be aware of.
+which have not yet been included in a block. Note that the message payload contains three
+sub-lists containing the [transaction types], sizes, and hashes of the announced
+transactions. All three sub-lists must be of equal length.
 
-The recommended soft limit for this message is 4096 hashes (128 KiB).
+The recommended soft limit for this message is 4096 hashes (~150 KiB).
 
-Nodes should only announce hashes of transactions that the remote peer could reasonably be
-considered not to know, but it is better to return more transactions than to have a nonce
-gap in the pool.
+To be maximally helpful, nodes should inform peers of all transactions that they may not
+be aware of. However, nodes should only announce hashes of transactions that the remote
+peer could reasonably be considered not to know, but it is better to return more
+transactions than to have a nonce gap in the pool.
 
 ### GetPooledTransactions (0x09)
 
@@ -443,14 +450,20 @@ The recommended soft limit for Receipts responses is 2 MiB.
 
 ## Change Log
 
+### eth/68 ([EIP-5793], October 2022)
+
+Version 68 changed the [NewPooledTransactionHashes] message to include types and sizes of
+the announced transactions. Prior to this update, the message payload was simply a list of
+hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
+
 ### eth/67 ([EIP-4938], March 2022)
 
 Version 67 removed the GetNodeData and NodeData messages.
 
 - GetNodeData (0x0d)
-  `[request_id: P, [hash_0: B_32, hash_1: B_32, ...]]`
+  `[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
 - NodeData (0x0e)
-  `[request_id: P, [value_0: B, value_1: B, ...]]`
+  `[request-id: P, [value₁: B, value₂: B, ...]]`
 
 ### eth/66 ([EIP-2481], April 2021)
 
@@ -544,7 +557,10 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2464]: https://eips.ethereum.org/EIPS/eip-2464
 [EIP-2481]: https://eips.ethereum.org/EIPS/eip-2481
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
+[transaction types]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
+[EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
+[The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
