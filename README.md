@@ -10,6 +10,7 @@ through the [Ethereum Foundation Bounty Program].
 We have several specifications for low-level protocols:
 
 - [Ethereum Node Records]
+- [DNS Node Lists]
 - [Node Discovery Protocol v4]
 - [Node Discovery Protocol v5]
 - [RLPx protocol]
@@ -82,6 +83,7 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Light Ethereum Subprotocol]: ./caps/les.md
 [Ethereum Witness Protocol]: ./caps/wit.md
 [Ethereum Node Records]: ./enr.md
+[DNS Node Lists]: ./dnsdisc.md
 [Node Discovery Protocol v4]: ./discv4.md
 [Node Discovery Protocol v5]: ./discv5/discv5.md
 [Parity Light Protocol]: ./caps/pip.md
