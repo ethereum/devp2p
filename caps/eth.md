@@ -454,7 +454,7 @@ The recommended soft limit for Receipts responses is 2 MiB.
 
 Version 68 changed the [NewPooledTransactionHashes] message to include types and sizes of
 the announced transactions. Prior to this update, the message payload was simply a list of
-hashes: `[hash_0: B_32, hash_1: B_32, ...]`.
+hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
 
 ### eth/67 ([EIP-4938], March 2022)
 
