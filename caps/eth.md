@@ -214,11 +214,10 @@ headers are processed in sequence during chain synchronization, the following ru
   values of `difficulty`, `gas-limit` and `time` are within the bounds of protocol rules
   given in the [Yellow Paper].
 - The `gas-used` header field must be less than or equal to the `gas-limit`.
-- `basefee-per-gas` must be present in headers after the [London hard fork]. Note that
-  `basefee-per-gas` must be absent for earlier blocks. This rule was added implicity by
-  [EIP-1559], which added the field into the definition of the Ethereum block hash.
+- `basefee-per-gas` must be present in headers after the [London hard fork]. It must be
+  absent for earlier blocks. This rule was added by [EIP-1559].
 - `withdrawals-root` must be present in headers after the [Shanghai fork]. The field must
-  be absent for blocks before the fork.
+  be absent for blocks before the fork. This rule was added by [EIP-4895].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
