@@ -1,9 +1,11 @@
 # Ethereum Node Records
 
-This specification defines Ethereum Node Records, an open format for p2p connectivity
-information. A node record usually contains the network endpoints of a node, i.e. the
-node's IP addresses and ports. It also holds information about the node's purpose on the
-network so others can decide whether to connect to the node.
+This specification defines Ethereum Node Records (ENR), an open format for p2p
+connectivity information. A node record usually contains the network endpoints of a node,
+i.e. the node's IP addresses and ports. It also holds information about the node's purpose
+on the network so others can decide whether to connect to the node.
+
+Ethereum Node Records were originally proposed in [EIP-778].
 
 ## Record Structure
 
@@ -122,4 +124,5 @@ The RLP structure of the record is:
       765f,
     ]
 
+[EIP-778]: https://eips.ethereum.org/EIPS/eip-778
 [URL-safe base64 alphabet]: https://tools.ietf.org/html/rfc4648#section-5
