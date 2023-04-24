@@ -132,5 +132,5 @@ as possible will sync the link tree first and add all linked names to the sync h
 1. The base64 and base32 encodings used to represent binary data are defined in [RFC
    4648]. No padding is used for base64 and base32 data.
 
-[EIP-1459]: https://eips.ethereum.org/EIPS/EIP-1459
+[EIP-1459]: https://eips.ethereum.org/EIPS/eip-1459
 [RFC 4648]: https://tools.ietf.org/html/rfc4648
