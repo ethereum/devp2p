@@ -461,9 +461,9 @@ hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
 Version 67 removed the GetNodeData and NodeData messages.
 
 - GetNodeData (0x0d)
-  `[request_id: P, [hash_0: B_32, hash_1: B_32, ...]]`
+  `[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
 - NodeData (0x0e)
-  `[request_id: P, [value_0: B, value_1: B, ...]]`
+  `[request-id: P, [value₁: B, value₂: B, ...]]`
 
 ### eth/66 ([EIP-2481], April 2021)
 
