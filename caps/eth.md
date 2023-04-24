@@ -177,6 +177,7 @@ Ethereum blocks are encoded as follows:
     block = [header, transactions, ommers]
     transactions = [tx₁, tx₂, ...]
     ommers = [header₁, header₂, ...]
+    withdrawals = [withdrawal₁, withdrawal₂, ...]
     header = [
         parent-hash: B_32,
         ommers-hash: B_32,
@@ -194,12 +195,13 @@ Ethereum blocks are encoded as follows:
         mix-digest: B_32,
         block-nonce: B_8,
         basefee-per-gas: P,
+        withdrawals-root: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
 single item called the 'block body'.
 
-    block-body = [transactions, ommers]
+    block-body = [transactions, ommers, withdrawals]
 
 The validity of block headers depends on the context in which they are used. For a single
 block header, only the validity of the proof-of-work seal (`mix-digest`, `block-nonce`)
@@ -212,10 +214,10 @@ headers are processed in sequence during chain synchronization, the following ru
   values of `difficulty`, `gas-limit` and `time` are within the bounds of protocol rules
   given in the [Yellow Paper].
 - The `gas-used` header field must be less than or equal to the `gas-limit`.
-- The `basefee-per-gas` header field must be present for blocks after the [London hard
-  fork]. Note that `basefee-per-gas` must be absent for earlier blocks. This rule was
-  added implicity by [EIP-1559], which added the field into the definition of the Ethereum
-  block hash.
+- `basefee-per-gas` must be present in headers after the [London hard fork]. It must be
+  absent for earlier blocks. This rule was added by [EIP-1559].
+- `withdrawals-root` must be present in headers after the [Shanghai fork]. The field must
+  be absent for blocks before the fork. This rule was added by [EIP-4895].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -234,6 +236,10 @@ disconnect peers sending invalid blocks.
   block.
 - The `transactions` of the block must be verified against the `txs-root` by computing and
   comparing the merkle trie hash of the transactions list.
+- The `withdrawals` of block body must be verified against the `withdrawals-root` by
+  computing and comparing the merkle trie hash of the withdrawals list. Note that no
+  further validation of withdrawals is possible, since they are injected into the block by
+  the consensus layer.
 - The `ommers` list may contain at most two headers.
 - `keccak256(ommers)` must match the `ommers-hash` of the block header.
 - The headers contained in the `ommers` list must be valid headers. Their block number
@@ -456,6 +462,12 @@ Version 68 changed the [NewPooledTransactionHashes] message to include types and
 the announced transactions. Prior to this update, the message payload was simply a list of
 hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
 
+### eth/67 with withdrawals ([EIP-4895], March 2022)
+
+PoS validator withdrawals were added by [EIP-4895], which changed the definition of block
+headers to include a `withdrawals-root`, and block bodies to include the `withdrawals`
+list. No new wire protocol version was created for this change.
+
 ### eth/67 ([EIP-4938], March 2022)
 
 Version 67 removed the GetNodeData and NodeData messages.
@@ -559,8 +571,10 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [transaction types]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[EIP-4895]: https://eips.ethereum.org/EIPS/eip-4895
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
+[Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
