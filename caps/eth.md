@@ -216,6 +216,8 @@ headers are processed in sequence during chain synchronization, the following ru
 - The `gas-used` header field must be less than or equal to the `gas-limit`.
 - `basefee-per-gas` must be present in headers after the [London hard fork]. It must be
   absent for earlier blocks. This rule was added by [EIP-1559].
+- For PoS blocks after [The Merge], `ommers-hash` must be the empty keccak256 hash since
+  no ommer headers can exist.
 - `withdrawals-root` must be present in headers after the [Shanghai fork]. The field must
   be absent for blocks before the fork. This rule was added by [EIP-4895].
 
@@ -466,7 +468,8 @@ hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
 
 PoS validator withdrawals were added by [EIP-4895], which changed the definition of block
 headers to include a `withdrawals-root`, and block bodies to include the `withdrawals`
-list. No new wire protocol version was created for this change.
+list. No new wire protocol version was created for this change, since it was only a
+backwards-compatible addition to the block validity rules.
 
 ### eth/67 ([EIP-4938], March 2022)
 
