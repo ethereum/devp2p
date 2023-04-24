@@ -56,6 +56,11 @@ state of that block.
 
 ### Block Propagation
 
+**Note: after the PoW-to-PoS transition ([The Merge]), block propagation is no longer
+handled by the 'eth' protocol. The text below only applies to PoW and PoA (clique)
+networks. Block propagation messages (NewBlock, NewBlockHashes...) will be removed from
+the protocol in a future version.**
+
 Newly-mined blocks must be relayed to all nodes. This happens through block propagation,
 which is a two step process. When a [NewBlock] announcement message is received from a
 peer, the client first verifies the basic header validity of the block, checking whether
@@ -546,5 +551,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
+[The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
