@@ -391,7 +391,7 @@ which have not yet been included in a block. Note that the message payload conta
 sub-lists containing the [transaction types], sizes, and hashes of the announced
 transactions. All three sub-lists must be of equal length.
 
-The recommended soft limit for this message is 4096 hashes (128 KiB).
+The recommended soft limit for this message is 4096 hashes (~150 KiB).
 
 To be maximally helpful, nodes should inform peers of all transactions that they may not
 be aware of. However, nodes should only announce hashes of transactions that the remote
