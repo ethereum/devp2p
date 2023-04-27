@@ -394,13 +394,37 @@ The Relay sends a [RELAYMSG] notification containing Alice's message nonce and E
 
 Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
 then sends it to Alice. Bob knows about Alice's endpoint from the `initiator-enr` given in
-RELAYMSG.
+[RELAYMSG].
 
 Bob's NAT adds the mapping `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip,
 Alice's-WAN-port, entry-lifetime)`. A hole is punched in Bob's NAT for Alice for the
 duration of `entry-lifetime`.
 
 From here on it's business as usual. See [Sessions].
+
+### Roles initiator, target and relay
+
+The initiator must store each yet not contacted node together with the `node-id` of the node
+which sent it. Upon timed out request, this way the initiator has a relay at hand which is
+more likely than most other nodes to have a connection to the target. Upon successful session
+establishment, the initiator can forget about the relay stored for that node. Implementations
+may store relays for nodes as they like, although it is recommend in the case that one ENR is
+received from more than one peer in the time window between sending the initial request (random
+packet) to it timing out, to replace the relay stored with the latest seen relay. It is crucial
+that the initiator doesn't discard the timed out request when initiating a hole punch attempt,
+it is need to map the [WHOAREYOU packet] to an expected response.
+
+The target is a node the initiator assumes is behind NAT. Upon receiving a [RELAYMSG] from a
+relay it must use the `nonce` in that message to assemble a [WHOAREYOU packet] to the
+initiator.
+
+Relays are only expected to relay to targets that are in its k-buckets, as almost only then is
+it possible that the relay has sent the target's ENR in a NODES response and the peer requesting
+the relay, the initiator, can hence make assumptions about the connectivity between the relay and
+the target.
+
+Regardless of role, all nodes behind NAT are responsible for keeping holes punched for their
+peers after initial session establishment to further allow their requests to reach them.
 
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
