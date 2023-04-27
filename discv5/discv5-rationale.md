@@ -440,7 +440,7 @@ to keep holes punched must be sent to all peers which a node has a session with.
   *Kademlia: A Peer-to-peer Information System Based on the XOR Metric.* 2002.\
   <https://www.scs.stanford.edu/~dm/home/papers/kpos.pdf>
 
-- Atul Singh, Tsuen-Wan “Johnny” Ngan, Peter Druschel, Dan S. Wallach.
+- Atul Singh, Tsuen-Wan “Johnny” Ngan, Peter Druschel and Dan S. Wallach.
   *Eclipse Attacks on Overlay Networks: Threats and Defenses*. 2006.\
   <https://www.cs.rice.edu/~dwallach/pub/eclipse-infocom06.pdf>
 
@@ -448,32 +448,38 @@ to keep holes punched must be sent to all peers which a node has a session with.
   *S/Kademlia: A Practicable Approach Towards Secure Key-Based Routing.* 2007.\
   <https://telematics.tm.kit.edu/publications/Files/267/SKademlia_2007.pdf>
 
-- Xin Sun, Ruben Torres and Sanjay Rao. *Feasiblity of DDoS Attacks with P2P Systems and
+- Xin Sun, Ruben Torres and Sanjay Rao. *Feasibility of DDoS Attacks with P2P Systems and
   Prevention through Robust Membership Management.* 2007.\
   <https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=1357&context=ecetr>
 
-- Erik Hjelmvik, Wolfgang John. *Breaking and Improving Protocol Obfuscation.* 2010.\
+- Erik Hjelmvik and Wolfgang John. *Breaking and Improving Protocol Obfuscation.* 2010.\
   <https://internetstiftelsen.se/docs/hjelmvik_breaking.pdf>
 
-- Adam Langley, Wan-Teh Chang. *QUIC Crypto*. 2016.\
+- Adam Langley and Wan-Teh Chang. *QUIC Crypto*. 2016.\
   <https://docs.google.com/document/d/1g5nIXAIkN_Y-7XJW5K45IblHd_L2f5LTaDUDwvZ5L6g>
 
 - W3C Credentials Community Group. *Decentralized Identifiers (DIDs) Spec.* 2017.\
   <https://w3c-ccg.github.io/did-spec>
 
-- Seoung Kyun Kim, Zane Ma, Siddharth Murali, Joshua Mason, Andrew Miller, Michael Bailey.
+- Seoung Kyun Kim, Zane Ma, Siddharth Murali, Joshua Mason, Andrew Miller and Michael Bailey.
   *Measuring Ethereum Network Peers*. 2018.\
   <http://mdbailey.ece.illinois.edu/publications/imc18_ethereum.pdf>
 
-- Yuval Marcus, Ethan Heilman, Sharon Goldberg.
+- Yuval Marcus, Ethan Heilman and Sharon Goldberg.
   *Low-Resource Eclipse Attacks on Ethereum’s Peer-to-Peer Network.* 2018.\
   <https://eprint.iacr.org/2018/236.pdf>
 
-- Kegel, D., Ford, B. and Srisuresh, P. (2005) *Peer-to-peer communication across network address translators - USENIX*. Available at: https://www.usenix.org/legacy/event/usenix05/tech/general/full_papers/ford/ford.pdf (Accessed: April 27, 2023). 
+- Dan Kegel, Bryan Ford and Pyda Srisuresh. 
+*Peer-to-peer communication across network address translators - USENIX*. 2005.\
+<https://www.usenix.org/legacy/event/usenix05/tech/general/full_papers/ford/ford.pdf>
 
-- Jennings, C., Audet, F. and Audet, F. (1973) *RFC 478: FTP Server-server interaction - II, IETF Datatracker*. Available at: https://datatracker.ietf.org/doc/html/rfc478 (Accessed: April 27, 2023). 
+- Cullen Fluffy Jennings and François Audet. 
+*RFC 478: FTP Server-server interaction - II, IETF Datatracker*. 1973.\
+<https://datatracker.ietf.org/doc/html/rfc478> 
 
-- Matthews, P., Beijnum, I.van and Bagnulo, M. (2011) *RFC FT-IETF-behave-V6V4-xlate-stateful: Stateful NAT64: Network address and protocol translation from IPv6 clients to ipv4 servers, IETF Datatracker*. Available at: https://datatracker.ietf.org/doc/html/rfc6146 (Accessed: April 27, 2023). 
+- Philip Matthews, Iljitsch Van Beijnum and Marcelo Bagnulo.
+ *RFC FT-IETF-behave-V6V4-xlate-stateful: Stateful NAT64: Network address and protocol translation from IPv6 clients to ipv4 servers, IETF Datatracker*. 2011.\ 
+ <https://datatracker.ietf.org/doc/html/rfc6146>
 
 [wire protocol]: ./discv5-wire.md
 [node records]: ../enr.md
