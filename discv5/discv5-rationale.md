@@ -340,6 +340,100 @@ disturb the operation of the protocol. Session keys per node-ID/IP generally pre
 replay across sessions. The `request-id`, mirrored in response packets, prevents replay of
 responses within a session.
 
+### Session message, the new packet type
+
+The [session message packet] is a unicast notification so by definition it doesn't trigger a
+response. Introducing this new message container removes the otherwise induced DoS attack
+vector that sending a [RELAYMSG] to a target will trigger the target to send 2 messages, a
+response as well as the [RELAYINIT] message.
+
+A session message doesn't trigger a response on the higher layer, the discv5 equivalent to
+TLS if you may, neither. If a session is not at hand to encrypt a session message, the session
+message is dropped, contrary to an ordinary message packet which then would be sent a random
+packet and await a [WHOAREYOU] response from the peer.
+
+### Redundancy of ENRs in NODES responses and connectivity status assumptions about Relay and Bob
+
+Often the same peers get passed around in NODES responses by different peers. The chance
+of seeing a peer received in a NODES response again in another NODES response is high as
+k-buckets favour long lived connections to new ones. This makes the need for a storing
+back up relays for peers small.
+
+Apart from the state that is saved by not storing more than the last peer to send us an
+ENR as its potential relay, the longer time that has passed since a peer sent us an ENR,
+the less guarantee we have that the peer is in fact connected to the owner of that ENR and
+hence of its ability to relay.
+
+### Job of keeping the hole punched falls on Bob and Bob's incentive to do so
+
+UDP session table entry lifetimes are configurable, though a common lower bound is 20
+seconds. Bob must periodically reset the session table entry for Alice in its NAT to keep
+the hole for Alice punched. If Alice too is behind NAT, it must do the same for Bob.
+Implementations must ensure, when a node behind NAT does not send a packet to a peer
+within the entry lifetime then an empty packet is sent that is dropped by the peer.
+
+NAT hole punching unavoidably creates overhead for all nodes in the network but once a
+hole is punched, keeping it punched requires no interaction between peers. The incentive
+for nodes behind NAT to keep holes for its peers punched is to avoid reestablishing a
+session. If there is no hole for Alice in Bob's NAT when Alice carries out a [liveness
+check], Bob is considered offline and the session to Bob useless. If the node behind NAT
+intends to frequently communicate with a peer, reestablishing the session is more costly
+than managing the interval of sent packets to that peer.
+
+### Discovering if the local node is behind NAT and must keep holes for peers punched
+
+A node may at start-up be assigned an externally reachable socket to advertise as well as
+a listen socket. If those sockets are not equivalent, the node is behind NAT and the
+[mechanism for keeping holes punched] is activated. Like so, a node assumes it is behind
+NAT if an externally reachable socket is omitted from the initial configuration and must
+activate the mechanism for keeping holes punched. The [runtime address discovery]
+mechanism can discovery the external endpoint address used by the local node. Once a new
+externally reachable endpoint is known, implementations will try to bind to its IP address
+at some number of randomly selected ports from a given range of probably unused ports. If
+binding succeeds with any port, the node is not behind NAT and the mechanism for keeping
+holes punched is deactivated.
+
+This solution assumes, in most scenarios where port-forwarding cannot be configured the
+local node host's address is private to the address realm of the device operating the NAT
+level furthest from the local node host. If the host and NAT device use the same IP
+address, binding will always succeed, so this method may give a false negative. However,
+this is not detrimental. A node behind NAT that deactivates the mechanism for keeping
+holes punched will more frequently have to re-establish sessions to its peers.
+
+### Limiting resource consumption of peers behind symmetric NATs, useful for light-clients
+
+Peers with unreachable ENRs do not get inserted into node table buckets. Nodes that are
+behind symmetric NATs will naturally never succeed in pinpointing one external socket for
+peers to reach them on by [runtime address discovery] and therefore their unreachable ENRs
+will never update to reachable ENRs.
+
+This means, these peers will never respond to requests, as only peers in the node table
+are sent requests. This does not cohere with the p2p-model, rather the server-client model
+where the peer with a unreachable ENR acts as the client. This misalignment is especially
+bothersome for well behaving (externally reachable) light-clients operating on limited
+resources. Discv5.2 corrects this side-effect of runtime address discovery by introducing
+a configurable limit to the number of sessions at a time with peers with unreachable ENRs,
+the lower limit being 1. Nodes must accept sessions with at least one peer with a
+unreachable ENR to for runtime address discovery to be enabled on the discv5.2 network.
+
+### Fault tolerance and connectivity
+
+As was already the case in discv5, if a request to a node times out, (after the configured
+number of retries) that peer is considered unresponsive and the session can be failed.
+Theoretically, peers behind NAT that repeatedly fail at taking responsibility for their
+inconvenient topology, i.e. fail at keeping holes punched in their NAT for their peers,
+could be banned by other peers from re-connecting within a set duration. This would
+certainly add to the incentive for nodes behind NAT to behave, however it can result in
+bad recovery from network-wide failure if many nodes simultaneously get blocked from
+further sessions establishment due to unresponsiveness. 
+
+The relation between two discv5 peers' k-buckets is not necessarily symmetric, one node
+having a peer in its k-buckets doesn't necessarily mean vv is true. Behaving nodes may very
+well have sessions to peers they don't have in their k-buckets. Increasing the frequency of
+discv5's [PING] liveness check for peers in k-buckets is therefore not enough to ensure
+connectivity across discv5.2. To keep NATs open for new incoming connections, packets sent
+to keep holes punched must be sent to all peers which a node has a session with.
+
 # References
 
 - Petar Maymounkov and David Mazières.
@@ -375,5 +469,16 @@ responses within a session.
   *Low-Resource Eclipse Attacks on Ethereum’s Peer-to-Peer Network.* 2018.\
   <https://eprint.iacr.org/2018/236.pdf>
 
+- Kegel, D., Ford, B. and Srisuresh, P. (2005) *Peer-to-peer communication across network address translators - USENIX*. Available at: https://www.usenix.org/legacy/event/usenix05/tech/general/full_papers/ford/ford.pdf (Accessed: April 27, 2023). 
+
+- Jennings, C., Audet, F. and Audet, F. (1973) *RFC 478: FTP Server-server interaction - II, IETF Datatracker*. Available at: https://datatracker.ietf.org/doc/html/rfc478 (Accessed: April 27, 2023). 
+
+- Matthews, P., Beijnum, I.van and Bagnulo, M. (2011) *RFC FT-IETF-behave-V6V4-xlate-stateful: Stateful NAT64: Network address and protocol translation from IPv6 clients to ipv4 servers, IETF Datatracker*. Available at: https://datatracker.ietf.org/doc/html/rfc6146 (Accessed: April 27, 2023). 
+
 [wire protocol]: ./discv5-wire.md
 [node records]: ../enr.md
+[session message packet]: ./discv5-wire.md#session-message-packet-flag--3
+[WHOAREYOU]: ./discv5-wire.md#whoareyou-packet-flag--1
+[PING]: ./discv5-wire.md#ping-request-0x01
+[RELAYINIT]: ./discv5-wire.md#relayinit-notification-0x07
+[RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
