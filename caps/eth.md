@@ -310,13 +310,14 @@ which aren't listed, i.e. clients should not require that any particular network
 used. Note that the Network ID may or may not correspond with the EIP-155 Chain ID used
 for transaction replay prevention.
 
-| ID | chain                         |
-|----|-------------------------------|
-| 0  | Olympic (disused)             |
-| 1  | Frontier (now mainnet)        |
-| 2  | Morden (disused)              |
-| 3  | Ropsten (current PoW testnet) |
-| 4  | [Rinkeby]                     |
+| ID | chain                     |
+|----|---------------------------|
+| 0  | Olympic (disused)         |
+| 1  | Frontier (now mainnet)    |
+| 2  | Morden testnet (disused)  |
+| 3  | Ropsten testnet (disused) |
+| 4  | Rinkeby testnet (disused) |
+| 5  | Goerli testnet            |
 
 For a community curated list of chain IDs, see <https://chainid.network>.
 
@@ -564,7 +565,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [RLPx]: ../rlpx.md
-[Rinkeby]: https://rinkeby.io
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
 [EIP-2124]: https://eips.ethereum.org/EIPS/eip-2124
