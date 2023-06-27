@@ -392,7 +392,7 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[[txtype₁: P, txtype₂: P, ...], [txsize₁: B_4, txsize₂: B_4, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
+`[[txtype₁: P, txtype₂: P, ...], [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
 
 This message announces one or more transactions that have appeared in the network and
 which have not yet been included in a block. Note that the message payload contains three
