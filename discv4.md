@@ -40,10 +40,10 @@ entries. The entries are sorted by time last seen — least-recently seen node a
 most-recently seen at the tail.
 
 Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket.
-If the bucket contains less than `k` entries N₁ can simply be added as the first entry. If
+If the bucket contains less than `k` entries N₁ can simply be added as the last entry. If
 the bucket already contains `k` entries, the least recently seen node in the bucket, N₂,
 needs to be revalidated by sending a [Ping] packet. If no reply is received from N₂ it is
-considered dead, removed and N₁ added to the front of the bucket.
+considered dead, removed and N₁ added to the tail of the bucket.
 
 ## Endpoint Proof
 
