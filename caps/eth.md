@@ -393,12 +393,15 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[[txtype₁: P, txtype₂: P, ...], [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
+`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
 
 This message announces one or more transactions that have appeared in the network and
-which have not yet been included in a block. Note that the message payload contains three
-sub-lists containing the [transaction types], sizes, and hashes of the announced
-transactions. All three sub-lists must be of equal length.
+which have not yet been included in a block. The message payload describes a list of
+of transactions, but note that it is encoded as three separate elements.
+
+The `txtypes` element is a byte array containing the announced [transaction types].
+The other two payload elements refer to the sizes and hashes of the announced transactions.
+All three payload elements must contain an equal number of items.
 
 The recommended soft limit for this message is 4096 hashes (~150 KiB).
 
