@@ -399,7 +399,7 @@ This message announces one or more transactions that have appeared in the networ
 which have not yet been included in a block. The message payload describes a list of
 of transactions, but note that it is encoded as three separate elements.
 
-The `txtypes` element is a byte array containing the announced transaction types.
+The `txtypes` element is a byte array containing the announced [transaction types].
 The other two payload elements refer to the sizes and hashes of the announced transactions.
 All three payload elements must contain an equal number of items.
 
