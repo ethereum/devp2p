@@ -74,6 +74,7 @@ devp2p is part of most Ethereum clients. Implementations include:
 - Ruby: ruby-devp2p <https://github.com/cryptape/ruby-devp2p>
 - Rust: rust-devp2p <https://github.com/rust-ethereum/devp2p>
 - Rust: openethereum <https://github.com/openethereum/openethereum>
+- Rust: reth <https://github.com/paradigmxyz/reth>
 
 WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-dissectors>
 
