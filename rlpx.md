@@ -118,7 +118,7 @@ Secrets generated following the exchange of handshake messages:
 All messages following the initial handshake are framed. A frame carries a single
 encrypted message belonging to a capability.
 
-The purpose of framing is multiplexing multiple capabilites over a single connection.
+The purpose of framing is multiplexing multiple capabilities over a single connection.
 Secondarily, as framed messages yield reasonable demarcation points for message
 authentication codes, supporting an encrypted and authenticated stream becomes
 straight-forward. Frames are encrypted and authenticated via key material generated during
@@ -252,8 +252,9 @@ in Hello because they may be used by a future version.
   "Ethereum(++)/1.0.0").
 - `capabilities` is the list of supported capabilities and their versions:
   `[[cap1, capVersion1], [cap2, capVersion2], ...]`.
-- `listenPort` specifies the port that the client is listening on (on the interface that
-  the present connection traverses). If 0 it indicates the client is not listening.
+- `listenPort` (legacy) specifies the port that the client is listening on (on the
+  interface that the present connection traverses). If 0 it indicates the client is
+  not listening. This field should be ignored.
 - `nodeId` is the secp256k1 public key corresponding to the node's private key.
 
 ### Disconnect (0x01)
