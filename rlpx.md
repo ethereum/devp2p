@@ -254,8 +254,7 @@ in Hello because they may be used by a future version.
   `[[cap1, capVersion1], [cap2, capVersion2], ...]`.
 - `listenPort` (legacy) specifies the port that the client is listening on (on the
   interface that the present connection traverses). If 0 it indicates the client is
-  not listening. This field is not really used anymore. It's a relic from the days
-  before we had the discovery protocol.
+  not listening. This field should be ignored.
 - `nodeId` is the secp256k1 public key corresponding to the node's private key.
 
 ### Disconnect (0x01)
