@@ -401,7 +401,9 @@ of transactions, but note that it is encoded as three separate elements.
 
 The `txtypes` element is a byte array containing the announced [transaction types].
 The other two payload elements refer to the sizes and hashes of the announced transactions.
-All three payload elements must contain an equal number of items.
+Size refers to the length of the 'consensus encoding' of a typed transaction (i.e. the bytes 
+without rlp header for typed transactions, and with header for legacy transactions). All
+three payload elements must contain an equal number of items.
 
 The recommended soft limit for this message is 4096 hashes (~150 KiB).
 
