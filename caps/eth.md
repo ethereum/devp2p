@@ -396,16 +396,18 @@ block.
 `[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
 
 This message announces one or more transactions that have appeared in the network and
-which have not yet been included in a block. The message payload describes a list of
-of transactions, but note that it is encoded as three separate elements.
+which have not yet been included in a block. The message payload describes a list of of
+transactions, but note that it is encoded as three separate elements.
 
-The `txtypes` element is a byte array containing the announced [transaction types].
-The other two payload elements refer to the sizes and hashes of the announced transactions.
-Size refers to the length of the 'consensus encoding' of a typed transaction (i.e. the bytes 
-without rlp header for typed transactions, and with header for legacy transactions). All
-three payload elements must contain an equal number of items.
+The `txtypes` element is a byte array containing the announced [transaction types]. The
+other two payload elements refer to the sizes and hashes of the announced transactions.
+All three payload elements must contain an equal number of items.
 
-The recommended soft limit for this message is 4096 hashes (~150 KiB).
+`txsizeₙ` refers to the length of the 'consensus encoding' of a typed transaction, i.e.
+the byte size of `tx-type || tx-data` for typed transactions, and the size of the
+RLP-encoded `legacy-tx` for non-typed legacy transactions.
+
+The recommended soft limit for this message is 4096 items (~150 KiB).
 
 To be maximally helpful, nodes should inform peers of all transactions that they may not
 be aware of. However, nodes should only announce hashes of transactions that the remote
