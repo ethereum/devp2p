@@ -288,7 +288,7 @@ A 'lookup' locates the `k` closest nodes to a node ID.
 
 The lookup initiator starts by picking `α` closest nodes to the target it knows of from
 the local table. The initiator then sends [FINDNODE] requests to those nodes. `α` is an
-implementation-defined concurrency parameter, typically `3`. As NEIGHBORS responses are
+implementation-defined concurrency parameter, typically `3`. As NODES responses are
 received, the initiator resends FINDNODE to nodes it has learned about from previous
 queries. Of the `k` nodes the initiator has heard of closest to the target, it picks `α`
 that it has not yet queried and sends FINDNODE to them. The lookup terminates when the
