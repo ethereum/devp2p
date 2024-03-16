@@ -33,7 +33,7 @@ purposes.
 
 #### 1.1.3 Support more than one node ID cryptosystem
 
-Ensure the DHT can accomodate ENR's with multiple identity systems. This will allow
+Ensure the DHT can accommodate ENR's with multiple identity systems. This will allow
 identity cryptosystems other than *secp256k1/keccak256*.
 
 #### 1.1.4 Replace node information tuples with ENRs
