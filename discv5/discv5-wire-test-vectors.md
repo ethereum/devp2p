@@ -150,6 +150,6 @@ protocol.
     pt: 0x01c20101
     ad: 0x93a7400fa0d6a694ebc24d5cf570f65d04215b6ac00757875e3f3a5f42107903
 
-Note that the 16 byte MAC is prepended to the ciphertext.
+Note that the 16 byte MAC is appended to the ciphertext.
 
     message-ciphertext: 0xa5d12a2d94b8ccb3ba55558229867dc13bfa3648
