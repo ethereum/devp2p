@@ -443,7 +443,7 @@ to refuse serving it via PooledTransactions. This situation can arise when the t
 is included in a block (and removed from the pool) in between the announcement and the
 request.
 
-A peer may respond with an empty list iff none of the hashes match transactions in its
+A peer may respond with an empty list if none of the hashes match transactions in its
 pool.
 
 ### GetReceipts (0x0f)
