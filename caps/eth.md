@@ -204,6 +204,10 @@ Ethereum blocks are encoded as follows:
         block-nonce: B_8,
         basefee-per-gas: P,
         withdrawals-root: B_32,
+        blob-gas-used: P,
+        excess-blob-gas: P,
+        parent-beacon_root: B_32,
+        requests-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -228,6 +232,11 @@ headers are processed in sequence during chain synchronization, the following ru
   no ommer headers can exist.
 - `withdrawals-root` must be present in headers after the [Shanghai fork]. The field must
   be absent for blocks before the fork. This rule was added by [EIP-4895].
+- `blob-gas-used`, `excess-blob-gas`, `parent-beacon-root`, must be present in headers
+  after the [Cancun fork], and absent for earlier blocks. This rule was
+  added by [EIP-4844] and [EIP-4788].
+- `requests-hash` must be present in headers after the [Prague fork], and absent for
+  earlier blocks. This rule was added by [EIP-7685].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -608,11 +617,16 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [transaction types]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[EIP-4788]: https://eips.ethereum.org/EIPS/eip-4788
 [EIP-4895]: https://eips.ethereum.org/EIPS/eip-4895
+[EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
+[EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
+[Cancun fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
+[Prague fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/prague.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
