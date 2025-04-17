@@ -277,7 +277,9 @@ disconnect peers sending invalid blocks.
 
 ### Receipt Encoding and Validity
 
-Receipts are the output of the EVM state transition of a transaction.
+Receipts are the output of the EVM state transition of a transaction. They are made
+available for the purpose of syncing the chain without re-executing transactions. All
+receipts have the same encoding regardless of transaction type.
 
     receiptₙ = [
         tx-type: P,
