@@ -491,23 +491,22 @@ The recommended soft limit for Receipts responses is 2 MiB.
 
 ### BlockRangeUpdate (0x11)
 
-`[earliestBlock: P, latestBlock: P, latestBlockHash: B_32]`
+`[earliest: P, latest: P, latestHash: B_32]`
 
 This is a notification about a change in the available block range on a peer.
 
-With this message, the peer announces that all blocks `b` with `earliestBlock >= b >=
-latestBlock` are available via [GetBlockBodies], and also that receipts for these blocks
-are available via [GetReceipts]. Headers are always assumed to be available for the full
-range of blocks from genesis.
+With this message, the peer announces that all blocks `b` with `earliest >= b >= latest`
+are available via [GetBlockBodies], and also that receipts for these blocks are available
+via [GetReceipts]. Headers are always assumed to be available for the full range of blocks
+from genesis.
 
 The notification doesn't need to be sent for every update to the node's head block. It is
 recommended to send an update about once every two minutes. Clients should validate
 received updates:
 
-- If `earliestBlock > latestBlock`, the peer should be disconnected.
-- `earliestBlock` should be meaningful for the network that is being run, i.e. clients
-  must ensure that their peers are not trying to freeload by only keeping a very short
-  range.
+- If `earliest > latest`, the peer should be disconnected.
+- `earliest` should be meaningful for the network that is being run, i.e. clients must
+  ensure that their peers are not trying to freeload by only keeping a very short range.
 - Updates can be used to detect the condition where a node is surrounded by syncing peers.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
