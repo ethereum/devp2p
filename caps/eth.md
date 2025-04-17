@@ -10,9 +10,9 @@ Once a connection is established, a [Status] message must be sent. Following the
 of the peer's Status message, the Ethereum session is active and any other message may be
 sent.
 
-Within a session, three high-level tasks can be performed: chain synchronization, block
-propagation and transaction exchange. These tasks use disjoint sets of protocol messages
-and clients typically perform them as concurrent activities on all peer connections.
+Within a session, two high-level tasks can be performed: chain synchronization, and
+transaction exchange. These tasks use disjoint sets of protocol messages and clients
+typically perform them as concurrent activities on all peer connections.
 
 Client implementations should enforce limits on protocol message sizes. The underlying
 RLPx transport limits the size of a single message to 16.7 MiB. The practical limits for
@@ -27,9 +27,15 @@ connection.
 
 ### Chain Synchronization
 
-Nodes participating in the eth protocol are expected to have knowledge of the chain of all
-blocks from the genesis block to current, latest block. The chain is obtained by
-downloading it from other peers.
+The chain is obtained by downloading it from other peers. It is generally expected that
+nodes respond to requests for headers, bodies, and receipts across the entire history
+range. However, due to the large size of the mainnet, it was decided that early chain
+history must be obtained in other ways, outside of the eth protocol, since it may not be
+possible for all nodes to store the full mainnet history in perpetuity and provide random
+access to it. As such, the protocol also provides means to announce the block range which
+is available from a peer. For the Ethereum mainnet, client implementations must deal with
+the absence of history on the eth protocol by either not syncing it at all, or by syncing
+it via alternative means.
 
 Since Ethereum consensus happens outside of the 'execution chain', there is no builtin
 mechanism within this protocol to determine the canonical chain head. It is assumed that
