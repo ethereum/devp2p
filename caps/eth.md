@@ -208,7 +208,7 @@ Ethereum block headers are encoded as follows:
         withdrawals-root: B_32,
         blob-gas-used: P,
         excess-blob-gas: P,
-        parent-beacon_root: B_32,
+        parent-beacon-root: B_32,
         requests-hash: B_32,
     ]
 
