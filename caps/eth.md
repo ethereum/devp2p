@@ -180,12 +180,8 @@ operating under slightly different validation rules.
 
 ### Block Encoding and Validity
 
-Ethereum blocks are encoded as follows:
+Ethereum block headers are encoded as follows:
 
-    block = [header, transactions, ommers]
-    transactions = [tx₁, tx₂, ...]
-    ommers = [header₁, header₂, ...]
-    withdrawals = [withdrawal₁, withdrawal₂, ...]
     header = [
         parent-hash: B_32,
         ommers-hash: B_32,
@@ -214,6 +210,13 @@ In certain protocol messages, the transaction and ommer lists are relayed togeth
 single item called the 'block body'.
 
     block-body = [transactions, ommers, withdrawals]
+    transactions = [tx₁, tx₂, ...]
+    ommers = [header₁, header₂, ...]
+    withdrawals = [withdrawal₁, withdrawal₂, ...]
+
+For the purpose of block propagation (now defunct), full blocks were relayed as a combined item:
+
+    block = [header, transactions, ommers]
 
 The validity of block headers depends on the context in which they are used. For a single
 block header, only the validity of the proof-of-work seal (`mix-digest`, `block-nonce`)
@@ -274,12 +277,12 @@ Receipts are the output of the EVM state transition of a transaction.
         tx-type: P,
         post-state-or-status: B,
         cumulative-gas: P,
-        logs: [log₁, log₂, ...]
+        logs: [log₁, log₂, ...],
     ]
     logₙ = [
         address: B_20,
         topics: [topic₁: B, topic₂: B, ...],
-        data: B
+        data: B,
     ]
 
 In the Ethereum Wire Protocol, receipts are always transferred as the complete list of all
