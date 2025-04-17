@@ -27,32 +27,40 @@ connection.
 
 ### Chain Synchronization
 
-Nodes participating in the eth protocol are expected to have knowledge of the complete
-chain of all blocks from the genesis block to current, latest block. The chain is obtained
-by downloading it from other peers.
+Nodes participating in the eth protocol are expected to have knowledge of the chain of all
+blocks from the genesis block to current, latest block. The chain is obtained by
+downloading it from other peers.
 
-Upon connection, both peers send their [Status] message, which includes the Total
-Difficulty (TD) and hash of their 'best' known block.
+Since Ethereum consensus happens outside of the 'execution chain', there is no builtin
+mechanism within this protocol to determine the canonical chain head. It is assumed that
+every node is aware of the canonical chain somehow, be it through communication with a
+consensus node, or by acting as a light client to the Ethereum consensus protocol.
 
-The client with the worst TD then proceeds to download block headers using the
-[GetBlockHeaders] message. It verifies proof-of-work values in received headers and
-fetches block bodies using the [GetBlockBodies] message. Received blocks are executed
-using the Ethereum Virtual Machine, recreating the state tree and receipts.
+With a known head of the chain, synchronization typically proceeds as follows: the node
+will first fetch headers from the head down to the genesis block, using [GetBlockHeaders].
+This process can be parallelized by first fetching a 'skeleton' structure of headers using
+the `skip` parameter, then filling in the gaps using multiple peers.
 
-Note that header downloads, block body downloads and block execution may happen
-concurrently.
+Once headers have been downloaded, the client can proceed to fetching the full blocks
+using [GetBlockBodies]. This can also utilize multiple peers since all block hashes are
+known from the header chain. Retrieved block bodies must be validated against the headers.
+The retrieved blocks are then executed by the EVM to obtain receipts and the state.
 
-### State Synchronization (a.k.a. "fast sync")
+### State Synchronization (a.k.a. "fast sync", "snap sync")
 
-Protocol versions eth/63 through eth/66 also allowed synchronizing the state tree. Since
-protocol version eth/67, the Ethereum state tree can no longer be retrieved using the eth
-protocol, and state downloads are provided by the auxiliary [snap protocol] instead.
+Protocol versions eth/63 through eth/66 also allowed synchronizing the state tree.
+Starting with version eth/67, the Ethereum state tree can no longer be retrieved using the
+eth protocol, and state downloads are provided by the auxiliary [snap protocol] instead.
 
-State synchronization typically proceeds by downloading the chain of block headers,
-verifying their validity. Block bodies are requested as in the Chain Synchronization
-section but transactions aren't executed, only their 'data validity' is verified. The
-client picks a block near the head of the chain (the 'pivot block') and downloads the
-state of that block.
+State synchronization typically proceeds by downloading the chain of block headers as
+above, Block bodies are requested as in the Chain Synchronization section but transactions
+aren't executed, only their 'data validity' is verified. The client picks a block near the
+head of the chain (the 'pivot block') and downloads the state of that block.
+
+Since state synchronization does not execute transactions, the node wouldn't have any of
+the receipts of execution available after synchronizing the state. In order to participate
+fully in the p2p protocol, receipts also need to be downloaded during state
+synchronization using the [GetReceipts] message.
 
 ### Block Propagation
 
@@ -256,7 +264,7 @@ Receipts are the output of the EVM state transition of a transaction.
     receiptₙ = [
         tx-type: P,
         post-state-or-status: B,
-        gas-used: P,
+        cumulative-gas: P,
         logs: [log₁, log₂, ...]
     ]
     logₙ = [
