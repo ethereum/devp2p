@@ -312,14 +312,14 @@ peer must mirror the value in the `request-id` element of the response message.
 
 ### Status (0x00)
 
-`[vsn: P, networkID: P, genesis: B_32, forkid, earliest: P, latest: P, latestHash: B_32]`
+`[vsn: P, networkid: P, genesis: B_32, forkid, earliest: P, latest: P, latestHash: B_32]`
 
 This is the initial message, informing the peer about the local node state and
 configuration. This message should be sent just after the connection is established and
 prior to any other eth protocol messages.
 
 - `vsn`: the current protocol version
-- `networkID`: integer identifying the blockchain, see table below
+- `networkid`: integer identifying the blockchain, see table below
 - `genesis`: the hash of the genesis block
 - `forkid`: An [EIP-2124] fork identifier, encoded as `[fork-hash, fork-next]`.
 
