@@ -10,7 +10,7 @@ Once a connection is established, a [Status] message must be sent. Following the
 of the peer's Status message, the Ethereum session is active and any other message may be
 sent.
 
-Within a session, two high-level tasks can be performed: chain synchronization, and
+Within a session, two high-level tasks can be performed: chain synchronization and
 transaction exchange. These tasks use disjoint sets of protocol messages and clients
 typically perform them as concurrent activities on all peer connections.
 
