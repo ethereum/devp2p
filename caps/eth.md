@@ -501,6 +501,10 @@ range of blocks from genesis.
 The notification doesn't need to be sent for every update to the node's head block. It is
 recommended to send an update about once every two minutes.
 
+Clients should validate that the announced range makes sense, i.e. `earliestBlock <= latestBlock`
+and `earliestBlock` should be meaningful for the network that is being run. In general, client
+implementations must take care not to disconnect syncing peers.
+
 ## Change Log
 
 ### eth/69 ([EIP-7642], April 2025)
