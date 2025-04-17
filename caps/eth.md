@@ -589,6 +589,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [PooledTransactions]: #pooledtransactions-0x0a
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
+[BlockRangeUpdate]: #blockrangeupdate-0x11
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
