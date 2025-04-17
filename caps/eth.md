@@ -255,7 +255,7 @@ Receipts are the output of the EVM state transition of a transaction.
 
     receiptₙ = [
         tx-type: P,
-        status: B,
+        post-state-or-status: B,
         gas-used: P,
         logs: [log₁, log₂, ...]
     ]
