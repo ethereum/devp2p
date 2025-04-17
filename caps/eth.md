@@ -299,7 +299,7 @@ is valid and known. When a list of block receipts is received by a peer, it must
 verified by computing and comparing the merkle trie hash of the list against the
 `receipts-root` of the block. Note that in order to perform this verification, the
 receipts need to be re-encoded into the format used by the Ethereum consensus protocol,
-and their bloom filter has to be recomputed.
+and their bloom filters have to be recomputed.
 
 Since the valid list of receipts is determined by the EVM state transition, it is not
 necessary to define any further validity rules for receipts in this specification.
