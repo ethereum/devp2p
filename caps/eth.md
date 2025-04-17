@@ -244,7 +244,7 @@ headers are processed in sequence during chain synchronization, the following ru
 - `blob-gas-used`, `excess-blob-gas`, `parent-beacon-root`, must be present in headers
   after the [Cancun fork], and absent for earlier blocks. This rule was
   added by [EIP-4844] and [EIP-4788].
-- `requests-hash` must be present in headers after the [Prague fork], and absent for
+- `requests-hash` must be present in headers after the Prague fork, and absent for
   earlier blocks. This rule was added by [EIP-7685].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
@@ -604,7 +604,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 - `0x1c` for PoC-6
 
 [block propagation]: #block-propagation
-[state synchronization]: #state-synchronization-aka-fast-sync
+[state synchronization]: #state-synchronization-aka-fast-sync-snap-sync
 [snap protocol]: ./snap.md
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
@@ -641,5 +641,4 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Cancun fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
-[Prague fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/prague.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
