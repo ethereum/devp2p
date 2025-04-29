@@ -502,11 +502,9 @@ from genesis.
 
 The notification doesn't need to be sent for every update to the node's head block. It is
 recommended to send an update about once every two minutes. Clients should validate
-received updates:
+received updates.
 
 - If `earliest > latest`, the peer should be disconnected.
-- `earliest` should be meaningful for the network that is being run, i.e. clients must
-  ensure that their peers are not trying to freeload by only keeping a very short range.
 - Updates can be used to detect the condition where a node is surrounded by syncing peers.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
