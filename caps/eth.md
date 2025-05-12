@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/68**. See end
+blockchain information between peers. The current protocol version is **eth/69**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -10,9 +10,9 @@ Once a connection is established, a [Status] message must be sent. Following the
 of the peer's Status message, the Ethereum session is active and any other message may be
 sent.
 
-Within a session, three high-level tasks can be performed: chain synchronization, block
-propagation and transaction exchange. These tasks use disjoint sets of protocol messages
-and clients typically perform them as concurrent activities on all peer connections.
+Within a session, two high-level tasks can be performed: chain synchronization and
+transaction exchange. These tasks use disjoint sets of protocol messages and clients
+typically perform them as concurrent activities on all peer connections.
 
 Client implementations should enforce limits on protocol message sizes. The underlying
 RLPx transport limits the size of a single message to 16.7 MiB. The practical limits for
@@ -27,32 +27,46 @@ connection.
 
 ### Chain Synchronization
 
-Nodes participating in the eth protocol are expected to have knowledge of the complete
-chain of all blocks from the genesis block to current, latest block. The chain is obtained
-by downloading it from other peers.
+The chain is obtained by downloading it from other peers. It is generally expected that
+nodes respond to requests for headers, bodies, and receipts across the entire history
+range. However, due to the large size of the mainnet, it was decided that early chain
+history must be obtained in other ways, outside of the eth protocol, since it may not be
+possible for all nodes to store the full mainnet history in perpetuity and provide random
+access to it. As such, the protocol also provides means to announce the block range which
+is available from a peer. For the Ethereum mainnet, client implementations must deal with
+the absence of history on the eth protocol by either not syncing it at all, or by syncing
+it via alternative means.
 
-Upon connection, both peers send their [Status] message, which includes the Total
-Difficulty (TD) and hash of their 'best' known block.
+Since Ethereum consensus happens outside of the 'execution chain', there is no builtin
+mechanism within this protocol to determine the canonical chain head. It is assumed that
+every node is aware of the canonical chain somehow, be it through communication with a
+consensus node, or by acting as a light client to the Ethereum consensus protocol.
 
-The client with the worst TD then proceeds to download block headers using the
-[GetBlockHeaders] message. It verifies proof-of-work values in received headers and
-fetches block bodies using the [GetBlockBodies] message. Received blocks are executed
-using the Ethereum Virtual Machine, recreating the state tree and receipts.
+With a known head of the chain, synchronization typically proceeds as follows: the node
+will first fetch headers from the head down to the genesis block, using [GetBlockHeaders].
+This process can be parallelized by first fetching a 'skeleton' structure of headers using
+the `skip` parameter, then filling in the gaps using multiple peers.
 
-Note that header downloads, block body downloads and block execution may happen
-concurrently.
+Once headers have been downloaded, the client can proceed to fetching the full blocks
+using [GetBlockBodies]. This can also utilize multiple peers since all block hashes are
+known from the header chain. Retrieved block bodies must be validated against the headers.
+The retrieved blocks are then executed by the EVM to obtain receipts and the state.
 
-### State Synchronization (a.k.a. "fast sync")
+### State Synchronization (a.k.a. "fast sync", "snap sync")
 
-Protocol versions eth/63 through eth/66 also allowed synchronizing the state tree. Since
-protocol version eth/67, the Ethereum state tree can no longer be retrieved using the eth
-protocol, and state downloads are provided by the auxiliary [snap protocol] instead.
+Protocol versions eth/63 through eth/66 also allowed synchronizing the state tree.
+Starting with version eth/67, the Ethereum state tree can no longer be retrieved using the
+eth protocol, and state downloads are provided by the auxiliary [snap protocol] instead.
 
-State synchronization typically proceeds by downloading the chain of block headers,
-verifying their validity. Block bodies are requested as in the Chain Synchronization
-section but transactions aren't executed, only their 'data validity' is verified. The
-client picks a block near the head of the chain (the 'pivot block') and downloads the
-state of that block.
+State synchronization typically proceeds by downloading the chain of block headers as
+above, Block bodies are requested as in the Chain Synchronization section but transactions
+aren't executed, only their 'data validity' is verified. The client picks a block near the
+head of the chain (the 'pivot block') and downloads the state of that block.
+
+Since state synchronization does not execute transactions, the node wouldn't have any of
+the receipts of execution available after synchronizing the state. In order to participate
+fully in the p2p protocol, receipts also need to be downloaded during state
+synchronization using the [GetReceipts] message.
 
 ### Block Propagation
 
@@ -172,12 +186,8 @@ operating under slightly different validation rules.
 
 ### Block Encoding and Validity
 
-Ethereum blocks are encoded as follows:
+Ethereum block headers are encoded as follows:
 
-    block = [header, transactions, ommers]
-    transactions = [tx₁, tx₂, ...]
-    ommers = [header₁, header₂, ...]
-    withdrawals = [withdrawal₁, withdrawal₂, ...]
     header = [
         parent-hash: B_32,
         ommers-hash: B_32,
@@ -196,12 +206,23 @@ Ethereum blocks are encoded as follows:
         block-nonce: B_8,
         basefee-per-gas: P,
         withdrawals-root: B_32,
+        blob-gas-used: P,
+        excess-blob-gas: P,
+        parent-beacon-root: B_32,
+        requests-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
 single item called the 'block body'.
 
     block-body = [transactions, ommers, withdrawals]
+    transactions = [tx₁, tx₂, ...]
+    ommers = [header₁, header₂, ...]
+    withdrawals = [withdrawal₁, withdrawal₂, ...]
+
+For the purpose of block propagation (now defunct), full blocks were relayed as a combined item:
+
+    block = [header, transactions, ommers]
 
 The validity of block headers depends on the context in which they are used. For a single
 block header, only the validity of the proof-of-work seal (`mix-digest`, `block-nonce`)
@@ -220,6 +241,11 @@ headers are processed in sequence during chain synchronization, the following ru
   no ommer headers can exist.
 - `withdrawals-root` must be present in headers after the [Shanghai fork]. The field must
   be absent for blocks before the fork. This rule was added by [EIP-4895].
+- `blob-gas-used`, `excess-blob-gas`, `parent-beacon-root`, must be present in headers
+  after the [Cancun fork], and absent for earlier blocks. This rule was
+  added by [EIP-4844] and [EIP-4788].
+- `requests-hash` must be present in headers after the Prague fork, and absent for
+  earlier blocks. This rule was added by [EIP-7685].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -251,39 +277,32 @@ disconnect peers sending invalid blocks.
 
 ### Receipt Encoding and Validity
 
-Receipts are the output of the EVM state transition of a block. Like transactions,
-receipts have two distinct encodings and we will refer to either encoding using the
-identifier `receiptₙ`.
+Receipts are the output of the EVM state transition of a transaction. They are made
+available for the purpose of syncing the chain without re-executing transactions. All
+receipts have the same encoding regardless of transaction type.
 
-    receipt = {legacy-receipt, typed-receipt}
-
-Untyped, legacy receipts are encoded as follows:
-
-    legacy-receipt = [
-        post-state-or-status: {B_32, {0, 1}},
+    receiptₙ = [
+        tx-type: P,
+        post-state-or-status: B,
         cumulative-gas: P,
-        bloom: B_256,
-        logs: [log₁, log₂, ...]
+        logs: [log₁, log₂, ...],
     ]
-    log = [
-        contract-address: B_20,
+    logₙ = [
+        address: B_20,
         topics: [topic₁: B, topic₂: B, ...],
-        data: B
+        data: B,
     ]
-
-[EIP-2718] typed receipts are encoded as RLP byte arrays where the first byte gives the
-receipt type (matching `tx-type`) and the remaining bytes are opaque data specific to the
-type.
-
-    typed-receipt = tx-type || receipt-data
 
 In the Ethereum Wire Protocol, receipts are always transferred as the complete list of all
 receipts contained in a block. It is also assumed that the block containing the receipts
 is valid and known. When a list of block receipts is received by a peer, it must be
 verified by computing and comparing the merkle trie hash of the list against the
-`receipts-root` of the block. Since the valid list of receipts is determined by the EVM
-state transition, it is not necessary to define any further validity rules for receipts in
-this specification.
+`receipts-root` of the block. Note that in order to perform this verification, the
+receipts need to be re-encoded into the format used by the Ethereum consensus protocol,
+and their bloom filters have to be recomputed.
+
+Since the valid list of receipts is determined by the EVM state transition, it is not
+necessary to define any further validity rules for receipts in this specification.
 
 ## Protocol Messages
 
@@ -293,17 +312,23 @@ peer must mirror the value in the `request-id` element of the response message.
 
 ### Status (0x00)
 
-`[version: P, networkid: P, td: P, blockhash: B_32, genesis: B_32, forkid]`
+`[vsn: P, networkid: P, genesis: B_32, forkid, earliest: P, latest: P, latestHash: B_32]`
 
-Inform a peer of its current state. This message should be sent just after the connection
-is established and prior to any other eth protocol messages.
+This is the initial message, informing the peer about the local node state and
+configuration. This message should be sent just after the connection is established and
+prior to any other eth protocol messages.
 
-- `version`: the current protocol version
+- `vsn`: the current protocol version
 - `networkid`: integer identifying the blockchain, see table below
-- `td`: total difficulty of the best chain. Integer, as found in block header.
-- `blockhash`: the hash of the best (i.e. highest TD) known block
 - `genesis`: the hash of the genesis block
 - `forkid`: An [EIP-2124] fork identifier, encoded as `[fork-hash, fork-next]`.
+
+The Status message also announces the available block range. See [BlockRangeUpdate] for
+more information.
+
+- `earliest`: number of the earliest available full block
+- `latest`: number of the latest available full block number
+- `latestHash`: hash of the latest available full block
 
 This table lists common Network IDs and their corresponding networks. Other IDs exist
 which aren't listed, i.e. clients should not require that any particular network ID is
@@ -464,7 +489,34 @@ contain the complete list of receipts of the block.
 
 The recommended soft limit for Receipts responses is 2 MiB.
 
+### BlockRangeUpdate (0x11)
+
+`[earliest: P, latest: P, latestHash: B_32]`
+
+This is a notification about a change in the available block range on a peer.
+
+With this message, the peer announces that all blocks `b` with `earliest >= b >= latest`
+are available via [GetBlockBodies], and also that receipts for these blocks are available
+via [GetReceipts]. Headers are always assumed to be available for the full range of blocks
+from genesis.
+
+The notification doesn't need to be sent for every update to the node's head block. It is
+recommended to send an update about once every two minutes. Clients should validate
+received updates.
+
+- If `earliest > latest`, the peer should be disconnected.
+- Updates can be used to detect the condition where a node is surrounded by syncing peers.
+  At the same time, client implementations must take care to not disconnect all syncing
+  peers purely on the basis of their BlockRangeUpdate.
+
 ## Change Log
+
+### eth/69 ([EIP-7642], April 2025)
+
+Version 69 changed the [Status] message to include information about the available block
+range. A new [BlockRangeUpdate] message was added to notify peers about changes in block
+range. The [Receipts] message was changed to simplify the encoding of typed receipts and
+to remove the bloom filter.
 
 ### eth/68 ([EIP-5793], October 2022)
 
@@ -556,7 +608,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 - `0x1c` for PoC-6
 
 [block propagation]: #block-propagation
-[state synchronization]: #state-synchronization-aka-fast-sync
+[state synchronization]: #state-synchronization-aka-fast-sync-snap-sync
 [snap protocol]: ./snap.md
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
@@ -571,6 +623,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [PooledTransactions]: #pooledtransactions-0x0a
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
+[BlockRangeUpdate]: #blockrangeupdate-0x11
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -581,10 +634,15 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [transaction types]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[EIP-4788]: https://eips.ethereum.org/EIPS/eip-4788
 [EIP-4895]: https://eips.ethereum.org/EIPS/eip-4895
+[EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
+[EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
+[EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
+[Cancun fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
