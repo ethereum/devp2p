@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 Welcome to the Node Discovery Protocol v5 specification!
 

@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Theory
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 This document explains the algorithms and data structures used by the protocol.
 
@@ -191,13 +191,13 @@ pending when WHOAREYOU is received, as in the following example:
 
     A -> B   FINDNODE
     A -> B   PING
-    A -> B   TOPICQUERY
+    A -> B   TALKREQ
     A <- B   WHOAREYOU (nonce references PING)
 
 When this happens, all buffered requests can be considered invalid (the remote end cannot
 decrypt them) and the packet referenced by the WHOAREYOU `nonce` (in this example: PING)
 must be re-sent as a handshake. When the response to the re-sent is received, the new
-session is established and other pending requests (example: FINDNODE, TOPICQUERY) may be
+session is established and other pending requests (example: FINDNODE, TALKREQ) may be
 re-sent.
 
 Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
@@ -334,204 +334,102 @@ the distance to retrieve more nodes from adjacent k-buckets on `B`:
 Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
 repeating the lookup procedure on another, closer node.
 
-## Topic Advertisement
+## Hole-punching Asymmetric NATs
 
-The topic advertisement subsystem indexes participants by their provided services. A
-node's provided services are identified by arbitrary strings called 'topics'. A node
-providing a certain service is said to 'place an ad' for itself when it makes itself
-discoverable under that topic. Depending on the needs of the application, a node can
-advertise multiple topics or no topics at all. Every node participating in the discovery
-protocol acts as an advertisement medium, meaning that it accepts topic ads from other
-nodes and later returns them to nodes searching for the same topic.
+This section explains the hole punching mechanism built into the protocol, which is
+enabled by the [RELAYINIT] and [RELAYMSG] message types. Compared to other protocol
+messages, these require deeper interaction with the session layer in order to ensure the
+hole punching mechanism operates safely.
 
-### Topic Table
+In the examples below, we assume that node `A` (Alice) has the goal of sending a request
+message (e.g. FINDNODE) to node `B` (Bob).
 
-Nodes store ads for any number of topics and a limited number of ads for each topic. The
-data structure holding advertisements is called the 'topic table'. The list of ads for a
-particular topic is called the 'topic queue' because it functions like a FIFO queue of
-limited length. The image below depicts a topic table containing three queues. The queue
-for topic `T₁` is at capacity.
+Bob operates behind a network-adress-translation (NAT) layer, and is unable to receive UDP
+packets from Alice initially. However, Bob has previously communicated with a third node
+`R` (Relay), and is able to receive incoming packets from the Relay node. We further
+assume Bob's NAT is 'asymmetric', i.e. the IP/Port of Bob's packets will be the same
+regardless of the host they are sent to. The hole-punching mechanism does not work for
+'symmetric' NAT where every destination host has a unique mapping.
 
-![topic table](./img/topic-queue-diagram.png)
+Node Alice may or may not behind a symmetric NAT.
 
-The queue size limit is implementation-defined. Implementations should place a global
-limit on the number of ads in the topic table regardless of the topic queue which contains
-them. Reasonable limits are 100 ads per queue and 50000 ads across all queues. Since ENRs
-are at most 300 bytes in size, these limits ensure that a full topic table consumes
-approximately 15MB of memory.
+Finally, it is assumed that a common lower bound on lifetime of NAT mappings is 20
+seconds, and that mappings will be refreshed when any packet is sent through them. For
+more background information about common NAT setups, please consult [RFC4787], [RFC6146]
+and [this paper][natpaper].
 
-Any node may appear at most once in any topic queue, that is, registration of a node which
-is already registered for a given topic fails. Implementations may impose other
-restrictions on the table, such as restrictions on the number of IP-addresses in a certain
-range or number of occurrences of the same node across queues.
+### Message flow
 
-### Tickets
+In the wire protocol, there are four packet types. Since the NAT-related messages require
+deeper integration with the packet/session layer, the packet type is explicitly shown for
+each message in the diagram below. We use these abbreviations:
 
-Ads should remain in the queue for a constant amount of time, the `target-ad-lifetime`. To
-maintain this guarantee, new registrations are throttled and registrants must wait for a
-certain amount of time before they are admitted. When a node attempts to place an ad, it
-receives a 'ticket' which tells them how long they must wait before they will be accepted.
-It is up to the registrant node to keep the ticket and present it to the advertisement
-medium when the waiting time has elapsed.
+- whoareyou - [WHOAREYOU packet]
+- `m(X)`: [message packet] containing request `X`
+- `H(X)`: [handshake message packet] containing request `X`
+- `s(M)`: [session message packet] containing message `M`
 
-The waiting time constant is:
+![Diagram](./img/nat-hole-punching-flow.svg) <!-- source: ./img/nat-hole-punching-flow.mermaid -->
 
-    target-ad-lifetime = 15min
+Preconditions: Bob is behind NAT. Bob is contained in Relay's node table, they have an
+established session and Bob has sent a packet to Relay in the last ~20 seconds hence Relay
+can get through Bob's NAT.
 
-The assigned waiting time for any registration attempt is determined according to the
-following rules:
+As part of recursive query for peers, Alice sends a [FINDNODE] request to Bob, who's ENR
+it just received from the Relay. By making an outgoing request to Bob, if Alice is behind
+NAT, Alice's NAT adds a mapping `(Alice's-LAN-ip, Alice's-LAN-port, Bob's-WAN-ip,
+Bob's-WAN-port, entry-lifetime)`. This means a hole now is punched for Bob in Alice's NAT
+for the duration of `entry-lifetime`. However, Alice's request is not delivered as Bob is
+behind NAT.
 
-- When the table is full, the waiting time is assigned based on the lifetime of the oldest
-  ad across the whole table, i.e. the registrant must wait for a table slot to become
-  available.
-- When the topic queue is full, the waiting time depends on the lifetime of the oldest ad
-  in the queue. The assigned time is `target-ad-lifetime - oldest-ad-lifetime` in this
-  case.
-- Otherwise the ad may be placed immediately.
+Alice detects the timeout, and initiates an attempt to punch a hole in Bob's NAT via
+Relay. Alice resets the request time-out on the timed out [FINDNODE] message and wraps the
+message's nonce in a [RELAYINIT] notification and sends it to Relay. The notification also
+contains its ENR and Bob's node ID.
 
-Tickets are opaque objects storing arbitrary information determined by the issuing node.
-While details of encoding and ticket validation are up to the implementation, tickets must
-contain enough information to verify that:
+The Relay node validates the [RELAYINIT] notification and uses the `target-id` to look up
+Bob's ENR in its node table. Bob is very likely to be a member of the Relay's table
+because it was just sent to Alice in a [NODES] response. Note that, if Bob is not
+contained in the table, communication ends here.
 
-- The node attempting to use the ticket is the node which requested it.
-- The ticket is valid for a single topic only.
-- The ticket can only be used within the registration window.
-- The ticket can't be used more than once.
+The Relay sends a [RELAYMSG] notification containing Alice's message nonce and ENR to Bob.
 
-Implementations may choose to include arbitrary other information in the ticket, such as
-the cumulative wait time spent by the advertiser. A practical way to handle tickets is to
-encrypt and authenticate them with a dedicated secret key:
+Bob disassembles the [RELAYMSG] and uses the `nonce` to assemble a [WHOAREYOU packet],
+then sends it to Alice. Bob knows about Alice's endpoint from the `initiator-enr` given in
+RELAYMSG.
 
-    ticket       = aesgcm_encrypt(ticket-key, ticket-nonce, ticket-pt, '')
-    ticket-pt    = [src-node-id, src-ip, topic, req-time, wait-time, cum-wait-time]
-    src-node-id  = node ID that requested the ticket
-    src-ip       = IP address that requested the ticket
-    topic        = the topic that ticket is valid for
-    req-time     = absolute time of REGTOPIC request
-    wait-time    = waiting time assigned when ticket was created
-    cum-wait     = cumulative waiting time of this node
+Bob's NAT adds the mapping `(Bob's-LAN-ip, Bob's-LAN-port, Alice's-WAN-ip,
+Alice's-WAN-port, entry-lifetime)`. A hole is punched in Bob's NAT for Alice for the
+duration of `entry-lifetime`.
 
-### Registration Window
+From here on it's business as usual. See [Sessions].
 
-The image below depicts a single ticket's validity over time. When the ticket is issued,
-the node keeping it must wait until the registration window opens. The length of the
-registration window is 10 seconds. The ticket becomes invalid after the registration
-window has passed.
+### Redundancy of ENRs in NODES responses and connectivity status assumptions about Relay and Bob
 
-![ticket validity over time](./img/ticket-validity.png)
+Often the same peers get passed around in NODES responses by different peers. The chance
+of seeing a peer received in a NODES response again in another NODES response is high as
+k-buckets favour long lived connections to new ones. This makes the need for a storing
+back up relays for peers small.
 
-Since all ticket waiting times are assigned to expire when a slot in the queue opens, the
-advertisement medium may receive multiple valid tickets during the registration window and
-must choose one of them to be admitted in the topic queue. The winning node is notified
-using a [REGCONFIRMATION] response.
-
-Picking the winner can be achieved by keeping track of a single 'next ticket' per queue
-during the registration window. Whenever a new ticket is submitted, first determine its
-validity and compare it against the current 'next ticket' to determine which of the two is
-better according to an implementation-defined metric such as the cumulative wait time
-stored in the ticket.
-
-### Advertisement Protocol
-
-This section explains how the topic-related protocol messages are used to place an ad.
-
-Let us assume that node `A` provides topic `T`. It selects node `C` as advertisement
-medium and wants to register an ad, so that when node `B` (who is searching for topic `T`)
-asks `C`, `C` can return the registration entry of `A` to `B`.
-
-Node `A` first attempts to register without a ticket by sending [REGTOPIC] to `C`.
-
-    A -> C  REGTOPIC [T, ""]
-
-`C` replies with a ticket and waiting time.
-
-    A <- C  TICKET [ticket, wait-time]
-
-Node `A` now waits for the duration of the waiting time. When the wait is over, `A` sends
-another registration request including the ticket. `C` does not need to remember its
-issued tickets since the ticket is authenticated and contains enough information for `C`
-to determine its validity.
-
-    A -> C  REGTOPIC [T, ticket]
-
-Node `C` replies with another ticket. Node `A` must keep this ticket in place of the
-earlier one, and must also be prepared to handle a confirmation call in case registration
-was successful.
-
-    A <- C  TICKET [ticket, wait-time]
-
-Node `C` waits for the registration window to end on the queue and selects `A` as the node
-which is registered. Node `C` places `A` into the topic queue for `T` and sends a
-[REGCONFIRMATION] response.
-
-    A <- C  REGCONFIRMATION [T]
-
-### Ad Placement And Topic Radius
-
-Since every node may act as an advertisement medium for any topic, advertisers and nodes
-looking for ads must agree on a scheme by which ads for a topic are distributed. When the
-number of nodes advertising a topic is at least a certain percentage of the whole
-discovery network (rough estimate: at least 1%), ads may simply be placed on random nodes
-because searching for the topic on randomly selected nodes will locate the ads quickly enough.
-
-However, topic search should be fast even when the number of advertisers for a topic is
-much smaller than the number of all live nodes. Advertisers and searchers must agree on a
-subset of nodes to serve as advertisement media for the topic. This subset is simply a
-region of the node ID address space, consisting of nodes whose Kademlia address is within a
-certain distance to the topic hash `sha256(T)`. This distance is called the 'topic
-radius'.
-
-Example: for a topic `f3b2529e...` with a radius of 2^240, the subset covers all nodes
-whose IDs have prefix `f3b2...`. A radius of 2^256 means the entire network, in which case
-advertisements are distributed uniformly among all nodes. The diagram below depicts a
-region of the address space with topic hash `t` in the middle and several nodes close to
-`t` surrounding it. Dots above the nodes represent entries in the node's queue for the
-topic.
-
-![diagram explaining the topic radius concept](./img/topic-radius-diagram.png)
-
-To place their ads, participants simply perform a random walk within the currently
-estimated radius and run the advertisement protocol by collecting tickets from all nodes
-encountered during the walk and using them when their waiting time is over.
-
-### Topic Radius Estimation
-
-Advertisers must estimate the topic radius continuously in order to place their ads on
-nodes where they will be found. The radius mustn't fall below a certain size because
-restricting registration to too few nodes leaves the topic vulnerable to censorship and
-leads to long waiting times. If the radius were too large, searching nodes would take too
-long to find the ads.
-
-Estimating the radius uses the waiting time as an indicator of how many other nodes are
-attempting to place ads in a certain region. This is achieved by keeping track of the
-average time to successful registration within segments of the address space surrounding
-the topic hash. Advertisers initially assume the radius is 2^256, i.e. the entire network.
-As tickets are collected, the advertiser samples the time it takes to place an ad in each
-segment and adjusts the radius such that registration at the chosen distance takes
-approximately `target-ad-lifetime / 2` to complete.
-
-## Topic Search
-
-Finding nodes that provide a certain topic is a continuous process which reads the content
-of topic queues inside the approximated topic radius. This is a much simpler process than
-topic advertisement because collecting tickets and waiting on them is not required.
-
-To find nodes for a topic, the searcher generates random node IDs inside the estimated
-topic radius and performs Kademlia lookups for these IDs. All (intermediate) nodes
-encountered during lookup are asked for topic queue entries using the [TOPICQUERY] packet.
-
-Radius estimation for topic search is similar to the estimation procedure for
-advertisement, but samples the average number of results from TOPICQUERY instead of
-average time to registration. The radius estimation value can be shared with the
-registration algorithm if the same topic is being registered and searched for.
+Apart from the state that is saved by not storing more than the last peer to send us an
+ENR as its potential relay, the longer time that has passed since a peer sent us an ENR,
+the less guarantee we have that the peer is in fact connected to the owner of that ENR and
+hence of its ability to relay.
 
 [EIP-778]: ../enr.md
 [identity scheme]: ../enr.md#record-structure
+[message packet]: ./discv5-wire.md#ordinary-message-packet-flag--0
+[session message packet]: ./discv5-wire.md#session-message-packet-flag--3
 [handshake message packet]: ./discv5-wire.md#handshake-message-packet-flag--2
 [WHOAREYOU packet]: ./discv5-wire.md#whoareyou-packet-flag--1
 [PING]: ./discv5-wire.md#ping-request-0x01
 [PONG]: ./discv5-wire.md#pong-response-0x02
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
-[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
-[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x09
-[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x0a
+[NODES]: ./discv5-wire.md#nodes-response-0x04
+[RELAYINIT]: ./discv5-wire.md#relayinit-notification-0x07
+[RELAYMSG]: ./discv5-wire.md#relaymsg-notification-0x08
+
+[Sessions]: ./discv5-theory.md#sessions
+[natpaper]: https://pdos.csail.mit.edu/papers/p2pnat.pdf
+[RFC4787]: https://datatracker.ietf.org/doc/html/rfc4787
+[RFC6146]: https://datatracker.ietf.org/doc/html/rfc6146
