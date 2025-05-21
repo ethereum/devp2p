@@ -1,0 +1,21 @@
+tr:first-of-type > td:first-of-type {
+    transform: rotate(0);
+}
+
+tr:first-of-type > td {
+    white-space: nowrap;
+    transform: translate(20px, -15px) rotate(-45deg);
+    padding: 5px 10px;
+}
+
+td:not(:first-child) {
+    text-align: center;
+    max-width: 30px;
+}
+
+/*
+ * Hack to keep column headers to be stripped off
+ */
+div {
+    height: 30px;
+}
