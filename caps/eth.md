@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/69**. See end
+blockchain information between peers. The current protocol version is **eth/70**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -361,11 +361,13 @@ of the sending node.
 
 ### Transactions (0x02)
 
-`[tx₁, tx₂, ...]`
+`[[tx₁, tx₂, ...], custodyids: B]`
 
 Specify transactions that the peer should make sure is included on its transaction queue.
 The items in the list are transactions in the format described in the main Ethereum
-specification. Transactions messages must contain at least one (new) transaction, empty
+specification. The custodyids element is a bitmap representing which cell IDs in transaction 
+payloads are stored by the sending peer, with each stored cell’s index marked as 1. 
+Transactions messages must contain at least one (new) transaction, empty
 Transactions messages are discouraged and may lead to disconnection.
 
 Nodes must not resend the same transaction to a peer in the same session and must not
@@ -509,7 +511,46 @@ received updates.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
 
+### CellAvailability (0x12)
+
+`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], custodyids: B]`
+
+This message announces the cell availability of transaction payloads. 
+The list of vhash values represents the commitment hashes of payloads for which cells are available. 
+The custodyid element is a bitmap marking the IDs of cells in the transaction payload 
+stored by the sending peer, with each stored cell’s index set to 1.
+
+### GetCellAndProofs (0x13)
+
+`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], requestids: B]`
+
+This message request peer to return cells and proofs of the given versioned hash 
+of the payload commitment.
+The requestids element is a bitmap representing IDs of cells required.
+
+### CellAndProofs (0x14)
+
+`[request-id: P, [[vhash₁: B_32, [cellAndProof₁: B, cellAndProof₂: B, ...]], [vhash₂: B_32, [cellAndProof₁: B, cellAndProof₂: B, ...]], ...]]` 
+
+This is a response to GetCellAndProofs, which provides the requested cells and their proofs. 
+Each list element contains the versioned hash of the payload commitment that includes 
+the cell, the cell itself, and a proof to verify the cell’s inclusion. 
+Each element must match the vhash specified in the request. 
+The sender can skip any cells that are not available, so the requester can fetch them 
+from other peers.
+
+The cellAndProof element contains the cell data along with the proof needed to verify 
+that it belongs to the original payload. 
+While its structure can vary depending on the verification method, 
+it should allow the recipient to infer which cell IDs were skipped.
+
 ## Change Log
+
+### eth/70 ()
+
+Version 70 added the [CellAvailability] message to exchange custody information 
+which represents cell IDs sending peer has stored. New message types,
+[GetCellAndProofs] and [CellAndProofs] were introduced to support cell-level messaging.
 
 ### eth/69 ([EIP-7642], April 2025)
 
@@ -624,6 +665,9 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
+[CellAvailability]: #cellavailability-0x12
+[GetCellAndProofs]: #getcellandproofs-0x13
+[CellAndProofs]: #cellandproofs-0x14
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
