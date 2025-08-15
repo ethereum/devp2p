@@ -392,13 +392,11 @@ of the sending node.
 
 ### Transactions (0x02)
 
-`[[tx₁, tx₂, ...], custodyids: B]`
+`[tx₁, tx₂, ...]`
 
 Specify transactions that the peer should make sure is included on its transaction queue.
 The items in the list are transactions in the format described in the main Ethereum
-specification. The custodyids element is a bitmap representing which cell IDs in transaction 
-payloads are stored by the sending peer, with each stored cell’s index marked as 1. 
-Transactions messages must contain at least one (new) transaction, empty
+specification. Transactions messages must contain at least one (new) transaction, empty
 Transactions messages are discouraged and may lead to disconnection.
 
 Nodes must not resend the same transaction to a peer in the same session and must not
