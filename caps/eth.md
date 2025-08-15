@@ -129,8 +129,8 @@ Blob transaction carries one or more large objects called blobs, in addition to 
 transaction payload. The transaction also includes metadata that allows peers to verify 
 blob fragments (cells) they exchange over the network.
 
-- `cell`: Cell is a fragment of a blob, computed by splitting the blob and applying 
-the erasure-code defined in EIP-7594. In an extended blob, a cell can be identified by its index.
+- `cell`: Cell is computed by splitting the blob and applying the erasure-code defined in 
+[EIP-7594]. A cell can be identified in the erasure-coded blob by its `index`.
 
 - Commitment: Commitment is a cryptographic value bound to a blob. It is used in inclusion 
 verification to ensure that any given cell is part of the original blob.
@@ -138,10 +138,10 @@ verification to ensure that any given cell is part of the original blob.
 - Proof: Proof is a cell-specific data used during the inclusion verification of associated cell.
 
 - Versioned hash (`vhash`): Versioned hash is the identifier for a blob, which is calculated 
-taking the hash of the blob's commitment, prefixed with a version byte. Peers can specify 
-which blob's cells they want to request.
+taking the hash of the blob's commitment, prefixed with a version byte.
 
-Note that cells are not sent with the transaction itself but are exchanged separately between peers.
+Note that blobs are not sent directly with the transaction but are exchanged in the form of
+cells separately between peers.
 
 ### Cell Exchange
 
@@ -153,7 +153,6 @@ Clients can selectively store cells according to their local parameters.
 A node should never announce availability to a peer that it can infer to already 
 have the associated cell. This can be achieved by remembering set of versioned hashes 
 and cell indices announced by each peer.
-
 
 ### Transaction Encoding and Validity
 
@@ -707,6 +706,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
+[EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
