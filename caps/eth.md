@@ -123,6 +123,38 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
+### Blob Transaction
+
+Blob transaction carries one or more large objects called blobs, in addition to the normal 
+transaction payload. The transaction also includes metadata that allows peers to verify 
+blob fragments (cells) they exchange over the network.
+
+- `cell`: Cell is a fragment of a blob, computed by splitting the blob and applying 
+the erasure-code defined in EIP-7594. In an extended blob, a cell can be identified by its index.
+
+- Commitment: Commitment is a cryptographic value bound to a blob. It is used in inclusion 
+verification to ensure that any given cell is part of the original blob.
+
+- Proof: Proof is a cell-specific data used during the inclusion verification of associated cell.
+
+- Versioned hash (`vhash`): Versioned hash is the identifier for a blob, which is calculated 
+taking the hash of the blob's commitment, prefixed with a version byte. Peers can specify 
+which blob's cells they want to request.
+
+Note that cells are not sent with the transaction itself but are exchanged separately between peers.
+
+### Cell Exchange
+
+When a new cell is added to a peer's pool, it should be announced to the network using 
+the [CellAvailability] message. All peers that receive the message can request 
+the cell whose index is specified in the message using the [GetCells] message. 
+Clients can selectively store cells according to their local parameters. 
+
+A node should never announce availability to a peer that it can infer to already 
+have the associated cell. This can be achieved by remembering set of versioned hashes 
+and cell indices announced by each peer.
+
+
 ### Transaction Encoding and Validity
 
 Transaction objects exchanged by peers have one of two encodings. In definitions across
@@ -513,36 +545,28 @@ received updates.
 
 ### CellAvailability (0x12)
 
-`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], custodyids: B]`
+`[[vhash₁: B_32, vhash₂: B_32, ...], cells: B_16]`
 
 This message announces the cell availability of transaction payloads. 
-The list of vhash values represents the commitment hashes of payloads for which cells are available. 
-The custodyid element is a bitmap marking the IDs of cells in the transaction payload 
-stored by the sending peer, with each stored cell’s index set to 1.
+The list of `vhash` values represents the commitment hashes of payloads for which cells are available. 
+The `cells` element is a bitmap marking the indices of cells in the transaction payload 
+stored by the sending peer. For each cell stored by the peer the corresponding bit is set.
 
-### GetCellAndProofs (0x13)
+### GetCells (0x13)
 
-`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], requestids: B]`
+`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], cells : B]`
 
-This message request peer to return cells and proofs of the given versioned hash 
-of the payload commitment.
-The requestids element is a bitmap representing IDs of cells required.
+This message requests the peer to return cells of the given vhashes.
+The `cells` element, a bitmap, specifies indices of the requested cells.
 
-### CellAndProofs (0x14)
+### Cells (0x14)
 
-`[request-id: P, [[vhash₁: B_32, [cellAndProof₁: B, cellAndProof₂: B, ...]], [vhash₂: B_32, [cellAndProof₁: B, cellAndProof₂: B, ...]], ...]]` 
+`[request-id: P, [[vhash₁: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], [vhash₂: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], ...]]` 
 
-This is a response to GetCellAndProofs, which provides the requested cells and their proofs. 
-Each list element contains the versioned hash of the payload commitment that includes 
-the cell, the cell itself, and a proof to verify the cell’s inclusion. 
-Each element must match the vhash specified in the request. 
+This is the response to [GetCells]. 
+Each element must match the vhash and cells specified in the request. 
 The sender can skip any cells that are not available, so the requester can fetch them 
-from other peers.
-
-The cellAndProof element contains the cell data along with the proof needed to verify 
-that it belongs to the original payload. 
-While its structure can vary depending on the verification method, 
-it should allow the recipient to infer which cell IDs were skipped.
+from other peers. 
 
 ## Change Log
 
@@ -550,7 +574,7 @@ it should allow the recipient to infer which cell IDs were skipped.
 
 Version 70 added the [CellAvailability] message to exchange custody information 
 which represents cell IDs sending peer has stored. New message types,
-[GetCellAndProofs] and [CellAndProofs] were introduced to support cell-level messaging.
+[GetCells] and [Cells] were introduced to support cell-level messaging.
 
 ### eth/69 ([EIP-7642], April 2025)
 
@@ -666,8 +690,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
 [CellAvailability]: #cellavailability-0x12
-[GetCellAndProofs]: #getcellandproofs-0x13
-[CellAndProofs]: #cellandproofs-0x14
+[GetCells]: #getcells-0x13
+[Cells]: #cells-0x14
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
