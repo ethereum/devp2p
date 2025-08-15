@@ -570,7 +570,7 @@ from other peers.
 ### eth/70 ()
 
 Version 70 added the [CellAvailability] message to exchange custody information 
-which represents cell IDs sending peer has stored. New message types,
+which represents cell indicies sending peer has stored. New message types,
 [GetCells] and [Cells] were introduced to support cell-level messaging.
 
 ### eth/69 ([EIP-7642], April 2025)
