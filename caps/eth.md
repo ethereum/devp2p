@@ -551,7 +551,7 @@ stored by the sending peer. For each cell stored by the peer the corresponding b
 
 ### GetCells (0x13)
 
-`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], cells : B]`
+`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], cells : B_16]`
 
 This message requests the peer to return cells of the given vhashes.
 The `cells` element, a bitmap, specifies indices of the requested cells.
