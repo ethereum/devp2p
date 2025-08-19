@@ -123,32 +123,19 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
-### Blob Transaction
+### Blob Transaction and Cell Exchange
 
 Blob transaction carries one or more large objects called blobs, in addition to the normal 
-transaction payload. The transaction also includes metadata that allows peers to verify 
-blob fragments (cells) they exchange over the network.
+transaction payload. Blobs are not sent directly with the transaction but are exchanged 
+in the form of `Cell` separately between peers.
+Cells are computed by splitting the blob and applying the erasure-code defined in [EIP-7594]. 
+A cell has its `index`, according to its relative position in the erasure-coded blob.
 
-- `cell`: Cell is computed by splitting the blob and applying the erasure-code defined in 
-[EIP-7594]. A cell can be identified in the erasure-coded blob by its `index`.
-
-- Commitment: Commitment is a cryptographic value bound to a blob. It is used in inclusion 
-verification to ensure that any given cell is part of the original blob.
-
-- Proof: Proof is a cell-specific data used during the inclusion verification of associated cell.
-
-- Versioned hash (`vhash`): Versioned hash is the identifier for a blob, which is calculated 
-taking the hash of the blob's commitment, prefixed with a version byte.
-
-Note that blobs are not sent directly with the transaction but are exchanged in the form of
-cells separately between peers.
-
-### Cell Exchange
-
-When a new cell is added to a peer's pool, it should be announced to the network using 
-the [CellAvailability] message. All peers that receive the message can request 
-the cell whose index is specified in the message using the [GetCells] message. 
-Clients can selectively store cells according to their local parameters. 
+When a blob transaction is added to a peer's pool, availability of its cell should be announced 
+to the network using `cells` field in the [NewPooledTransactionHashes] message. 
+All peers that receive the message can request the cell whose index is specified in the 
+`cells` using the [GetCells] message. Clients can selectively store cells according to 
+their local parameters. 
 
 A node should never announce availability to a peer that it can infer to already 
 have the associated cell. This can be achieved by remembering set of versioned hashes 
@@ -449,11 +436,11 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
+`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...], cells: B_16]`
 
 This message announces one or more transactions that have appeared in the network and
 which have not yet been included in a block. The message payload describes a list of of
-transactions, but note that it is encoded as three separate elements.
+transactions, but note that it is encoded as four separate elements.
 
 The `txtypes` element is a byte array containing the announced [transaction types]. The
 other two payload elements refer to the sizes and hashes of the announced transactions.
@@ -462,6 +449,10 @@ All three payload elements must contain an equal number of items.
 `txsizeₙ` refers to the length of the 'consensus encoding' of a typed transaction, i.e.
 the byte size of `tx-type || tx-data` for typed transactions, and the size of the
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
+
+The `cells` element is a bitmap marking the indices of cells stored by the sending peer. 
+For each cell stored by the peer the corresponding bit is set. Note that blob transactions 
+with same cells field is being batched together.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
@@ -540,36 +531,28 @@ received updates.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
 
-### CellAvailability (0x12)
+### GetCells (0x12)
 
-`[[vhash₁: B_32, vhash₂: B_32, ...], cells: B_16]`
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
 
-This message announces the cell availability of transaction payloads. 
-The list of `vhash` values represents the commitment hashes of payloads for which cells are available. 
-The `cells` element is a bitmap marking the indices of cells in the transaction payload 
-stored by the sending peer. For each cell stored by the peer the corresponding bit is set.
-
-### GetCells (0x13)
-
-`[request-id: P, [vhash₁: B_32, vhash₂: B_32, ...], cells : B_16]`
-
-This message requests the peer to return cells of the given vhashes.
+This message requests the peer to return cells of the given txhashes.
 The `cells` element, a bitmap, specifies indices of the requested cells.
 
-### Cells (0x14)
+### Cells (0x13)
 
-`[request-id: P, [[vhash₁: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], [vhash₂: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], ...]]` 
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], ...]]` 
 
 This is the response to [GetCells]. 
-Each element must match the vhash and cells specified in the request. 
-The sender can skip any cells that are not available, so the requester can fetch them 
+Each element must match the txhash and cells specified in the request. The `cellₙ` field
+is an rlp encoded array that contains the cells for all blobs included in the transaction.
+The sender can skip any indices that are not available, so the requester can fetch them 
 from other peers. 
 
 ## Change Log
 
 ### eth/70 ()
 
-Version 70 added the [CellAvailability] message to exchange custody information 
+Version 70 changed the [NewPooledTransactionHashes] message to include custody information 
 which represents cell indicies sending peer has stored. New message types,
 [GetCells] and [Cells] were introduced to support cell-level messaging.
 
@@ -686,9 +669,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
-[CellAvailability]: #cellavailability-0x12
-[GetCells]: #getcells-0x13
-[Cells]: #cells-0x14
+[GetCells]: #getcells-0x12
+[Cells]: #cells-0x13
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
