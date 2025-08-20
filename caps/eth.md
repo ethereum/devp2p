@@ -126,16 +126,17 @@ relayed by the peer.
 ### Blob Transaction and Cell Exchange
 
 Blob transaction carries one or more large objects called blobs, in addition to the normal 
-transaction payload. Blobs are not sent directly with the transaction but are exchanged 
-in the form of `Cell` separately between peers.
-Cells are computed by splitting the blob and applying the erasure-code defined in [EIP-7594]. 
-A cell has its `index`, according to its relative position in the erasure-coded blob.
+transaction payload. Blobs are not sent directly with the transaction. Instead, they are 
+split into cells using the erasure code defined in [EIP-7594], and these cells are exchanged 
+separately between peers. Since a transaction can carry multiple blobs, cell exchange is 
+handled at the transaction level, which means that cells in the same transaction should be 
+delivered together.
 
 When a blob transaction is added to a peer's pool, availability of its cells should be 
 announced to the network using the `cells` field in the [NewPooledTransactionHashes] message. 
-The granularity of the `cells` is at the transaction level. If a bit is set, it indicates 
-that the peer holds the corresponding cell for all blobs included in the announced 
-transactions. All peers that receive the message can then request the cells whose indices are 
+If a bit is set, it indicates that the peer holds the corresponding cell for all blobs 
+included in the announced transactions. 
+All peers that receive the message can then request the cells whose indices are 
 specified in the cells field using the [GetCells] message. Clients can selectively store 
 cells according to their local parameters.
 
