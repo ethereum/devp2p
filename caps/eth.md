@@ -540,11 +540,10 @@ The `cells` element, a bitmap, specifies indices of the requested cells.
 
 ### Cells (0x13)
 
-`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B], [index₂: P, cell₂: B, ...]], ...]]` 
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B, cell₂: B], [index₂: P, cell₁: B, cell₂: B, ...]], ...]]` 
 
 This is the response to [GetCells]. 
-Each element must match the txhash and cells specified in the request. The `cellₙ` field
-is an rlp encoded array that contains the cells for all blobs included in the transaction.
+Each element must match the txhash and cells specified in the request.
 The sender can skip any indices that are not available, so the requester can fetch them 
 from other peers. 
 
