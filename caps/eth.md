@@ -132,10 +132,10 @@ Cells are computed by splitting the blob and applying the erasure-code defined i
 A cell has its `index`, according to its relative position in the erasure-coded blob.
 
 When a blob transaction is added to a peer's pool, availability of its cells should be 
-announced to the network using the cells field in the [NewPooledTransactionHashes] message. 
-If a bit in `cells` is set, it indicates that the peer holds the corresponding cell for all 
-blobs included in the announced transactions. 
-All peers that receive the message can then request the cells whose indices are 
+announced to the network using the `cells` field in the [NewPooledTransactionHashes] message. 
+The granularity of the `cells` is at the transaction level. If a bit is set, it indicates 
+that the peer holds the corresponding cell for all blobs included in the announced 
+transactions. All peers that receive the message can then request the cells whose indices are 
 specified in the cells field using the [GetCells] message. Clients can selectively store 
 cells according to their local parameters.
 
@@ -537,7 +537,7 @@ received updates.
 
 `[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
 
-This message requests the peer to return cells of the given txhashes.
+This message requests the peer to return cell data of the given txhashes.
 The `cells` element, a bitmap, specifies indices of the requested cells.
 
 ### Cells (0x13)
@@ -547,7 +547,9 @@ The `cells` element, a bitmap, specifies indices of the requested cells.
 This is the response to [GetCells]. 
 Each element must match the txhash and cells specified in the request.
 The sender can skip any indices that are not available, so the requester can fetch them 
-from other peers. 
+from other peers. Skipping is allowed only at the index level. The sender must return the 
+corresponding cells for all blobs included in the transaction and cannot skip cells belonging 
+to specific blobs.
 
 ## Change Log
 
