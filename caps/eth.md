@@ -540,7 +540,7 @@ The `cells` element, a bitmap, specifies indices of the requested cells.
 
 ### Cells (0x13)
 
-`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B, cell₂: B], [index₂: P, cell₁: B, cell₂: B, ...]], ...]]` 
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], ...]]` 
 
 This is the response to [GetCells]. 
 Each element must match the txhash and cells specified in the request.
