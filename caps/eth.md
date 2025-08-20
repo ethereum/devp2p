@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/70**. See end
+blockchain information between peers. The current protocol version is **eth/69**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -131,11 +131,13 @@ in the form of `Cell` separately between peers.
 Cells are computed by splitting the blob and applying the erasure-code defined in [EIP-7594]. 
 A cell has its `index`, according to its relative position in the erasure-coded blob.
 
-When a blob transaction is added to a peer's pool, availability of its cell should be announced 
-to the network using `cells` field in the [NewPooledTransactionHashes] message. 
-All peers that receive the message can request the cell whose index is specified in the 
-`cells` using the [GetCells] message. Clients can selectively store cells according to 
-their local parameters. 
+When a blob transaction is added to a peer's pool, availability of its cells should be 
+announced to the network using the cells field in the [NewPooledTransactionHashes] message. 
+If a bit in `cells` is set, it indicates that the peer holds the corresponding cell for all 
+blobs included in the announced transactions. 
+All peers that receive the message can then request the cells whose indices are 
+specified in the cells field using the [GetCells] message. Clients can selectively store 
+cells according to their local parameters.
 
 A node should never announce availability to a peer that it can infer to already 
 have the associated cell. This can be achieved by remembering set of versioned hashes 
@@ -549,7 +551,7 @@ from other peers.
 
 ## Change Log
 
-### eth/70 ()
+### eth/ ()
 
 Version 70 changed the [NewPooledTransactionHashes] message to include custody information 
 which represents cell indicies sending peer has stored. New message types,
