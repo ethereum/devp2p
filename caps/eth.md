@@ -484,10 +484,12 @@ All three payload elements must contain an equal number of items.
 the byte size of `tx-type || tx-data` for typed transactions, and the size of the
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
-The `cells` element is a bitmap marking the indices of cells stored by the sending peer. 
-For each cell stored by the peer the corresponding bit is set. 
-This field is only relevant when the transaction hash refers to a blob transaction.
-Blob transactions with identical cells values may be batched together in the same message.
+The cells element is a bitmap marking which cell indices can be fetched from the sending 
+peer. For each bit set to one, the peer stores the cell at that index in all blobs of the 
+transaction. A bit must be set only if the peer has the cell at that index in all blobs of 
+the transaction. This field is only relevant for those entries that refer to blob 
+transactions. Blob transactions with the same cells value may be announced together in a 
+batch within this message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
