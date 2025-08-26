@@ -486,7 +486,8 @@ RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
 The `cells` element is a bitmap marking the indices of cells stored by the sending peer. 
 For each cell stored by the peer the corresponding bit is set. Note that blob transactions 
-with same cells field is being batched together.
+with same cells field is being batched together. This field is only meaningful for blob 
+transactions included in the message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
@@ -571,17 +572,28 @@ received updates.
 
 This message requests the peer to return cell data of the given txhashes.
 The `cells` element, a bitmap, specifies indices of the requested cells.
+To prevent greedy peer from abusing the bandwidth and incentivize collective fetch, 
+a node should either set 4 bits ($1-p$) or 64 bits ($p$) on `cells` field.
+
 
 ### Cells (0x13)
 
-`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], [txhash₂: B_32, [index₁: P, cell₁: B, cell₂: B, ...], [index₂: P, cell₁: B, cell₂: B, ...]], ...]]` 
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
 
-This is the response to [GetCells]. 
-Each element must match the txhash and cells specified in the request.
-The sender can skip any indices that are not available, so the requester can fetch them 
-from other peers. However, skipping is allowed only at the index level. 
-The sender must return the corresponding cells for all blobs included in the transaction 
-and cannot skip cells belonging to specific blobs.
+This is the response to [GetCells].
+
+Each transaction hash is followed by one or more pairs consisting of an index and the 
+corresponding cells. The index specifies the position of a cell within a blob. 
+Blob transaction can contain multiple blobs, and the same index is applied to all of 
+them. If an index is included in the response, one cell must be returned from each 
+blob of the transaction at that index. The cells are listed in the order in which the 
+blobs appear in the transaction.
+
+A peer may omit entire transactions or entire indices if they are unavailable or 
+constrained. However, if an index is included for a transaction, cells for all blobs 
+of that transaction at that index must be returned.
+
+A peer may respond with an empty list if none of the requested cells are available.
 
 ## Change Log
 
