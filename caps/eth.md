@@ -174,12 +174,12 @@ announce availability to a peer if it can infer that the peer already holds the
 corresponding cell. This can be achieved by tracking the set of transaction hashes and cell 
 indices announced by each peer.
 
-To manage uplink bandwidth usage, a node may disconnect peers that issue excessive 
-requests. This can be enforced by monitoring factors such as the number of requested cells 
-over a given period. A client connected to a supernode that stores the entire custody set 
-should distribute its requests as evenly as possible. To avoid being banned by the peer, it 
-must also respect a probability parameter $p$. With probability $p$, it should request 50% 
-of the data from a single peer, and with probability $1 – p$, it should request subsets of 
+To manage uplink bandwidth usage, a node may disconnect peers that send excessive 
+requests. This can be enforced by monitoring metrics such as the number of requested cells 
+over a given period. A client that want to store the entire blob should distribute 
+its requests as evenly as possible. To avoid being banned by its peer, it 
+must also respect a probability parameter $p$. With probability $p$, it can request 50% 
+of the data from a single peer, but with probability $1 – p$, it should request subsets of 
 cells collectively from multiple peers.
 
 ### Transaction Encoding and Validity
