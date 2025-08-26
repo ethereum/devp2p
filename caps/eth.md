@@ -123,27 +123,34 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
+For additional rules for blob transactions, refer to the [blob transaction and cell exchange] 
+section.
+
 ### Blob Transaction and Cell Exchange
+
+This section describes additional constraints and node behaviours that apply only to blob 
+transactions, in addition to the ordinary transaction exchange.
 
 Blob transactions contain one or more 128 KiB fixed-size objects called blobs. Blobs can be 
 split into cells using the erasure code defined in [EIP-7594]. The size of a cell is 
-currently defined as 2 KiB, which means each blob consists of 128 cells encoded with a 1/2 
-code rate. A cell is identified within the erasure-coded blob by its order (index).
+currently defined as 2 KiB and each blob consists of 128 cells encoded with a 1/2 
+code rate. A cell is identified within the erasure-coded blob by its index.
 
-Blobs also include metadata such as cell proofs and a commitment required to verify whether 
-a cell belongs to the blob data.
+Blob transactions also include metadata such as proofs and commitments required to verify 
+whether a cell belongs to the blob data.
 
 - Commitment: A cryptographic value bound to a blob, used in inclusion verification to 
 ensure that any given cell is part of the original blob.
 
-- Proof: A cell-specific proof used during inclusion verification of the corresponding cell.
+- Proof: A cell-specific data used during inclusion verification of the corresponding cell.
 
-Blob transaction exchange must be initiated exclusively through the 
+Blob transaction exchange must be initiated only through the 
 [NewPooledTransactionHashes] message. The peer must also announce the availability of its 
-cells using the cells field in the message. If a bit in the field is set, it indicates that 
+cells using the `cells` field in the message. If a bit in the field is set, it indicates that 
 the peer holds the corresponding cell for all blobs included in the announced transactions.
 
-Responses to [GetPooledTransactions] for blob transactions include the traditional transaction payload and blob metadata. However, the blob data itself can only be obtained 
+Responses to [GetPooledTransactions] for blob transactions include the traditional transaction 
+payload and blob metadata. However, the blob data itself can only be obtained 
 as cells via [GetCells]. Since a transaction can carry multiple blobs, cell exchange is 
 handled at the transaction level, meaning that all cells within the same transaction must 
 be delivered together.
@@ -488,7 +495,7 @@ The `cells` element is a bitmap marking which cell indices can be fetched from t
 peer. For each bit set to one, the peer stores the cell at that index in all blobs of the 
 transaction. A bit must be set only if the peer has the cell at that index in all blobs of 
 the transaction. This field is only relevant for those entries that refer to blob 
-transactions. Blob transactions with the same cells value may be announced together in a 
+transactions. Blob transactions with the same `cells` field may be announced together in a 
 batch within this message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
@@ -708,6 +715,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [block propagation]: #block-propagation
 [state synchronization]: #state-synchronization-aka-fast-sync-snap-sync
 [snap protocol]: ./snap.md
+[blob transaction and cell exchange]: #blob-transaction-and-cell-exchange
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
 [Transactions]: #transactions-0x02
