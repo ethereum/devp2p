@@ -164,23 +164,19 @@ to 1 in the cells field. The recommended probability $p$ is 0.15.
 If it decides not to fetch full blobs, it must instead request its custody cells from peers 
 that announced overlapping availability, using the [GetCells] message, but only after 
 observing N (TBD) distinct full-availability announcements. Custody cells are the cells 
-whose indices belong to the custody index set of the associated consensus node ID. The node 
-must also request an excess of N random columns in addition to its custody set to mitigate 
+whose indices belong to the custody index set of the associated consensus node ID. In practice, 
+this information can be delievered using engine API from consensus layer. The node 
+must also request an excess of N random indices in addition to its custody set to mitigate 
 targeted and selective data attacks. A node must announce availability only after obtaining 
 all of its custody cells.
 
-A node must request no more than 4 (TBD) columns per peer per transaction. It should never 
-announce availability to a peer if it can infer that the peer already holds the 
-corresponding cell. This can be achieved by tracking the set of transaction hashes and cell 
-indices announced by each peer.
-
-To manage uplink bandwidth usage, a node may disconnect peers that send excessive 
-requests. This can be enforced by monitoring metrics such as the number of requested cells 
-over a given period. A client that want to store the entire blob should distribute 
-its requests as evenly as possible. To avoid being banned by its peer, it 
-must also respect a probability parameter $p$. With probability $p$, it can request 50% 
-of the data from a single peer, but with probability $1 – p$, it should request subsets of 
-cells collectively from multiple peers.
+A node must specify no more than 4 (TBD) indices per request. To manage uplink bandwidth usage, 
+a node may disconnect peers that send excessive requests. This can be enforced by monitoring 
+metrics such as the number of requested cells over a given period. 
+A client that wants to store every blobs should distribute its requests as evenly as possible. 
+To avoid being banned by its peer, it must also respect a probability parameter $p$. 
+With probability $p$, it can request 50% of the data from a single peer, but with probability 
+$1 – p$, it should request those cells collectively from multiple peers.
 
 ### Transaction Encoding and Validity
 
