@@ -484,7 +484,7 @@ All three payload elements must contain an equal number of items.
 the byte size of `tx-type || tx-data` for typed transactions, and the size of the
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
-The cells element is a bitmap marking which cell indices can be fetched from the sending 
+The `cells` element is a bitmap marking which cell indices can be fetched from the sending 
 peer. For each bit set to one, the peer stores the cell at that index in all blobs of the 
 transaction. A bit must be set only if the peer has the cell at that index in all blobs of 
 the transaction. This field is only relevant for those entries that refer to blob 
@@ -572,10 +572,14 @@ received updates.
 
 `[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
 
-This message requests the peer to return cell data of the given txhashes.
-The `cells` element, a bitmap, specifies indices of the requested cells.
-To prevent greedy peers from abusing the bandwidth and to encourage collective fetch,
-a node should either set 4 bits ($1-p$) or 64 bits ($p$) in the cells field.
+This message requests the peer to return cell data of the given transaction hashes.
+The cells element is a bitmap specifying which cell indices are requested. For each bit 
+set, the requester asks for the cell at that index from all blobs of the corresponding 
+transaction.
+
+A node should either set 4 bits (with probability $1–p$) or 64 bits (with probability $p$) 
+in the cells field. This mechanism prevents a greedy peer from abusing bandwidth and 
+encourages collective fetch behavior.
 
 
 ### Cells (0x13)
