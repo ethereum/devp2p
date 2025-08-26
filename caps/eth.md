@@ -125,24 +125,55 @@ relayed by the peer.
 
 ### Blob Transaction and Cell Exchange
 
-Blob transaction carries one or more large objects called blobs, in addition to the normal 
-transaction payload. Blobs are not sent directly with the transaction. Instead, they are 
-split into cells using the erasure code defined in [EIP-7594], and these cells are exchanged 
-separately between peers. Since a transaction can carry multiple blobs, cell exchange is 
-handled at the transaction level, which means that cells in the same transaction should be 
-delivered together.
+Blob transactions contain one or more 128 KiB fixed-size objects called blobs. Blobs can be 
+split into cells using the erasure code defined in [EIP-7594]. The size of a cell is 
+currently defined as 2 KiB, which means each blob consists of 128 cells encoded with a 1/2 
+code rate. A cell is identified within the erasure-coded blob by its order (index).
 
-When a blob transaction is added to a peer's pool, availability of its cells should be 
-announced to the network using the `cells` field in the [NewPooledTransactionHashes] message. 
-If a bit is set, it indicates that the peer holds the corresponding cell for all blobs 
-included in the announced transactions. 
-All peers that receive the message can then request the cells whose indices are 
-specified in the cells field using the [GetCells] message. Clients can selectively store 
-cells according to their local parameters.
+Blobs also include metadata such as cell proofs and a commitment required to verify whether 
+a cell belongs to the blob data.
 
-A node should never announce availability to a peer that it can infer to already 
-have the associated cell. This can be achieved by remembering set of versioned hashes 
-and cell indices announced by each peer.
+- Commitment: A cryptographic value bound to a blob, used in inclusion verification to 
+ensure that any given cell is part of the original blob.
+
+- Proof: A cell-specific proof used during inclusion verification of the corresponding cell.
+
+Blob transaction exchange must be initiated exclusively through the 
+[NewPooledTransactionHashes] message. The peer must also announce the availability of its 
+cells using the cells field in the message. If a bit in the field is set, it indicates that 
+the peer holds the corresponding cell for all blobs included in the announced transactions.
+
+Responses to [GetPooledTransactions] for blob transactions include the traditional transaction payload and blob metadata. However, the blob data itself can only be obtained 
+as cells via [GetCells]. Since a transaction can carry multiple blobs, cell exchange is 
+handled at the transaction level, meaning that all cells within the same transaction must 
+be delivered together.
+
+Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
+the node begins fetching cells in parallel with transaction fetching. The node first makes 
+a probabilistic decision. If it decides to fetch full blobs with probability $p$, it 
+requests them using the [GetCells] message, setting more than 50% of the total cell indices 
+to 1 in the cells field. The recommended probability $p$ is 0.15.
+
+If it decides not to fetch full blobs, it must instead request its custody cells from peers 
+that announced overlapping availability, using the [GetCells] message, but only after 
+observing N (TBD) distinct full-availability announcements. Custody cells are the cells 
+whose indices belong to the custody index set of the associated consensus node ID. The node 
+must also request an excess of N random columns in addition to its custody set to mitigate 
+targeted and selective data attacks. A node must announce availability only after obtaining 
+all of its custody cells.
+
+A node must request no more than 4 (TBD) columns per peer per transaction. It should never 
+announce availability to a peer if it can infer that the peer already holds the 
+corresponding cell. This can be achieved by tracking the set of transaction hashes and cell 
+indices announced by each peer.
+
+To manage uplink bandwidth usage, a node may disconnect peers that issue excessive 
+requests. This can be enforced by monitoring factors such as the number of requested cells 
+over a given period. A client connected to a supernode that stores the entire custody set 
+should distribute its requests as evenly as possible. To avoid being banned by the peer, it 
+must also respect a probability parameter $p$. With probability $p$, it should request 50% 
+of the data from a single peer, and with probability $1 – p$, it should request subsets of 
+cells collectively from multiple peers.
 
 ### Transaction Encoding and Validity
 
@@ -548,9 +579,9 @@ The `cells` element, a bitmap, specifies indices of the requested cells.
 This is the response to [GetCells]. 
 Each element must match the txhash and cells specified in the request.
 The sender can skip any indices that are not available, so the requester can fetch them 
-from other peers. Skipping is allowed only at the index level. The sender must return the 
-corresponding cells for all blobs included in the transaction and cannot skip cells belonging 
-to specific blobs.
+from other peers. However, skipping is allowed only at the index level. 
+The sender must return the corresponding cells for all blobs included in the transaction 
+and cannot skip cells belonging to specific blobs.
 
 ## Change Log
 
