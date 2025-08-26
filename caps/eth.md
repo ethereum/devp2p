@@ -579,7 +579,7 @@ transaction.
 
 A node should either set 4 bits (with probability $1–p$) or 64 bits (with probability $p$) 
 in the cells field. This mechanism prevents a greedy peer from abusing bandwidth and 
-encourages collective fetch behavior.
+encourages collective fetch.
 
 
 ### Cells (0x13)
