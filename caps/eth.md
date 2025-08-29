@@ -123,9 +123,6 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
-For additional rules for blob transactions, refer to the [blob transaction and cell exchange] 
-section.
-
 ### Blob Transaction and Cell Exchange
 
 This section describes additional constraints and node behaviours that apply only to blob 
@@ -170,9 +167,6 @@ must also request an excess of N random indices in addition to its custody set t
 targeted and selective data attacks. A node must announce availability only after obtaining 
 all of its custody cells.
 
-A node must specify no more than 4 (TBD) indices per request. To manage uplink bandwidth usage, 
-a node may disconnect peers that send excessive requests. This can be enforced by monitoring 
-metrics such as the number of requested cells over a given period. 
 A client that wants to store every blobs should distribute its requests as evenly as possible. 
 To avoid being banned by its peer, it must also respect a probability parameter $p$. 
 With probability $p$, it can request 50% of the data from a single peer, but with probability 
@@ -604,6 +598,9 @@ of that transaction at that index must be returned.
 
 A peer may respond with an empty list if none of the requested cells are available.
 
+To manage uplink bandwidth usage, a node may disconnect peers that send excessive requests. 
+This can be enforced by monitoring metrics such as the number of requested cells over a given 
+period. 
 ## Change Log
 
 ### eth/ ()
@@ -711,7 +708,6 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [block propagation]: #block-propagation
 [state synchronization]: #state-synchronization-aka-fast-sync-snap-sync
 [snap protocol]: ./snap.md
-[blob transaction and cell exchange]: #blob-transaction-and-cell-exchange
 [Status]: #status-0x00
 [NewBlockHashes]: #newblockhashes-0x01
 [Transactions]: #transactions-0x02
