@@ -156,7 +156,7 @@ as cells via [GetCells].
 Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
 the node begins fetching cells in parallel with transaction fetching. The node first makes 
 a probabilistic decision. If it decides to fetch full blobs with probability $p$, it 
-requests them using the [GetCells] message, setting more than 50% of the total cell indices 
+requests them using the [GetCells] message, setting half of the total cell indices 
 to 1 in the cells field. The recommended probability $p$ is 0.15.
 
 If it decides not to fetch full blobs, it must instead request its custody cells from peers 
