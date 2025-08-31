@@ -128,10 +128,13 @@ relayed by the peer.
 This section describes additional constraints and node behaviours that apply only to blob 
 transactions, in addition to the ordinary transaction exchange.
 
-Blob transactions contain one or more 128 KiB fixed-size objects called blobs. Blobs can be 
-split into cells using the erasure code defined in [EIP-7594]. The size of a cell is 
+A blob transaction contains one or more 128 KiB fixed-size objects called blob. Blobs can
+be  split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
 currently defined as 2 KiB and each blob consists of 128 cells encoded with a 1/2 
-code rate. A cell is identified within the erasure-coded blob by its index.
+code rate. A cell is identified within the erasure-coded blob by its index. Protocol
+messages index cells at the transaction level. Such an index refers to the corresponding
+cell of each blob in the given transaction. This is similar to (but not to be confused with)
+the notion of column in [EIP-7594].
 
 Blob transactions also include metadata such as proofs and commitments required to verify 
 whether a cell belongs to the blob data.
@@ -148,9 +151,7 @@ the peer holds the corresponding cell for all blobs included in the announced tr
 
 Responses to [GetPooledTransactions] for blob transactions include the traditional transaction 
 payload and blob metadata. However, the blob data itself can only be obtained 
-as cells via [GetCells]. Since a transaction can carry multiple blobs, cell exchange is 
-handled at the transaction level, meaning that all cells within the same transaction must 
-be delivered together.
+as cells via [GetCells].
 
 Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
 the node begins fetching cells in parallel with transaction fetching. The node first makes 
