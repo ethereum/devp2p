@@ -484,9 +484,9 @@ the byte size of `tx-type || tx-data` for typed transactions, and the size of th
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
 The `cells` element is a bitmap marking which cell indices can be fetched from the sending 
-peer. For each bit set to one, the peer stores the cell at that index in all blobs of the 
-transaction. A bit must be set only if the peer has the cell at that index in all blobs of 
-the transaction. This field is only relevant for those entries that refer to blob 
+peer. For each bit set to one, the peer stores the cells at that index in every blob of 
+all blob transactions included in the announcemnt. 
+This field is only relevant for those entries that refer to blob 
 transactions. Blob transactions with the same `cells` field may be announced together in a 
 batch within this message.
 
@@ -573,8 +573,8 @@ received updates.
 
 This message requests the peer to return cell data of the given transaction hashes.
 The cells element is a bitmap specifying which cell indices are requested. For each bit 
-set, the requester asks for the cell at that index from all blobs of the corresponding 
-transaction.
+set, the requester asks for the cell at that index from every blob of all transactions 
+specified by the list of txhash.
 
 A node should either set 4 bits (with probability $1–p$) or 64 bits (with probability $p$) 
 in the cells field. This mechanism prevents a greedy peer from abusing bandwidth and 
