@@ -163,7 +163,7 @@ If it decides not to fetch full blobs, it must instead request its custody cells
 that announced overlapping availability, using the [GetCells] message, but only after 
 observing N (TBD) distinct full-availability announcements. Custody cells are the cells 
 whose indices belong to the custody index set of the associated consensus node ID. In practice, 
-this information can be delievered using engine API from consensus layer. The node 
+this information can be delivered using engine API from consensus layer. The node 
 must also request an excess of N random indices in addition to its custody set to mitigate 
 targeted and selective data attacks. A node must announce availability only after obtaining 
 all of its custody cells.
