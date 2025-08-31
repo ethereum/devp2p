@@ -576,9 +576,9 @@ The cells element is a bitmap specifying which cell indices are requested. For e
 set, the requester asks for the cell at that index from every blob of all transactions 
 specified by the list of txhash.
 
-A node should either set 4 bits (with probability $1–p$) or 64 bits (with probability $p$) 
-in the cells field. This mechanism prevents a greedy peer from abusing bandwidth and 
-encourages collective fetch.
+A node should either set at most 4 bits (with probability $1–p$) or exactly 64 bits 
+(with probability $p$) in the cells field. 
+This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
 
 
 ### Cells (0x13)
