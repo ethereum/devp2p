@@ -170,8 +170,9 @@ all of its custody cells.
 
 A client that wants to store every blobs should distribute its requests as evenly as possible. 
 To avoid being banned by its peer, it must also respect a probability parameter $p$. 
-With probability $p$, it can request 50% of the data from a single peer, but with probability 
-$1 – p$, it should request those cells collectively from multiple peers.
+With probability $p$, it can request half of the cells of a blob transaction from a single
+peer, but with probability $1 – p$, it should request those cells collectively from multiple
+peers.
 
 ### Transaction Encoding and Validity
 
