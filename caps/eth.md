@@ -191,7 +191,7 @@ peers.
 | `MAX_CELLS_PER_PARTIAL_REQUEST` | 4 (TBD) | Maximum number of cells per [GetCells] request as a sampler |
 | `CELLS_PER_FULL_REQUEST` | 64 | Number of cells per [GetCells] request as a provider |
 | `AVAILABILITY_THRESHOLD` | 4 (TBD) | Minimum number of peers required to confirm blob availability as a sampler |
-| `EXCESSIVE_SAMPLE_SIZE` | 4 (TBD) | Number of additional cells requested beyond the custody set |
+| `EXCESSIVE_SAMPLE_SIZE` | 4 (TBD) | Number of additional cells sampled beyond the custody set |
 
 ### Transaction Encoding and Validity
 
@@ -591,12 +591,12 @@ received updates.
 `[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
 
 This message requests the peer to return cell data of the given transaction hashes.
-The cells element is a bitmap specifying which cell indices are requested. For each bit 
+The `cells` element is a bitmap specifying which cell indices are requested. For each bit 
 set, the requester asks for the cell at that index from every blob of all transactions 
 specified by the list of txhash.
 
-A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with probability $1–p$) or exactly `CELLS_PER_FULL_REQUEST` bits 
-(with probability $p$) in the cells field. 
+A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with probability $1–$`MIN_P`) 
+or exactly `CELLS_PER_FULL_REQUEST` bits (with probability `MIN_P`) in the cells field. 
 This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
 
 ### Cells (0x13)
@@ -618,9 +618,6 @@ of that transaction at that index must be returned.
 
 A peer may respond with an empty list if none of the requested cells are available.
 
-To manage uplink bandwidth usage, a node may disconnect peers that send excessive requests. 
-This can be enforced by monitoring metrics such as the number of requested cells over a given 
-period. 
 ## Change Log
 
 ### eth/ ()
