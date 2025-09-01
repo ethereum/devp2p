@@ -129,7 +129,7 @@ This section describes additional constraints and node behaviours that apply onl
 transactions, in addition to the ordinary transaction exchange.
 
 A blob transaction contains one or more 128 KiB fixed-size objects called blob. Blobs can
-be  split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
+be split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
 currently defined as 2 KiB and each blob consists of 128 cells encoded with a 1/2 
 code rate. A cell is identified within the erasure-coded blob by its index. Protocol
 messages index cells at the transaction level. Such an index refers to the corresponding
@@ -155,24 +155,42 @@ as cells via [GetCells].
 
 Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
 the node begins fetching cells in parallel with transaction fetching. The node first makes 
-a probabilistic decision. If it decides to fetch full blobs with probability $p$, it 
-requests them using the [GetCells] message, setting half of the total cell indices 
-to 1 in the cells field. The recommended probability $p$ is 0.15.
+a probabilistic decision. 
+
+If it decides to fetch full blobs with probability $p$, 
+it requests them using the [GetCells] message, setting half of the total cell indices to 1 
+in the cells field. 
+Note that $p$ should be greater than or equal to `MIN_P`.
 
 If it decides not to fetch full blobs, it must instead request its custody cells from peers 
 that announced overlapping availability, using the [GetCells] message, but only after 
-observing N (TBD) distinct full-availability announcements. Custody cells are the cells 
-whose indices belong to the custody index set of the associated consensus node ID. In practice, 
-this information can be delivered using engine API from consensus layer. The node 
-must also request an excess of N random indices in addition to its custody set to mitigate 
-targeted and selective data attacks. A node must announce availability only after obtaining 
-all of its custody cells.
+observing `AVAILABILITY_THRESHOLD` distinct full-availability announcements. 
+Custody cells are the cells whose indices belong to the custody index set of the associated 
+consensus node ID.
+In practice, this information can be delivered using engine API from consensus layer. The node 
+must also request an excess of `EXCESSIVE_SAMPLE_SIZE` random indices in addition to its 
+custody set to mitigate targeted and selective data attacks. 
+A node must announce availability only after obtaining all of its custody cells.
+
+For ease of explanation, in the former case the node is said to perform the provider role 
+for a given transaction, and in the latter case it is said to perform the sampler role.
 
 A client that wants to store every blobs should distribute its requests as evenly as possible. 
-To avoid being banned by its peer, it must also respect a probability parameter $p$. 
+To avoid being banned by its peer, it must also respect a probability parameter `MIN_P`. 
 With probability $p$, it can request half of the cells of a blob transaction from a single
-peer, but with probability $1 – p$, it should request those cells collectively from multiple
+peer, but with probability 1 – `MIN_P`, it should request those cells collectively from multiple
 peers.
+
+#### Constants
+
+|  **Name**   | **Value** | **Note** |
+|---------|------|---------------------------------------------------------------------------------|
+| `NUMBER_OF_CELLS` | 128 | Number of cells in an extended blob, as defined in [EIP-7594] |
+| `MIN_P` | 0.15 | Minimum recommended probability to fetch the full blobs for a given transaction |
+| `MAX_CELLS_PER_PARTIAL_REQUEST` | 4 (TBD) | Maximum number of cells per [GetCells] request as a sampler |
+| `CELLS_PER_FULL_REQUEST` | 64 | Number of cells per [GetCells] request as a provider |
+| `AVAILABILITY_THRESHOLD` | 4 (TBD) | Minimum number of peers required to confirm blob availability as a sampler |
+| `EXCESSIVE_SAMPLE_SIZE` | 4 (TBD) | Number of additional cells requested beyond the custody set |
 
 ### Transaction Encoding and Validity
 
@@ -576,10 +594,9 @@ The cells element is a bitmap specifying which cell indices are requested. For e
 set, the requester asks for the cell at that index from every blob of all transactions 
 specified by the list of txhash.
 
-A node should either set at most 4 bits (with probability $1–p$) or exactly 64 bits 
+A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with probability $1–p$) or exactly `CELLS_PER_FULL_REQUEST` bits 
 (with probability $p$) in the cells field. 
 This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
-
 
 ### Cells (0x13)
 
