@@ -176,8 +176,9 @@ For ease of explanation, in the former case the node is said to perform the prov
 for a given transaction, and in the latter case it is said to perform the sampler role.
 
 A client that wants to store every blobs should distribute its requests as evenly as possible. 
-To avoid being banned by its peer, it must also respect a probability parameter `MIN_P`. 
-With probability $p$, it can request half of the cells of a blob transaction from a single
+It must also respect `MIN_P`, which means that over a given period the ratio of requests for 
+half of the cell indices must not exceed `MIN_P` of its total requests. 
+With probability `MIN_P`, it can request half of the cells of a blob transaction from a single
 peer, but with probability 1 – `MIN_P`, it should request those cells collectively from multiple
 peers.
 
