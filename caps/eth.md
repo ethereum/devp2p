@@ -599,6 +599,10 @@ A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with prob
 or exactly `CELLS_PER_FULL_REQUEST` bits (with probability `MIN_P`) in the cells field. 
 This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
 
+To manage uplink bandwidth usage, a node may disconnect peers that send excessive requests. 
+This can be enforced by monitoring metrics such as the number of requested cells over a given 
+period. 
+
 ### Cells (0x13)
 
 `[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
