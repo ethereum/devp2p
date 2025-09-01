@@ -160,7 +160,7 @@ a probabilistic decision.
 If it decides to fetch full blobs with probability $p$, 
 it requests them using the [GetCells] message, setting half of the total cell indices to 1 
 in the cells field. 
-Note that $p$ should be greater than or equal to `MIN_P`.
+Note that $p$ is a local parameter greater than or equal to `MIN_P`.
 
 If it decides not to fetch full blobs, it must instead request its custody cells from peers 
 that announced overlapping availability, using the [GetCells] message, but only after 
