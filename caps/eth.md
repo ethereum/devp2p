@@ -123,6 +123,76 @@ of it (either because it was previously sent or because it was informed from thi
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
 
+### Blob Transaction and Cell Exchange
+
+This section describes additional constraints and node behaviours that apply only to blob 
+transactions, in addition to the ordinary transaction exchange.
+
+A blob transaction contains one or more 128 KiB fixed-size objects called blob. Blobs can
+be split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
+currently defined as 2 KiB and each blob consists of 128 cells encoded with a 1/2 
+code rate. A cell is identified within the erasure-coded blob by its index. Protocol
+messages index cells at the transaction level. Such an index refers to the corresponding
+cell of each blob in the given transaction. This is similar to (but not to be confused with)
+the notion of column in [EIP-7594].
+
+Blob transactions also include metadata such as proofs and commitments required to verify 
+whether a cell belongs to the blob data.
+
+- Commitment: A cryptographic value bound to a blob, used in inclusion verification to 
+ensure that any given cell is part of the original blob.
+
+- Proof: A cell-specific data used during inclusion verification of the corresponding cell.
+
+Blob transaction exchange must be initiated only through the 
+[NewPooledTransactionHashes] message. The peer must also announce the availability of its 
+cells using the `cells` field in the message. If a bit in the field is set, it indicates that 
+the peer holds the corresponding cell for all blobs included in the announced transactions.
+
+Responses to [GetPooledTransactions] for blob transactions include the traditional transaction 
+payload and blob metadata. However, the blob data itself can only be obtained 
+as cells via [GetCells].
+
+Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
+the node begins fetching cells in parallel with transaction fetching. The node first makes 
+a probabilistic decision. 
+
+If it decides to fetch full blobs with probability $p$, 
+it requests them using the [GetCells] message, setting half of the total cell indices to 1 
+in the cells field. 
+Note that $p$ is a local parameter greater than or equal to `MIN_P`.
+
+If it decides not to fetch full blobs, it must instead request its custody cells from peers 
+that announced overlapping availability, using the [GetCells] message, but only after 
+observing `AVAILABILITY_THRESHOLD` distinct full-availability announcements. 
+Custody cells are the cells whose indices belong to the custody index set of the associated 
+consensus node ID.
+In practice, this information can be delivered using engine API from consensus layer. The node 
+must also request an excess of `EXCESSIVE_SAMPLE_SIZE` random indices in addition to its 
+custody set to mitigate targeted and selective data attacks. 
+A node must announce availability only after obtaining all of its custody cells.
+
+For ease of explanation, in the former case the node is said to perform the provider role 
+for a given transaction, and in the latter case it is said to perform the sampler role.
+
+A client that wants to store every blobs should distribute its requests as evenly as possible. 
+It must also respect `MIN_P`, which means that over a given period the ratio of requests for 
+half of the cell indices must not exceed `MIN_P` of its total requests. 
+With probability `MIN_P`, it can request half of the cells of a blob transaction from a single
+peer, but with probability 1 – `MIN_P`, it should request those cells collectively from multiple
+peers.
+
+#### Constants
+
+|  **Name**   | **Value** | **Note** |
+|---------|------|---------------------------------------------------------------------------------|
+| `NUMBER_OF_CELLS` | 128 | Number of cells in an extended blob, as defined in [EIP-7594] |
+| `MIN_P` | 0.15 | Minimum recommended probability to fetch the full blobs for a given transaction |
+| `MAX_CELLS_PER_PARTIAL_REQUEST` | 4 (TBD) | Maximum number of cells per [GetCells] request as a sampler |
+| `CELLS_PER_FULL_REQUEST` | 64 | Number of cells per [GetCells] request as a provider |
+| `AVAILABILITY_THRESHOLD` | 4 (TBD) | Minimum number of peers required to confirm blob availability as a sampler |
+| `EXCESSIVE_SAMPLE_SIZE` | 4 (TBD) | Number of additional cells sampled beyond the custody set |
+
 ### Transaction Encoding and Validity
 
 Transaction objects exchanged by peers have one of two encodings. In definitions across
@@ -418,11 +488,11 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
+`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...], cells: B_16]`
 
 This message announces one or more transactions that have appeared in the network and
 which have not yet been included in a block. The message payload describes a list of of
-transactions, but note that it is encoded as three separate elements.
+transactions, but note that it is encoded as four separate elements.
 
 The `txtypes` element is a byte array containing the announced [transaction types]. The
 other two payload elements refer to the sizes and hashes of the announced transactions.
@@ -431,6 +501,13 @@ All three payload elements must contain an equal number of items.
 `txsizeₙ` refers to the length of the 'consensus encoding' of a typed transaction, i.e.
 the byte size of `tx-type || tx-data` for typed transactions, and the size of the
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
+
+The `cells` element is a bitmap marking which cell indices can be fetched from the sending 
+peer. For each bit set to one, the peer stores the cells at that index in every blob of 
+all blob transactions included in the announcemnt. 
+This field is only relevant for those entries that refer to blob 
+transactions. Blob transactions with the same `cells` field may be announced together in a 
+batch within this message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
@@ -509,7 +586,49 @@ received updates.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
 
+### GetCells (0x12)
+
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
+
+This message requests the peer to return cell data of the given transaction hashes.
+The `cells` element is a bitmap specifying which cell indices are requested. For each bit 
+set, the requester asks for the cell at that index from every blob of all transactions 
+specified by the list of txhash.
+
+A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with probability $1–$`MIN_P`) 
+or exactly `CELLS_PER_FULL_REQUEST` bits (with probability `MIN_P`) in the cells field. 
+This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
+
+To manage uplink bandwidth usage, a node may disconnect peers that send excessive requests. 
+This can be enforced by monitoring metrics such as the number of requested cells over a given 
+period. 
+
+### Cells (0x13)
+
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
+
+This is the response to [GetCells].
+
+Each transaction hash is followed by one or more pairs consisting of an index and the 
+corresponding cells. The index specifies the position of a cell within a blob. 
+Blob transaction can contain multiple blobs, and the same index is applied to all of 
+them. If an index is included in the response, one cell must be returned from each 
+blob of the transaction at that index. The cells are listed in the order in which the 
+blobs appear in the transaction.
+
+A peer may omit entire transactions or entire indices if they are unavailable or 
+constrained. However, if an index is included for a transaction, cells for all blobs 
+of that transaction at that index must be returned.
+
+A peer may respond with an empty list if none of the requested cells are available.
+
 ## Change Log
+
+### eth/ ()
+
+Version 70 changed the [NewPooledTransactionHashes] message to include custody information 
+which represents cell indicies sending peer has stored. New message types,
+[GetCells] and [Cells] were introduced to support cell-level messaging.
 
 ### eth/69 ([EIP-7642], April 2025)
 
@@ -624,6 +743,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
+[GetCells]: #getcells-0x12
+[Cells]: #cells-0x13
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -639,6 +760,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
+[EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
