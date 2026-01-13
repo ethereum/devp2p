@@ -210,6 +210,7 @@ Ethereum block headers are encoded as follows:
         excess-blob-gas: P,
         parent-beacon-root: B_32,
         requests-hash: B_32,
+        block-access-list-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -246,6 +247,10 @@ headers are processed in sequence during chain synchronization, the following ru
   added by [EIP-4844] and [EIP-4788].
 - `requests-hash` must be present in headers after the Prague fork, and absent for
   earlier blocks. This rule was added by [EIP-7685].
+- `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
+  absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
+  `keccak256(rlp.encode(block_access_list))`. For blocks with no state changes, this is
+  the hash of an empty RLP list: `0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347`.
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -303,6 +308,35 @@ and their bloom filters have to be recomputed.
 
 Since the valid list of receipts is determined by the EVM state transition, it is not
 necessary to define any further validity rules for receipts in this specification.
+
+### Block Access List Encoding
+
+Block Access Lists (BALs) record all accounts and storage locations accessed during block
+execution, along with their post-execution values. BALs are not included in the block body
+but can be requested separately via the [GetBlockAccessLists] message.
+
+The BAL is RLP-encoded as a list of account changes, sorted lexicographically by address:
+
+    block-access-list = [account-changes₁, account-changes₂, ...]
+
+    account-changes = [
+        address: B_20,
+        storage-changes: [[slot: B_32, [[block-access-index: P, value: B_32], ...]], ...],
+        storage-reads: [slot₁: B_32, slot₂: B_32, ...],
+        balance-changes: [[block-access-index: P, balance: P], ...],
+        nonce-changes: [[block-access-index: P, nonce: P], ...],
+        code-changes: [[block-access-index: P, code: B], ...],
+    ]
+
+Where `block-access-index` indicates when the change occurred:
+
+- `0` for pre-execution system contract calls
+- `1...n` for transactions (in block order)
+- `n+1` for post-execution system contract calls and withdrawals
+
+When a BAL is received, it must be validated by computing `keccak256(rlp.encode(bal))` and
+comparing against the `block-access-list-hash` in the corresponding block header. For
+complete BAL generation rules, see [EIP-7928].
 
 ## Protocol Messages
 
@@ -524,7 +558,40 @@ received updates.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
 
+### GetBlockAccessLists (0x12)
+
+`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
+
+Require peer to return a BlockAccessLists message containing the block access lists of the
+given block hashes. The number of BALs that can be requested in a single message may be
+subject to implementation-defined limits.
+
+BALs are only available for blocks after [EIP-7928] activation and within the weak
+subjectivity period (~3533 epochs). Requests for unavailable BALs return empty entries.
+
+### BlockAccessLists (0x13)
+
+`[request-id: P, [block-access-list₁, block-access-list₂, ...]]`
+
+This is the response to GetBlockAccessLists, providing the requested BALs. Each element
+in the response list corresponds to a block hash from the GetBlockAccessLists request.
+Empty BALs (RLP-encoded empty list) are returned for blocks where the BAL is unavailable.
+
+The BAL must be validated by computing `keccak256(rlp.encode(bal))` and comparing against
+the `block-access-list-hash` in the corresponding block header. See [Block Access List
+Encoding] for the structure of block access lists.
+
+The recommended soft limit for BlockAccessLists responses is 2 MiB.
+
 ## Change Log
+
+### eth/70 ([EIP-7928], TBD)
+
+Version 70 added block-level access lists (BALs) support for the [Amsterdam fork]. The
+block header now includes a `block-access-list-hash` field containing the keccak256 hash
+of the RLP-encoded access list. Two new messages [GetBlockAccessLists] and
+[BlockAccessLists] were added to enable peer-to-peer exchange of BALs for optimized
+synchronization and parallel execution.
 
 ### eth/70 ([EIP-7975], June 2025)
 
@@ -645,6 +712,9 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
+[GetBlockAccessLists]: #getblockaccesslists-0x12
+[BlockAccessLists]: #blockaccesslists-0x13
+[Block Access List Encoding]: #block-access-list-encoding
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -662,9 +732,11 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
+[EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Cancun fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
+[Amsterdam fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/amsterdam.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf
