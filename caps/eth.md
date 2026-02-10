@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/70**. See end
+blockchain information between peers. The current protocol version is **eth/71**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -585,9 +585,9 @@ The recommended soft limit for BlockAccessLists responses is 2 MiB.
 
 ## Change Log
 
-### eth/70 ([EIP-7928], TBD)
+### eth/71 ([EIP-7928], TBD)
 
-Version 70 added block-level access lists (BALs) support for the [Amsterdam fork]. The
+Version 71 added block-level access lists (BALs) support for the [Amsterdam fork]. The
 block header now includes a `block-access-list-hash` field containing the keccak256 hash
 of the RLP-encoded access list. Two new messages [GetBlockAccessLists] and
 [BlockAccessLists] were added to enable peer-to-peer exchange of BALs for optimized
