@@ -249,8 +249,7 @@ headers are processed in sequence during chain synchronization, the following ru
   earlier blocks. This rule was added by [EIP-7685].
 - `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
   absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
-  `keccak256(rlp.encode(block_access_list))`. For blocks with no state changes, this is
-  the hash of an empty RLP list: `0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347`.
+  `keccak256(rlp.encode(block_access_list))`.
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -581,7 +580,7 @@ The BAL must be validated by computing `keccak256(rlp.encode(bal))` and comparin
 the `block-access-list-hash` in the corresponding block header. See [Block Access List
 Encoding] for the structure of block access lists.
 
-The recommended soft limit for BlockAccessLists responses is 2 MiB.
+The recommended soft limit for BlockAccessLists responses is 10 MiB.
 
 ## Change Log
 
