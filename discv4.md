@@ -1,4 +1,4 @@
-# Node Discovery Protocol
+# Node Discovery Protocol 
 
 This specification defines the Node Discovery protocol version 4, a Kademlia-like DHT that
 stores information about Ethereum nodes. The Kademlia structure was chosen because it is
