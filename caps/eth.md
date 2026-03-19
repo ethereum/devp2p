@@ -499,6 +499,9 @@ Each list of block receipts must be complete, with two exceptions:
   The remaining items of the last list are missing in that case, and the client can fetch
   them using another `GetReceipts` request.
 
+If the server does not have the receipts of a certain block in its storage, it should
+end the response at that block.
+
 The recommended soft limit for Receipts responses is 2 MiB.
 
 ### BlockRangeUpdate (0x11)
