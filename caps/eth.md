@@ -473,19 +473,31 @@ pool.
 
 ### GetReceipts (0x0f)
 
-`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
+`[request-id: P, firstBlockReceiptIndex: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a Receipts message containing the receipts of the given block
-hashes. The number of receipts that can be requested in a single message may be subject to
-implementation-defined limits.
+Request the peer to return a Receipts message containing the receipt lists of the given
+block hashes. The number of blocks that can be requested in a single message may be
+subject to implementation-defined limits.
+
+`firstBlockReceiptIndex` specifies an offset into the first receipt list which is served
+by the peer. This is intended to allow requesting the next receipts from a partial list
+received earlier.
 
 ### Receipts (0x10)
 
-`[request-id: P, [[receipt₁, receipt₂], ...]]`
+`[request-id: P, lastBlockIncomplete: {0,1}, [[receipt₁, receipt₂, ...], ...]]`
 
-This is the response to GetReceipts, providing the requested block receipts. Each element
-in the response list corresponds to a block hash of the GetReceipts request, and must
-contain the complete list of receipts of the block.
+This is the response to GetReceipts, providing the receipts. There should be a complete
+list of block receipts for each requested block hash, following the order of the request.
+
+Each list of block receipts must be complete, with two exceptions:
+
+- When the request has a non-zero `firstBlockReceiptIndex`, the first block receipt list
+  should start at that index and omit earlier items.
+- When the `lastBlockIncomplete` flag of the response is set to `1`, the server indicates
+  that the receipts of the last block in the response would overflow a message size of 10MB.
+  The remaining items of the last list are missing in that case, and the client can fetch
+  them using another `GetReceipts` request.
 
 The recommended soft limit for Receipts responses is 2 MiB.
 
@@ -510,6 +522,12 @@ received updates.
   peers purely on the basis of their BlockRangeUpdate.
 
 ## Change Log
+
+### eth/70 ([EIP-7975], June 2025)
+
+In version 70, the [GetReceipts] and [Receipts] messages were modified to allow requesting
+partial block receipt lists. With the rising gas limit on Ethereum mainnet, the list of
+block receipts could eventually become larger than the maximum message size of RLPx.
 
 ### eth/69 ([EIP-7642], April 2025)
 
@@ -641,6 +659,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
+[EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
