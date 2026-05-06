@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/69**. See end
+blockchain information between peers. The current protocol version is **eth/70**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
