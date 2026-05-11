@@ -18,7 +18,7 @@ We have several specifications for low-level protocols:
 The repository also contains specifications of many RLPx-based application-level protocols:
 
 - [Ethereum Wire Protocol] (eth/68)
-- [Ethereum Snapshot Protocol] (snap/1)
+- [Ethereum Snapshot Protocol] (snap/1), [Snapshot Protocol v2] (snap/2)
 - [Light Ethereum Subprotocol] (les/4)
 - [Parity Light Protocol] (pip/1)
 - [Ethereum Witness Protocol] (wit/0)
@@ -81,6 +81,7 @@ WireShark dissectors are available here: <https://github.com/ConsenSys/ethereum-
 [Ethereum Foundation Bounty Program]: https://bounty.ethereum.org
 [Ethereum Wire Protocol]: ./caps/eth.md
 [Ethereum Snapshot Protocol]: ./caps/snap.md
+[Snapshot Protocol v2]: ./caps/snap2.md
 [Light Ethereum Subprotocol]: ./caps/les.md
 [Ethereum Witness Protocol]: ./caps/wit.md
 [Ethereum Node Records]: ./enr.md
