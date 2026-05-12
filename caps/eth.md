@@ -327,6 +327,10 @@ The BAL is RLP-encoded as a list of account changes, sorted lexicographically by
         code-changes: [[block-access-index: P, code: B], ...],
     ]
 
+`storage-changes` must be sorted lexicographically by slot. Changes within each slot must
+be sorted by `block-access-index` ascending. `storage-reads` must be sorted
+lexicographically by slot.
+
 Where `block-access-index` indicates when the change occurred:
 
 - `0` for pre-execution system contract calls
@@ -565,8 +569,8 @@ Require peer to return a BlockAccessLists message containing the block access li
 given block hashes. The number of BALs that can be requested in a single message may be
 subject to implementation-defined limits.
 
-BALs are only available for blocks after [EIP-7928] activation and within the weak
-subjectivity period (~3533 epochs). Requests for unavailable BALs return empty entries.
+BALs are only available for blocks after [EIP-7928] activation and within the retention
+period defined therein. Requests for unavailable BALs return empty entries.
 
 ### BlockAccessLists (0x13)
 
@@ -574,17 +578,17 @@ subjectivity period (~3533 epochs). Requests for unavailable BALs return empty e
 
 This is the response to GetBlockAccessLists, providing the requested BALs. Each element
 in the response list corresponds to a block hash from the GetBlockAccessLists request.
-Empty BALs (RLP-encoded empty list) are returned for blocks where the BAL is unavailable.
+The RLP empty string (`0x80`) is returned for blocks where the BAL is unavailable.
 
 The BAL must be validated by computing `keccak256(rlp.encode(bal))` and comparing against
 the `block-access-list-hash` in the corresponding block header. See [Block Access List
 Encoding] for the structure of block access lists.
 
-The recommended soft limit for BlockAccessLists responses is 10 MiB.
+The recommended soft limit for BlockAccessLists responses is 2 MiB.
 
 ## Change Log
 
-### eth/71 ([EIP-7928], TBD)
+### eth/71 ([EIP-8159], February 2026)
 
 Version 71 added block-level access lists (BALs) support for the [Amsterdam fork]. The
 block header now includes a `block-access-list-hash` field containing the keccak256 hash
@@ -733,6 +737,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
+[EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
