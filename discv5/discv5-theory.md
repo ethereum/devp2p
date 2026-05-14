@@ -6,532 +6,794 @@ This document explains the algorithms and data structures used by the protocol.
 
 ## Nodes, Records and Distances
 
-A participant in the Node Discovery Protocol is represented by a 'node record' as defined
-in [EIP-778]. The node record keeps arbitrary information about the node. For the purposes
-of this protocol, the node must at least provide an IP address (`"ip"` or `"ip6"` key) and
-UDP port (`"udp"` key) in order to have it's record relayed in the DHT.
+A participant in the Node Discovery Protocol is represented by a 'node record' as defined in [EIP-778].
+The node record keeps arbitrary information about the node. For the purposes of this protocol, the node
+must at least provide an IP address (`"ip"` or `"ip6"` key) and UDP port (`"udp"` key) in order to have
+it's record relayed in the DHT.
 
-Node records are signed according to an 'identity scheme'. Any scheme can be used with
-Node Discovery Protocol, and nodes using different schemes can communicate.
+Node records are signed according to an 'identity scheme'. Any scheme can be used with Node Discovery
+Protocol, and nodes using different schemes can communicate. The identity scheme of a node record defines
+how a 32-byte 'node ID' is derived from the information contained in the record.
 
-The identity scheme of a node record defines how a 32-byte 'node ID' is derived from the
-information contained in the record. The 'distance' between two node IDs is the bitwise
-XOR of the IDs, taken as the big-endian number.
+The 'distance' between two node IDs is the bitwise XOR of the IDs, taken as the big-endian number.
 
     distance(n₁, n₂) = n₁ XOR n₂
 
-In many situations, the logarithmic distance (i.e. length of differing suffix in bits) is
-used in place of the actual distance.
+In many situations, the logarithmic distance (i.e. length of differing suffix in bits) is used in place of the
+actual distance.
 
     logdistance(n₁, n₂) = log2(distance(n₁, n₂))
 
 ### Maintaining The Local Node Record
 
-Participants should update their record, increase the sequence number and sign a new
-version of the record whenever their information changes. This is especially important for
-changes to the node's IP address and port. Implementations should determine the external
-endpoint (the Internet-facing IP address and port on which the node can be reached) and
-include it in their record.
+Participants should update their record, increase the sequence number and sign a new version of the record
+whenever their information changes. This is especially important for changes to the node's IP address and port.
 
-If communication flows through a NAT device, the UPnP/NAT-PMP protocols or the mirrored
-UDP envelope IP and port found in the [PONG] message can be used to determine the external
-IP address and port.
-
-If the endpoint cannot be determined (e.g. when the NAT doesn't support 'full-cone'
-translation), implementations should omit IP address and UDP port from the record.
+Implementations should determine the external endpoint (the Internet-facing IP address and port on which
+the node can be reached) and include it in their record. If communication flows through a NAT device, the
+UPnP/NAT-PMP protocols or the mirrored UDP envelope IP and port found in the [PONG] message can be used
+to determine the external IP address and port. If the endpoint cannot be determined (e.g. when the NAT
+doesn't support 'full-cone' translation), implementations should omit IP address and UDP port from the record.
 
 ## Sessions
 
-Discovery communication is encrypted and authenticated using session keys, established in
-the handshake. Since every node participating in the network acts as both client and
-server, a handshake can be initiated by either side of communication at any time.
+Discovery communication is encrypted and authenticated using session keys, established in the handshake.
+Since every node participating in the network acts as both client and server, a handshake can be initiated
+by either side of communication at any time.
 
 ### Handshake Steps
 
 #### Step 1: Node A sends message packet
 
-In the following definitions, we assume that node A wishes to communicate with node B,
-e.g. to send a FINDNODE message. Node A must have a copy of node B's record in order to
-communicate with it.
+In the following definitions, we assume that node A wishes to communicate with node B, e.g. to send a
+FINDNODE message. Node A must have a copy of node B's record in order to communicate with it.
 
-If node A has session keys from prior communication with B, it encrypts its request with
-those keys. If no keys are known, it initiates the handshake by sending an ordinary
-message packet with random message content.
+If node A has session keys from prior communication with B, it encrypts its request with those keys.
+If no keys are known, it initiates the handshake by sending an ordinary message packet with random
+message content.
 
-    A -> B   FINDNODE message packet encrypted with unknown key
+    A -> B    FINDNODE message packet encrypted with unknown key
 
 #### Step 2: Node B responds with challenge
 
-Node B receives the message packet and extracts the source node ID from the packet header.
-If node B has session keys from prior communication with A, it attempts to decrypt the
-message data. If decryption and authentication of the message succeeds, there is no need
-for a handshake and node B can simply respond to the request.
+Node B receives the message packet and extracts the source node ID from the packet header. If node B has
+session keys from prior communication with A, it attempts to decrypt the message data. If decryption and
+authentication of the message succeeds, there is no need for a handshake and node B can simply respond to
+the request.
 
-If node B does not have session keys or decryption is not successful, it must initiate a
-handshake by responding with a [WHOAREYOU packet].
+If node B does not have session keys or decryption is not successful, it must initiate a handshake by
+responding with a [WHOAREYOU packet]. It first generates a unique `id-nonce` value and includes it in the
+packet. Node B also checks if it has a copy of node A's record. If it does, it also includes the sequence
+number of this record in the challenge packet, otherwise it sets the `enr-seq` field to zero.
 
-It first generates a unique `id-nonce` value and includes it in the packet. Node B also
-checks if it has a copy of node A's record. If it does, it also includes the sequence
-number of this record in the challenge packet, otherwise it sets the `enr-seq` field to
-zero.
+Node B must also store the A's record and the WHOAREYOU challenge for a short duration after sending it to
+node A because they will be needed again in step 4.
 
-Node B must also store the A's record and the WHOAREYOU challenge for a short duration
-after sending it to node A because they will be needed again in step 4.
-
-    A <- B   WHOAREYOU packet including id-nonce, enr-seq
+    A <- B    WHOAREYOU packet including id-nonce, enr-seq
 
 #### Step 3: Node A processes the challenge
 
-Node A receives the challenge sent by node B, which confirms that node B is alive and is
-ready to perform the handshake. The challenge can be traced back to the request packet
-which solicited it by checking the `nonce`, which mirrors the request packet's `nonce`.
+Node A receives the challenge sent by node B, which confirms that node B is alive and is ready to perform
+the handshake. The challenge can be traced back to the request packet which solicited it by checking the
+`nonce`, which mirrors the request packet's `nonce`.
 
-Node A proceeds with the handshake by re-sending the FINDNODE request as a [handshake
-message packet]. This packet contains three parts in addition to the message:
-`id-signature`, `ephemeral-pubkey` and `record`.
+Node A proceeds with the handshake by re-sending the FINDNODE request as a [handshake message packet].
+This packet contains three parts in addition to the message: `id-signature`, `ephemeral-pubkey` and `record`.
 
 The handshake uses the unmasked WHOAREYOU challenge as an input:
 
-    challenge-data     = masking-iv || static-header || authdata
+    challenge-data = masking-iv || static-header || authdata
 
-Node A can now derive the new session keys. To do so, it first generates an ephemeral key
-pair on the elliptic curve used by node B's identity scheme. As an example, let's assume
-the node record of B uses the "v4" scheme. In this case the `ephemeral-pubkey` will be a
-public key on the secp256k1 curve.
+Node A can now derive the new session keys. To do so, it first generates an ephemeral key pair on the
+elliptic curve used by node B's identity scheme. As an example, let's assume the node record of B uses the
+"v4" scheme. In this case the `ephemeral-pubkey` will be a public key on the secp256k1 curve.
 
-    ephemeral-key      = random private key generated by node A
-    ephemeral-pubkey   = public key corresponding to ephemeral-key
+    ephemeral-key = random private key generated by node A
+    ephemeral-pubkey = public key corresponding to ephemeral-key
 
-The ephemeral key is used to perform Diffie-Hellman key agreement with node B's static
-public key and the session keys are derived from it using the HKDF key derivation
-function.
+The ephemeral key is used to perform Diffie-Hellman key agreement with node B's static public key and the
+session keys are derived from it using the HKDF key derivation function.
 
-    dest-pubkey        = public key corresponding to node B's static private key
-    secret             = ecdh(dest-pubkey, ephemeral-key)
-    kdf-info           = "discovery v5 key agreement" || node-id-A || node-id-B
-    prk                = HKDF-Extract(secret, challenge-data)
-    key-data           = HKDF-Expand(prk, kdf-info)
-    initiator-key      = key-data[:16]
-    recipient-key      = key-data[16:]
+    dest-pubkey = public key corresponding to node B's static private key
+    secret = ecdh(dest-pubkey, ephemeral-key)
+    kdf-info = "discovery v5 key agreement" || node-id-A || node-id-B
+    prk = HKDF-Extract(secret, challenge-data)
+    key-data = HKDF-Expand(prk, kdf-info)
+    initiator-key = key-data[:16]
+    recipient-key = key-data[16:]
 
-Node A creates the `id-signature`, which proves that it controls the private key which
-signed its node record. The signature also prevents replay of the handshake.
+Node A creates the `id-signature`, which proves that it controls the private key which signed its node
+record. The signature also prevents replay of the handshake.
 
-    id-signature-text  = "discovery v5 identity proof"
+    id-signature-text = "discovery v5 identity proof"
     id-signature-input = id-signature-text || challenge-data || ephemeral-pubkey || node-id-B
-    id-signature       = id_sign(sha256(id-signature-input))
+    id-signature = id_sign(sha256(id-signature-input))
 
-Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own
-node record sequence number. If the sequence number in the challenge is lower, it includes
-its record into the handshake message packet.
+Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own node record
+sequence number. If the sequence number in the challenge is lower, it includes its record into the handshake
+message packet. The request is now re-sent, with the message encrypted using the new session keys.
 
-The request is now re-sent, with the message encrypted using the new session keys.
-
-    A -> B   FINDNODE handshake message packet, encrypted with new initiator-key
+    A -> B    FINDNODE handshake message packet, encrypted with new initiator-key
 
 #### Step 4: Node B receives handshake message
 
-When node B receives the handshake message packet, it first loads the node record and
-WHOAREYOU challenge which it sent and stored earlier.
+When node B receives the handshake message packet, it first loads the node record and WHOAREYOU challenge
+which it sent and stored earlier. If node B did not have the node record of node A, the handshake message
+packet must contain a node record. A record may also be present if node A determined that its record is
+newer than B's current copy. If the packet contains a node record, B must first validate it by checking the
+record's signature.
 
-If node B did not have the node record of node A, the handshake message packet must
-contain a node record. A record may also be present if node A determined that its record
-is newer than B's current copy. If the packet contains a node record, B must first
-validate it by checking the record's signature.
+Node B then verifies the `id-signature` against the identity public key of A's record. After that, B can
+perform the key derivation using its own static private key and the `ephemeral-pubkey` from the handshake
+packet. Using the resulting session keys, it attempts to decrypt the message contained in the packet.
 
-Node B then verifies the `id-signature` against the identity public key of A's record.
+If the message can be decrypted and authenticated, Node B considers the new session keys valid and responds
+to the message. In our example case, the response is a `NODES` message:
 
-After that, B can perform the key derivation using its own static private key and the
-`ephemeral-pubkey` from the handshake packet. Using the resulting session keys, it
-attempts to decrypt the message contained in the packet.
-
-If the message can be decrypted and authenticated, Node B considers the new session keys
-valid and responds to the message. In our example case, the response is a `NODES` message:
-
-    A <- B   NODES encrypted with new recipient-key
+    A <- B    NODES encrypted with new recipient-key
 
 #### Step 5: Node A receives response message
 
-Node A receives the message packet response and authenticates/decrypts it with the new
-session keys. If decryption/authentication succeeds, node B's identity is verified and
-node A also considers the new session keys valid.
+Node A receives the message packet response and authenticates/decrypts it with the new session keys. If
+decryption/authentication succeeds, node B's identity is verified and node A also considers the new session
+keys valid.
 
 ### Identity-Specific Cryptography in the Handshake
 
-Establishment of session keys is dependent on the [identity scheme] used by the recipient
-(i.e. the node which sends WHOAREYOU). Likewise, the signature over `id-sig-input` is made
-by the identity key of the initiator. It is not required that initiator and recipient use
-the same identity scheme in their respective node records. Implementations must be able to
-perform the handshake for all supported identity schemes.
+Establishment of session keys is dependent on the [identity scheme] used by the recipient (i.e. the node
+which sends WHOAREYOU). Likewise, the signature over `id-sig-input` is made by the identity key of the
+initiator. It is not required that initiator and recipient use the same identity scheme in their respective
+node records. Implementations must be able to perform the handshake for all supported identity schemes.
 
-At this time, the only supported identity scheme is "v4".
-
-`id_sign(hash)` creates a signature over `hash` using the node's static private key. The
-signature is encoded as the 64-byte array `r || s`, i.e. as the concatenation of the
-signature values.
-
-`ecdh(pubkey, privkey)` creates a secret through elliptic-curve Diffie-Hellman key
-agreement. The public key is multiplied by the private key to create a secret ephemeral
-key `eph = pubkey * privkey`. The 33-byte secret output is `y || eph.x` where `y` is
-`0x02` when `eph.y` is even or `0x03` when `eph.y` is odd.
+At this time, the only supported identity scheme is "v4". `id_sign(hash)` creates a signature over `hash`
+using the node's static private key. The signature is encoded as the 64-byte array `r || s`, i.e. as the
+concatenation of the signature values. `ecdh(pubkey, privkey)` creates a secret through elliptic-curve
+Diffie-Hellman key agreement. The public key is multiplied by the private key to create a secret ephemeral
+key `eph = pubkey * privkey`. The 33-byte secret output is `y || eph.x` where `y` is `0x02` when `eph.y`
+is even or `0x03` when `eph.y` is odd.
 
 ### Handshake Implementation Considerations
 
-Since a handshake may happen at any time, UDP packets may be reordered by transmitting
-networking equipment, implementations must deal with certain subtleties regarding the
-handshake.
+Since a handshake may happen at any time, UDP packets may be reordered by transmitting networking equipment,
+implementations must deal with certain subtleties regarding the handshake.
 
-In general, implementations should keep a reference to all sent request packets until the
-request either times out, is answered by the corresponding response packet or answered by
-WHOAREYOU. If WHOAREYOU is received as the answer to a request, the request must be
-re-sent as a handshake packet.
+In general, implementations should keep a reference to all sent request packets until the request either
+times out, is answered by the corresponding response packet or answered by WHOAREYOU. If WHOAREYOU is
+received as the answer to a request, the request must be re-sent as a handshake packet.
 
-If an implementation supports sending concurrent requests, multiple responses may be
-pending when WHOAREYOU is received, as in the following example:
+If an implementation supports sending concurrent requests, multiple responses may be pending when WHOAREYOU
+is received, as in the following example:
 
-    A -> B   FINDNODE
-    A -> B   PING
-    A -> B   TOPICQUERY
-    A <- B   WHOAREYOU (nonce references PING)
+    A -> B    FINDNODE
+    A -> B    PING
+    A -> B    TOPICQUERY
+    A <- B    WHOAREYOU (nonce references PING)
 
-When this happens, all buffered requests can be considered invalid (the remote end cannot
-decrypt them) and the packet referenced by the WHOAREYOU `nonce` (in this example: PING)
-must be re-sent as a handshake. When the response to the re-sent is received, the new
-session is established and other pending requests (example: FINDNODE, TOPICQUERY) may be
-re-sent.
+When this happens, all buffered requests can be considered invalid (the remote end cannot decrypt them) and
+the packet referenced by the WHOAREYOU `nonce` (in this example: PING) must be re-sent as a handshake. When
+the response to the re-sent is received, the new session is established and other pending requests (example:
+FINDNODE, TOPICQUERY) may be re-sent. Note that WHOAREYOU is only ever valid as a response to a previously
+sent request. If WHOAREYOU is received but no requests are pending, the handshake attempt can be ignored.
 
-Note that WHOAREYOU is only ever valid as a response to a previously sent request. If
-WHOAREYOU is received but no requests are pending, the handshake attempt can be ignored.
+Another important issue is the processing of message packets while a challenge is received: consider the case
+where node A has sent a packet that B cannot decrypt, and B has responded with WHOAREYOU.
 
-Another important issue is the processing of message packets while a challenge is
-received: consider the case where node A has sent a packet that B cannot decrypt, and B
-has responded with WHOAREYOU.
+    A -> B    FINDNODE
+    A <- B    WHOAREYOU
 
-    A -> B   FINDNODE
-    A <- B   WHOAREYOU
+Node B is now waiting for a handshake message packet to complete the new session, but instead receives
+another ordinary message packet.
 
-Node B is now waiting for a handshake message packet to complete the new session, but
-instead receives another ordinary message packet.
+    A -> B    ORDINARY MESSAGE PACKET
 
-    A -> B   ORDINARY MESSAGE PACKET
-
-In this case, implementations should respond with a new WHOAREYOU challenge referencing
-the message packet.
+In this case, implementations should respond with a new WHOAREYOU challenge referencing the message packet.
 
 ### Session Cache
 
-Nodes should store session keys for communication with other recently-seen nodes. Since
-sessions are ephemeral and can be re-established whenever necessary, it is sufficient to
-store a limited number of sessions in an in-memory LRU cache.
+Nodes should store session keys for communication with other recently-seen nodes. Since sessions are ephemeral
+and can be re-established whenever necessary, it is sufficient to store a limited number of sessions in an
+in-memory LRU cache. To prevent IP spoofing attacks, implementations must ensure that session secrets and the
+handshake are tied to a specific UDP endpoint. This is simple to implement by using the node ID and IP/port as
+the 'key' into the in-memory session cache.
 
-To prevent IP spoofing attacks, implementations must ensure that session secrets and the
-handshake are tied to a specific UDP endpoint. This is simple to implement by using the
-node ID and IP/port as the 'key' into the in-memory session cache. When a node switches
-endpoints, e.g. when roaming between different wireless networks, sessions will have to be
-re-established by handshaking again. This requires no effort on behalf of the roaming node
-because the recipients of protocol messages will simply refuse to decrypt messages from
-the new endpoint and reply with WHOAREYOU.
+When a node switches endpoints, e.g. when roaming between different wireless networks, sessions will have to
+be re-established by handshaking again. This requires no effort on behalf of the roaming node because the
+recipients of protocol messages will simply refuse to decrypt messages from the new endpoint and reply with
+WHOAREYOU.
 
-The number of messages which can be encrypted with a certain session key is limited
-because encryption of each message requires a unique nonce for AES-GCM. In addition to the
-keys, the session cache must also keep track of the count of outgoing messages to ensure
-the uniqueness of nonce values. Since the wire protocol uses 96 bit AES-GCM nonces, it is
-strongly recommended to generate them by encoding the current outgoing message count into
-the first 32 bits of the nonce and filling the remaining 64 bits with random data
-generated by a cryptographically secure random number generator.
+The number of messages which can be encrypted with a certain session key is limited because encryption of each
+message requires a unique nonce for AES-GCM. In addition to the keys, the session cache must also keep track
+of the count of outgoing messages to ensure the uniqueness of nonce values. Since the wire protocol uses 96 bit
+AES-GCM nonces, it is strongly recommended to generate them by encoding the current outgoing message count into
+the first 32 bits of the nonce and filling the remaining 64 bits with random data generated by a cryptographically
+secure random number generator.
 
 ## Node Table
 
-Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored
-in a routing table consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a
-k-bucket for nodes of `logdistance(self, n) == i`. The Node Discovery Protocol uses `k =
-16`, i.e. every k-bucket contains up to 16 node entries. The entries are sorted by time
-last seen — least-recently seen node at the head, most-recently seen at the tail.
+Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored in a routing table
+consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a k-bucket for nodes of
+`logdistance(self, n) == i`. The Node Discovery Protocol uses `k = 16`, i.e. every k-bucket contains up to
+16 node entries. The entries are sorted by time last seen — least-recently seen node at the head,
+most-recently seen at the tail.
 
-Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket.
-If the bucket contains less than `k` entries N₁ can simply be added as the first entry. If
-the bucket already contains `k` entries, the liveness of the least recently seen node in
-the bucket, N₂, needs to be revalidated. If no reply is received from N₂ it is considered
-dead, removed and N₁ added to the front of the bucket.
+Whenever a new node N₁ is encountered, it can be inserted into the corresponding bucket. If the bucket contains
+less than `k` entries N₁ can simply be added as the first entry. If the bucket already contains `k` entries, the
+liveness of the least recently seen node in the bucket, N₂, needs to be revalidated. If no reply is received from
+N₂ it is considered dead, removed and N₁ added to the front of the bucket.
 
-Neighbors of very low distance are unlikely to occur in practice. Implementations may omit
-k-buckets for low distances.
+Neighbors of very low distance are unlikely to occur in practice. Implementations may omit k-buckets for low
+distances.
 
 ### Table Maintenance In Practice
 
-Nodes are expected to keep track of their close neighbors and regularly refresh their
-information. To do so, a lookup targeting the least recently refreshed bucket should be
-performed at regular intervals.
+Nodes are expected to keep track of their close neighbors and regularly refresh their information. To do so,
+a lookup targeting the least recently refreshed bucket should be performed at regular intervals.
 
-Checking node liveness whenever a node is to be added to a bucket is impractical and
-creates a DoS vector. Implementations should perform liveness checks asynchronously with
-bucket addition and occasionally verify that a random node in a random bucket is live by
-sending [PING]. When the PONG response indicates that a new version of the node record is
-available, the liveness check should pull the new record and update it in the local table.
+Checking node liveness whenever a node is to be added to a bucket is impractical and creates a DoS vector.
+Implementations should perform liveness checks asynchronously with bucket addition and occasionally verify that
+a random node in a random bucket is live by sending [PING]. When the PONG response indicates that a new version
+of the node record is available, the liveness check should pull the new record and update it in the local table.
+If a node's liveness has been verified many times, implementations may consider occasional non-responsiveness
+permissible and assume the node is live.
 
-If a node's liveness has been verified many times, implementations may consider occasional
-non-responsiveness permissible and assume the node is live.
+When responding to FINDNODE, implementations must avoid relaying any nodes whose liveness has not been verified.
+This is easy to achieve by storing an additional flag per node in the table, tracking whether the node has ever
+successfully responded to a PING request.
 
-When responding to FINDNODE, implementations must avoid relaying any nodes whose liveness
-has not been verified. This is easy to achieve by storing an additional flag per node in
-the table, tracking whether the node has ever successfully responded to a PING request.
-
-In order to keep all k-bucket positions occupied even when bucket members fail liveness
-checks, it is strongly recommended to maintain a 'replacement cache' alongside each
-bucket. This cache holds recently-seen nodes which would fall into the corresponding bucket
-but cannot become a member of the bucket because it is already at capacity. Once a bucket
-member becomes unresponsive, a replacement can be chosen from the cache.
+In order to keep all k-bucket positions occupied even when bucket members fail liveness checks, it is strongly
+recommended to maintain a 'replacement cache' alongside each bucket. This cache holds recently-seen nodes which
+would fall into the corresponding bucket but cannot become a member of the bucket because it is already at capacity.
+Once a bucket member becomes unresponsive, a replacement can be chosen from the cache.
 
 ### Lookup
 
-A 'lookup' locates the `k` closest nodes to a node ID.
+A 'lookup' locates the `k` closest nodes to a node ID. The lookup initiator starts by picking `α` closest nodes
+to the target it knows of from the local table. The initiator then sends [FINDNODE] requests to those nodes.
 
-The lookup initiator starts by picking `α` closest nodes to the target it knows of from
-the local table. The initiator then sends [FINDNODE] requests to those nodes. `α` is an
-implementation-defined concurrency parameter, typically `3`. As NODES responses are
-received, the initiator resends FINDNODE to nodes it has learned about from previous
-queries. Of the `k` nodes the initiator has heard of closest to the target, it picks `α`
-that it has not yet queried and sends FINDNODE to them. The lookup terminates when the
-initiator has queried and gotten responses from the `k` closest nodes it has seen.
+`α` is an implementation-defined concurrency parameter, typically `3`. As NODES responses are received, the
+initiator resends FINDNODE to nodes it has learned about from previous queries. Of the `k` nodes the initiator
+has heard of closest to the target, it picks `α` that it has not yet queried and sends FINDNODE to them. The
+lookup terminates when the initiator has queried and gotten responses from the `k` closest nodes it has seen.
 
-To improve the resilience of lookups against adversarial nodes, the algorithm may be
-adapted to perform network traversal on multiple disjoint paths. Not only does this
-approach benefit security, it also improves effectiveness because more nodes are visited
-during a single lookup. The initial `k` closest nodes are partitioned into multiple
-independent 'path' buckets, and ​concurrent FINDNODE​ requests executed as described above,
-with one difference: results discovered on one path are not reused on another, i.e. each
-path attempts to reach the closest nodes to the lookup target independently without
-reusing intermediate results found on another path. Note that it is still necessary to
-track previously asked nodes across all paths to keep the paths disjoint.
+To improve the resilience of lookups against adversarial nodes, the algorithm may be adapted to perform network
+traversal on multiple disjoint paths. Not only does this approach benefit security, it also improves effectiveness
+because more nodes are visited during a single lookup.
+
+The initial `k` closest nodes are partitioned into multiple independent 'path' buckets, and concurrent FINDNODE
+requests executed as described above, with one difference: results discovered on one path are not reused on another,
+i.e. each path attempts to reach the closest nodes to the lookup target independently without reusing intermediate
+results found on another path. Note that it is still necessary to track previously asked nodes across all paths to
+keep the paths disjoint.
 
 ### Lookup Protocol
 
-This section shows how the wire protocol messages can be used to perform a lookup
-interaction against a single node.
+This section shows how the wire protocol messages can be used to perform a lookup interaction against a single node.
 
-Node `A` is looking for target `x`. It selects node `B` from the local table or
-intermediate lookup results. To query for nodes close to `x` on `B`, node `A` computes the
-query distance `d = logdistance(B, x)` and sends its request.
+Node `A` is looking for target `x`. It selects node `B` from the local table or intermediate lookup results.
+To query for nodes close to `x` on `B`, node `A` computes the query distance `d = logdistance(B, x)` and sends
+its request.
 
-    A -> B  FINDNODE [d]
+    A -> B    FINDNODE [d]
 
-Node `B` responds with multiple nodes messages containing the nodes at the queried
-distance.
+Node `B` responds with multiple nodes messages containing the nodes at the queried distance.
 
-    A <- B  NODES [N₁, N₂, N₃]
-    A <- B  NODES [N₄, N₅]
+    A <- B    NODES [N₁, N₂, N₃]
+    A <- B    NODES [N₄, N₅]
 
-Depending on the value of `d` and the content of `B`s table, the response to the initial
-query might contain very few nodes or no nodes at all. Should this be the case, `A` varies
-the distance to retrieve more nodes from adjacent k-buckets on `B`:
+Depending on the value of `d` and the content of `B`s table, the response to the initial query might contain very
+few nodes or no nodes at all. Should this be the case, `A` varies the distance to retrieve more nodes from adjacent
+k-buckets on `B`:
 
-    A -> B  FINDNODE [d+1]
+    A -> B    FINDNODE [d+1]
 
 `B` responds with more nodes:
 
-    A <- B  NODES [N₆, N₇]
+    A <- B    NODES [N₆, N₇]
 
-Node `A` now sorts all received nodes by distance to the lookup target and proceeds by
-repeating the lookup procedure on another, closer node.
+Node `A` now sorts all received nodes by distance to the lookup target and proceeds by repeating the lookup
+procedure on another, closer node.
 
-## Topic Advertisement
+# Service Discovery
 
-The topic advertisement subsystem indexes participants by their provided services. A
-node's provided services are identified by arbitrary strings called 'topics'. A node
-providing a certain service is said to 'place an ad' for itself when it makes itself
-discoverable under that topic. Depending on the needs of the application, a node can
-advertise multiple topics or no topics at all. Every node participating in the discovery
-protocol acts as an advertisement medium, meaning that it accepts topic ads from other
-nodes and later returns them to nodes searching for the same topic.
+## Overview
 
-### Topic Table
+Node Discovery v5 maintains the global Discv5 discovery network and each node's local node table. Applications use this node discovery substrate to discover peers that participate in higher-level services, so that the participants of each service form a service-specific overlay.
 
-Nodes store ads for any number of topics and a limited number of ads for each topic. The
-data structure holding advertisements is called the 'topic table'. The list of ads for a
-particular topic is called the 'topic queue' because it functions like a FIFO queue of
-limited length. The image below depicts a topic table containing three queues. The queue
-for topic `T₁` is at capacity.
+Currently, a node can search for service-specific peers by sampling nodes through node discovery and then checking whether the sampled nodes support the desired service. This check is outside the ordinary node discovery algorithm: depending on the application, service support may be inferred from information in the ENR, discovered by establishing a devp2p/RLPx connection and negotiating supported subprotocols, or determined by a service-specific protocol query.
 
-![topic table](./img/topic-queue-diagram.png)
+This random-sampling approach preserves the security benefits of sampling from the global discovery network, because the search is not concentrated around a small set of service-specific locations. However, it is inefficient, especially when the target service is supported by only a small fraction of nodes.
 
-The queue size limit is implementation-defined. Implementations should place a global
-limit on the number of ads in the topic table regardless of the topic queue which contains
-them. Reasonable limits are 100 ads per queue and 50000 ads across all queues. Since ENRs
-are at most 300 bytes in size, these limits ensure that a full topic table consumes
-approximately 15MB of memory.
+DISC-NG extends Node Discovery v5 with service discovery. It allows nodes to advertise participation in a service and allows other nodes to discover those advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet format, and authenticated session machinery.
 
-Any node may appear at most once in any topic queue, that is, registration of a node which
-is already registered for a given topic fails. Implementations may impose other
-restrictions on the table, such as restrictions on the number of IP-addresses in a certain
-range or number of occurrences of the same node across queues.
+
+## Co-existence with Node Discovery
+
+DISC-NG is layered on top of Node Discovery v5. A DISC-NG-capable node first uses the Node Discovery v5 to join the global discovery network, populate its local node table, and learn DISC-NG-capable nodes. These nodes are then used to bootstrap DISC-NG. As DISC-NG registration and lookup operations proceed, DISC-NG-capable nodes can also return additional nodes to improve those service-specific tables, as described below.
+
+A DISC-NG failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable for ordinary
+node discovery but unusable for DISC-NG registration or lookup. Conversely, a node that fails ordinary Discovery
+v5 liveness checks ceases to be eligible for insertion into DISC-NG service tables.
+
+## DISC-NG Capability
+
+A node indicates support for DISC-NG by including the following key-value pair in its ENR:
+
+    discng = <version>
+
+The `discng` ENR entry signals that the node implements the DISC-NG messages and can participate in DISC-NG service discovery, subject to local policy.
+
+The value of `discng` is an unsigned integer identifying the supported DISC-NG protocol version. A node supporting the version one of DISC-NG described in this document sets:
+
+    discng = 1.0
+
+Nodes whose ENR does not contain `discng`, or whose `discng` value is not supported by the local implementation are not inserted into service tables and are not selected for DISC-NG registration or lookup requests.
+
+## Services and Service Identifiers
+
+DISC-NG operates on 32-byte service identifiers. A service identifier denotes a higher-level service, subnetwork, overlay, or protocol-specific discovery target.
+
+Service identifiers are in the same 256-bit identifier space as Node IDs. This allows DISC-NG to apply the Node Discovery v5 XOR distance function between service identifiers and node IDs.
+
+The mapping from higher-level service names or application-specific parameters to service identifiers is defined by the relevant service binding. Such parameters MAY include, for example, protocol name, network name, fork identifier, client capability, subnet identifier, or other service-specific values.
+
+This document does not define a canonical derivation rule for service identifiers.
+
+## Node Roles
+
+A node that advertises DISC-NG capability in its ENR acts as a registrar, subject to local policy and resource limits.
+
+A **registrar** accepts DISC-NG registration and lookup requests, admits advertisements into its local **ad cache**, and returns admitted advertisements to discoverers.
+
+A DISC-NG-capable node may also act as an advertiser, a discoverer, or both.
+
+An **advertiser** participates in a service and registers advertisements for that service with registrars. A node acts as an advertiser only for services that it chooses to advertise.
+
+A **discoverer** queries registrars to obtain advertisements for a target service. A node acts as a discoverer only when it is looking up peers for a service.
+
+The roles are not mutually exclusive. A single node can simultaneously act as a registrar, advertise one or more services, and discover peers for one or more services.
+
+## Service Tables
+
+A service table `B(s)` is a per-service node table centred on service identifier `s`, rather than on the local node ID.
+
+Similar to the ordinary Node Table, `B(s)` is divided into distance buckets. The difference is the reference point used to assign nodes to buckets. In the ordinary node table, a node `n` is placed according to `logdistance(self, n)`, where `self` is the local node ID. In a service table, the same node `n` is placed according to `logdistance(s, n)`, where `s` is the service identifier.
+
+For each `0 ≤ i < 256`, bucket `bᵢ(s)` contains DISC-NG-capable nodes whose node IDs are at logarithmic distance `i` from the service identifier:
+
+    bᵢ(s) = { n | logdistance(s, n) = i }
+
+Thus, `B(s)` gives the local node a service-centred view of the discovery network. Buckets closer to `s` contain nodes whose IDs are closer to the service identifier, while buckets farther from `s` contain nodes from progressively larger regions of the key space.
+
+A node may maintain a service table for each service identifier for which it performs DISC-NG operations. Advertisers use `B(s)` as an advertise table for service `s`; discoverers use `B(s)` as a search table for service `s`.
+
+The registrar ad cache is separate from service tables. A registrar does not need to maintain `B(s)` for every service represented in its ad cache.
+
+### Bootstrap from Ordinary Node Discovery
+
+A node does not start DISC-NG advertisement placement or lookup from an empty service table.
+
+The node first joins the Node Discovery v5 network using the standard bootstrapping procedure. It populates its ordinary local node table through the existing `PING`, `PONG`, `FINDNODE`, lookup, refresh, and liveness mechanisms.
+
+For a service identifier `s`, the initial service table
+
+    B(s) = { b₀(s), b₁(s), ..., b₂₅₅(s) }
+
+is derived by filtering the ordinary node table to nodes that can be used for DISC-NG operations and inserting each remaining node into the appropriate bucket of `B(s)`.
+
+A node can be used for DISC-NG operations if it:
+
+1. is present in the ordinary node table;
+2. advertises a supported DISC-NG version in its ENR;
+3. satisfies the ordinary Node Discovery v5 liveness requirements;
+4. is not currently excluded by local DISC-NG usability policy.
+
+The initial contents of `B(s)` are derived from the ordinary node table. When constructing this initial service table, implementations should:
+
+1. take nodes currently known in the ordinary node table;
+2. discard nodes whose ENR does not advertise a supported DISC-NG version;
+3. discard nodes whose liveness has not been verified by the ordinary Node Discovery v5 table-maintenance rules;
+4. discard nodes currently excluded by local DISC-NG usability policy;
+5. insert each remaining node into the corresponding bucket of `B(s)`.
+
+The resulting `B(s)` is soft state. It need not be complete before DISC-NG operations begin.
+
+If the ordinary node table contains too few nodes that can be used for DISC-NG operations, implementations should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are learned.
+
+### Ongoing Maintenance of `B(s)`
+
+A service table is maintained from two sources:
+
+1. the ordinary Discovery v5 node table; and
+2. auxiliary ENRs learned through DISC-NG responses.
+
+When a newly verified node advertising DISC-NG capability is learned through ordinary discovery, it becomes
+eligible for insertion into relevant service tables.
+
+Responses to DISC-NG registration and lookup requests may include additional ENRs selected from the responder's
+view of the service table. Such ENRs may be inserted into `B(s)` only after ENR validation, capability checking,
+and any local DISC-NG usability checks.
+
+Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary local node
+table, while still remaining anchored in ordinary Discovery v5 state.
+
+### DISC-NG Liveness and Temporary Exclusion
+
+A node advertising DISC-NG capability is not automatically a usable registrar for every DISC-NG operation. It may
+time out, return malformed responses, reject requests, or fail to implement the extension correctly.
+
+Implementations should therefore maintain DISC-NG-level usability state for nodes in `B(s)`.
+
+If a node in `B(s)` repeatedly fails to answer registration or lookup requests, times out, or returns malformed
+responses, implementations should temporarily exclude that node from selection for DISC-NG operations. Temporary
+exclusion may be implemented by removing the node from `B(s)`, suppressing its selection for a backoff period,
+or assigning it lower selection priority.
+
+Temporary exclusion is not a permanent blacklist. After the backoff period expires, the node may become eligible
+for re-insertion into `B(s)` if it is still present in the ordinary node table, still advertises DISC-NG capability,
+and still satisfies ordinary Discovery v5 liveness requirements.
+
+Failure of a DISC-NG request does not by itself require removal from the ordinary Discovery v5 node table.
+Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and table-maintenance
+rules.
+
+## Advertisements
+
+An advertisement states that an advertiser participates in a service.
+
+An advertisement identifies the advertiser by its ENR. Service-specific connection metadata should be encoded in
+the ENR where possible. If a service requires additional advertisement payload, its format is defined by the
+relevant service binding and encoded as specified in the wire-format document.
+
+An advertisement is specific to a service. A node that participates in multiple services advertises each service
+separately.
+
+Registrars store admitted advertisements in their ad cache. Discoverers collect advertisements from registrars
+and use the advertised ENRs as candidate peers for the target service.
+
+## Registrar Behaviour
+
+### Ad Cache
+
+A registrar stores admitted advertisements in a bounded ad cache.
+
+Each admitted advertisement expires after duration `E`. The ad cache has capacity `C`. A registrar stores at most
+one active advertisement for the same advertiser and service.
+
+The ad cache is not a service table. It is registrar-local storage used to answer service lookup requests.
+
+An ad cache entry contains at least:
+
+- the service identifier;
+- the advertiser ENR;
+- the expiry time;
+- any advertisement payload defined by the service binding or wire-format document.
+
+Implementations may maintain additional indices for efficient retrieval by service, expiry time, advertiser, and
+IP prefix.
+
+Expired advertisements are removed automatically. Once an advertisement expires, it is no longer returned in
+lookup responses and no longer contributes to waiting-time calculations.
+
+If a registrar receives a registration request for an advertisement that is already present in its ad cache, the
+registrar may treat the request as a renewal or ignore it, depending on the renewal semantics specified by the
+wire-format document. The registrar must not store duplicate active advertisements for the same advertiser and
+service.
+
+### Admission Control
+
+Registrars use admission control to decide whether and when an incoming registration request for an advertisement may be admitted to the
+ad cache.
+
+Admission is based on a waiting-time mechanism. If an advertisement is not admitted immediately, the registrar
+returns a ticket and a waiting time. This mechanism promotes diversity in the ad cache and avoids requiring
+registrars to keep unbounded per-request state for pending registrations.
+
+When a registrar receives a registration request, it computes a waiting time from the current state of the ad
+cache and the incoming advertisement. If the effective remaining waiting time is zero, the
+advertisement is admitted. Otherwise, the registrar returns a ticket and a waiting time.
+
+The registrar does not need to keep per-request state for pending registrations. Instead, the state needed to
+prove accumulated waiting time is carried by the advertiser in the registrar-issued ticket.
+
+The waiting time in a ticket is not binding. On each retry, the registrar recomputes the waiting time using the
+current ad cache state. The advertiser is admitted only when its accumulated waiting time is sufficient according
+to the recomputed waiting time.
+
+If an advertiser retries too early, retries too late, omits the latest ticket, or presents an invalid ticket, the
+registrar treats the request as a new registration attempt or rejects it, depending on the wire-format rules.
 
 ### Tickets
 
-Ads should remain in the queue for a constant amount of time, the `target-ad-lifetime`. To
-maintain this guarantee, new registrations are throttled and registrants must wait for a
-certain amount of time before they are admitted. When a node attempts to place an ad, it
-receives a 'ticket' which tells them how long they must wait before they will be accepted.
-It is up to the registrant node to keep the ticket and present it to the advertisement
-medium when the waiting time has elapsed.
+A ticket is a registrar-issued object that allows an advertiser to retry a registration attempt after waiting.
 
-The waiting time constant is:
+A ticket is bound to the advertisement, the registrar, and timing information. The advertiser uses the latest
+ticket issued by the registrar when retrying the registration. The exact ticket encoding, signature format, and
+signature domain are specified in the wire-format document.
 
-    target-ad-lifetime = 15min
+Algorithmically, a ticket contains enough information for the registrar to verify:
 
-The assigned waiting time for any registration attempt is determined according to the
-following rules:
+- the advertisement to which the ticket applies;
+- the time at which the ticket was first issued;
+- the time at which the ticket was last updated;
+- the remaining waiting time reported to the advertiser;
+- that the ticket was issued by the registrar.
 
-- When the table is full, the waiting time is assigned based on the lifetime of the oldest
-  ad across the whole table, i.e. the registrant must wait for a table slot to become
-  available.
-- When the topic queue is full, the waiting time depends on the lifetime of the oldest ad
-  in the queue. The assigned time is `target-ad-lifetime - oldest-ad-lifetime` in this
-  case.
-- Otherwise the ad may be placed immediately.
+A retry is valid only during the registration window associated with the ticket:
 
-Tickets are opaque objects storing arbitrary information determined by the issuing node.
-While details of encoding and ticket validation are up to the implementation, tickets must
-contain enough information to verify that:
+    tmod + twait ≤ now ≤ tmod + twait + δ
 
-- The node attempting to use the ticket is the node which requested it.
-- The ticket is valid for a single topic only.
-- The ticket can only be used within the registration window.
-- The ticket can't be used more than once.
+where `tmod` is the ticket modification time, `twait` is the remaining wait time reported in the ticket, and `δ`
+is the registration window duration.
 
-Implementations may choose to include arbitrary other information in the ticket, such as
-the cumulative wait time spent by the advertiser. A practical way to handle tickets is to
-encrypt and authenticate them with a dedicated secret key:
+If the advertiser retries before the scheduled time, the registrar may ignore the request. If the advertiser
+retries after the registration window, the advertiser loses the accumulated waiting time and must start over.
 
-    ticket       = aesgcm_encrypt(ticket-key, ticket-nonce, ticket-pt, '')
-    ticket-pt    = [src-node-id, src-ip, topic, req-time, wait-time, cum-wait-time]
-    src-node-id  = node ID that requested the ticket
-    src-ip       = IP address that requested the ticket
-    topic        = the topic that ticket is valid for
-    req-time     = absolute time of REGTOPIC request
-    wait-time    = waiting time assigned when ticket was created
-    cum-wait     = cumulative waiting time of this node
+### Waiting-Time Function
 
-### Registration Window
+The waiting-time function determines how long an advertisement must wait before admission.
 
-The image below depicts a single ticket's validity over time. When the ticket is issued,
-the node keeping it must wait until the registration window opens. The length of the
-registration window is 10 seconds. The ticket becomes invalid after the registration
-window has passed.
+The function depends on the current ad cache occupancy, the number of cached advertisements for the same service,
+the IP similarity of the advertiser, and a safety constant. The waiting time shapes the contents of the ad cache
+and provides flow control at the registrar.
 
-![ticket validity over time](./img/ticket-validity.png)
+The waiting time is:
 
-Since all ticket waiting times are assigned to expire when a slot in the queue opens, the
-advertisement medium may receive multiple valid tickets during the registration window and
-must choose one of them to be admitted in the topic queue. The winning node is notified
-using a [REGCONFIRMATION] response.
+    w(ad) = E * 1 / (1 - c/C)^Pocc * ( c(ad.service)/c + score(ad.IP) + G )
 
-Picking the winner can be achieved by keeping track of a single 'next ticket' per queue
-during the registration window. Whenever a new ticket is submitted, first determine its
-validity and compare it against the current 'next ticket' to determine which of the two is
-better according to an implementation-defined metric such as the cumulative wait time
-stored in the ticket.
+where:
 
-### Advertisement Protocol
+- `E` is the advertisement expiry duration;
+- `C` is the ad cache capacity;
+- `c` is the current number of advertisements in the cache;
+- `c(ad.service)` is the number of cached advertisements for the same service;
+- `score(ad.IP)` is the IP similarity score of the advertiser;
+- `Pocc` is the occupancy exponent;
+- `G` is the safety constant.
 
-This section explains how the topic-related protocol messages are used to place an ad.
+The occupancy component increases the waiting time as the ad cache approaches capacity. This limits the rate at
+which new advertisements can be admitted.
 
-Let us assume that node `A` provides topic `T`. It selects node `C` as advertisement
-medium and wants to register an ad, so that when node `B` (who is searching for topic `T`)
-asks `C`, `C` can return the registration entry of `A` to `B`.
+The service-similarity component increases the waiting time for services that are already well represented in the
+cache. This makes it easier for less represented services to obtain cache entries.
 
-Node `A` first attempts to register without a ticket by sending [REGTOPIC] to `C`.
+The IP-similarity component increases the waiting time for advertisers whose IP prefixes are overrepresented in
+the cache. This discourages a small number of IP prefixes from dominating the registrar's ad cache.
 
-    A -> C  REGTOPIC [T, ""]
+The safety constant prevents the waiting time from becoming zero when the cache is sparsely populated and the
+incoming advertisement appears dissimilar to existing entries.
 
-`C` replies with a ticket and waiting time.
+When a returning advertiser presents a valid ticket, the registrar computes the effective remaining waiting time as:
 
-    A <- C  TICKET [ticket, wait-time]
+    tremaining = w(current-cache, ad) - (now - tinit)
 
-Node `A` now waits for the duration of the waiting time. When the wait is over, `A` sends
-another registration request including the ticket. `C` does not need to remember its
-issued tickets since the ticket is authenticated and contains enough information for `C`
-to determine its validity.
+where `tinit` is the ticket creation time. The advertisement is admitted when `tremaining ≤ 0`.
 
-    A -> C  REGTOPIC [T, ticket]
+### IP Similarity Tree
 
-Node `C` replies with another ticket. Node `A` must keep this ticket in place of the
-earlier one, and must also be prepared to handle a confirmation call in case registration
-was successful.
+Registrars maintain an IP-prefix tree over the IP addresses of admitted advertisements.
 
-    A <- C  TICKET [ticket, wait-time]
+The tree is used to compute the IP similarity score. Prefixes that are overrepresented in the ad cache increase
+the score, causing advertisements from similar IP prefixes to receive higher waiting times.
 
-Node `C` waits for the registration window to end on the queue and selects `A` as the node
-which is registered. Node `C` places `A` into the topic queue for `T` and sends a
-[REGCONFIRMATION] response.
+For IPv4, the tree has 32 levels below the root. Each edge corresponds to one bit of the IP address, and each
+vertex stores a counter. The root counter represents the total number of IP addresses represented in the ad cache.
 
-    A <- C  REGCONFIRMATION [T]
+To score an IP address, the registrar walks the tree along the bits of the address. At each level, the registrar
+compares the observed counter for the corresponding prefix with the counter expected in a perfectly balanced tree.
+Prefixes that are overrepresented contribute to the score.
 
-### Ad Placement And Topic Radius
+The resulting score is normalised to the interval `[0, 1]`.
 
-Since every node may act as an advertisement medium for any topic, advertisers and nodes
-looking for ads must agree on a scheme by which ads for a topic are distributed. When the
-number of nodes advertising a topic is at least a certain percentage of the whole
-discovery network (rough estimate: at least 1%), ads may simply be placed on random nodes
-because searching for the topic on randomly selected nodes will locate the ads quickly enough.
+The tree is updated when advertisements are admitted or expire. When an advertisement is admitted, counters along
+the path corresponding to the advertiser's IP address are incremented. When the advertisement expires or is removed,
+those counters are decremented.
 
-However, topic search should be fast even when the number of advertisers for a topic is
-much smaller than the number of all live nodes. Advertisers and searchers must agree on a
-subset of nodes to serve as advertisement media for the topic. This subset is simply a
-region of the node ID address space, consisting of nodes whose Kademlia address is within a
-certain distance to the topic hash `sha256(T)`. This distance is called the 'topic
-radius'.
+The same principle can be applied to IPv6 by using the IPv6 address length.
 
-Example: for a topic `f3b2529e...` with a radius of 2^240, the subset covers all nodes
-whose IDs have prefix `f3b2...`. A radius of 2^256 means the entire network, in which case
-advertisements are distributed uniformly among all nodes. The diagram below depicts a
-region of the address space with topic hash `t` in the middle and several nodes close to
-`t` surrounding it. Dots above the nodes represent entries in the node's queue for the
-topic.
+### Waiting-Time Lower Bound
 
-![diagram explaining the topic radius concept](./img/topic-radius-diagram.png)
+Registrars enforce a lower bound on waiting times so that an advertiser cannot obtain a better effective waiting
+time by repeatedly requesting new tickets.
 
-To place their ads, participants simply perform a random walk within the currently
-estimated radius and run the advertisement protocol by collecting tickets from all nodes
-encountered during the walk and using them when their waiting time is over.
+Without a lower bound, a pending advertiser could repeatedly request new tickets in the hope that cache changes
+cause a lower waiting time. The lower-bound rule ensures that a new waiting time cannot improve on the old one
+by more than the elapsed time.
 
-### Topic Radius Estimation
+Registrars do not maintain unbounded per-request lower-bound state for pending registrations. Lower-bound state is
+maintained only for bounded structures, such as:
 
-Advertisers must estimate the topic radius continuously in order to place their ads on
-nodes where they will be found. The radius mustn't fall below a certain size because
-restricting registration to too few nodes leaves the topic vulnerable to censorship and
-leads to long waiting times. If the radius were too large, searching nodes would take too
-long to find the ads.
+- services already represented in the ad cache; and
+- prefixes represented in the IP similarity tree.
 
-Estimating the radius uses the waiting time as an indicator of how many other nodes are
-attempting to place ads in a certain region. This is achieved by keeping track of the
-average time to successful registration within segments of the address space surrounding
-the topic hash. Advertisers initially assume the radius is 2^256, i.e. the entire network.
-As tickets are collected, the advertiser samples the time it takes to place an ad in each
-segment and adjusts the radius such that registration at the chosen distance takes
-approximately `target-ad-lifetime / 2` to complete.
+When a service `s` enters the ad cache for the first time, the registrar initialises lower-bound state for `s`.
+When a later ticket request for `s` arrives, the registrar computes the service waiting-time component and applies
+the stored lower bound before issuing a new ticket.
 
-## Topic Search
+For IP addresses, lower-bound state is maintained at the IP-tree vertex corresponding to the longest prefix match
+already present in the tree, without introducing new vertices only for pending requests. If multiple IP addresses
+map to the same vertex, the registrar aggregates their lower-bound state using a maximum.
 
-Finding nodes that provide a certain topic is a continuous process which reads the content
-of topic queues inside the approximated topic radius. This is a much simpler process than
-topic advertisement because collecting tickets and waiting on them is not required.
+## Advertiser Behaviour
 
-To find nodes for a topic, the searcher generates random node IDs inside the estimated
-topic radius and performs Kademlia lookups for these IDs. All (intermediate) nodes
-encountered during lookup are asked for topic queue entries using the [TOPICQUERY] packet.
+### Advertisement Placement
 
-Radius estimation for topic search is similar to the estimation procedure for
-advertisement, but samples the average number of results from TOPICQUERY instead of
-average time to registration. The radius estimation value can be shared with the
-registration algorithm if the same topic is being registered and searched for.
+For each service `s` that a node advertises, the advertiser attempts to maintain up to `Kregister` active or
+pending registrations in each bucket of its advertise table `B(s)`.
 
-[EIP-778]: ../enr.md
-[identity scheme]: ../enr.md#record-structure
-[handshake message packet]: ./discv5-wire.md#handshake-message-packet-flag--2
-[WHOAREYOU packet]: ./discv5-wire.md#whoareyou-packet-flag--1
-[PING]: ./discv5-wire.md#ping-request-0x01
-[PONG]: ./discv5-wire.md#pong-response-0x02
-[FINDNODE]: ./discv5-wire.md#findnode-request-0x03
-[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
-[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x09
-[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x0a
+Candidate registrars are selected from the corresponding bucket of the advertise table. Placement starts from
+the furthest bucket from `s` and progresses towards the closest bucket.
+
+The advertiser maintains per-bucket state for ongoing and active registrations. This state records the registrars
+for which an advertisement attempt is already pending or active, so that the advertiser does not repeatedly choose
+the same registrar when filling the same bucket.
+
+Within a placement cycle, registrar selection should not repeatedly return the same registrar from the same bucket.
+
+For each bucket `bᵢ(s)`, while the number of active or pending registrations in that bucket is below `Kregister`,
+the advertiser selects a candidate registrar from `bᵢ(s)` and starts a registration attempt.
+
+If no eligible registrar remains in the bucket, the advertiser stops trying to fill that bucket during the current
+placement cycle. The bucket may be attempted again later after the service table is refreshed or after temporary
+exclusions expire.
+
+Advertisement placement is continuous soft state. Advertisers periodically repeat placement and renewal so that
+advertisements remain available despite expiry, churn, registrar failure, and changes in the service table.
+
+### Registration Procedure
+
+An advertiser registers an advertisement by sending a registration request to a selected registrar.
+
+The first registration request for an advertisement is sent without a ticket. The registrar either admits the
+advertisement immediately or returns a ticket and a waiting time.
+
+If the registrar returns a ticket, the advertiser waits for the indicated duration and retries with the latest
+ticket. If the registrar recomputes the waiting time and determines that more waiting is required, it returns an
+updated ticket and waiting time. The advertiser repeats this process until the advertisement is admitted or the
+attempt fails.
+
+A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, or
+is otherwise considered unusable according to local DISC-NG liveness policy. On failure, the advertiser removes
+the registrar from the pending state for that bucket and may select another registrar.
+
+When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed
+earlier by registrar policy.
+
+Registration responses may include additional ENRs selected from the registrar's view of the service table. The
+advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs and checking DISC-NG
+capability.
+
+### Renewal
+
+An admitted advertisement remains stored until its expiry time `E`.
+
+Advertisers should renew advertisements before expiry, or continuously maintain enough active and pending
+registrations, to preserve the target number of placements in each bucket.
+
+A renewal is a new registration attempt for an advertisement already admitted or about to expire. The exact renewal
+encoding and the treatment of duplicate registrations are specified by the wire-format document.
+
+If a renewal fails, the advertiser may attempt to register with another eligible registrar in the same bucket.
+
+Advertisers should treat registrations as soft state. The target is not to permanently bind a service to a fixed
+set of registrars, but to maintain sufficient active or pending placements across the service-centred key space.
+
+## Discoverer Behaviour
+
+### Lookup Procedure
+
+A discoverer looking for service `s` queries registrars selected from its search table `B(s)`.
+
+Lookup starts from the furthest bucket from `s` and progresses towards the closest bucket. The discoverer queries
+up to `Klookup` registrars per bucket and stops when it has collected at least `Flookup` distinct advertisers or
+when no unqueried registrars remain.
+
+For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from the bucket. The same registrar should not
+be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses
+to retry according to local policy.
+
+If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query
+as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded
+from DISC-NG operations.
+
+Lookup responses may include advertisements and additional ENRs. Advertisements are candidate results for the target
+service. Additional ENRs are used to improve the discoverer's search table `B(s)`.
+
+The discoverer validates returned ENRs before using them. Invalid ENRs are ignored.
+
+### Lookup Responses
+
+A registrar receiving a lookup request for service `s` returns up to `Freturn` advertisements for that service from
+its ad cache.
+
+A registrar may also return additional ENRs selected from its view of the service table. The requester uses these
+ENRs to update its local service table `B(s)`. The exact encoding of returned advertisements and neighbour ENRs is
+specified in the wire-format document.
+
+The registrar should return only non-expired advertisements. It may choose which advertisements to return when more
+than `Freturn` advertisements for the service are present in its ad cache.
+
+Additional neighbour ENRs are not themselves lookup results. They are auxiliary routing information used to improve
+future registration and lookup operations.
+
+### Distinct Advertisers
+
+Lookup termination is based on the number of distinct advertisers, not the number of raw advertisements or ENRs
+received.
+
+A discoverer may receive the same advertiser from multiple registrars and de-duplicates results before deciding
+whether `Flookup` has been reached.
+
+Two advertisements identify the same advertiser if they resolve to the same advertised node identity according to
+the ENR identity scheme. Implementations should use the ENR node ID, rather than response source or registrar
+identity, for de-duplication.
+
+### Updating the Search Table During Lookup
+
+The discoverer updates `B(s)` using additional ENRs returned in lookup responses.
+
+An ENR learned through lookup is eligible for insertion into `B(s)` only if:
+
+1. the ENR is valid;
+2. the ENR advertises DISC-NG capability;
+3. the node is not temporarily excluded by local DISC-NG usability policy;
+4. the node satisfies ordinary Discovery v5 liveness requirements, or is scheduled for ordinary liveness verification.
+
+Implementations may insert learned ENRs immediately with an unverified flag and verify liveness asynchronously, or
+may require liveness verification before insertion. However, implementations should avoid selecting unverified nodes
+for DISC-NG operations if doing so would conflict with ordinary Discovery v5 table-maintenance rules.
+
+## Parameters
+
+The DISC-NG algorithms use the following parameters:
+
+| Parameter | Meaning | Default |
+|---|---|---|
+| `Kregister` | Target number of active or pending registrations per bucket | `5` |
+| `Klookup` | Maximum number of registrar queries per bucket during lookup | `5` |
+| `Freturn` | Maximum number of advertisements returned by one registrar | `10` |
+| `Flookup` | Target number of distinct advertisers collected by lookup | `30` |
+| `E` | Advertisement expiry duration | `15 min` |
+| `C` | Registrar ad cache capacity | `1000` |
+| `δ` | Registration retry window duration | `TBD` |
+| `Pocc` | Occupancy exponent in the waiting-time function | `10` |
+| `G` | Safety constant in the waiting-time function | `10^-7` |
+
+Parameters that are not yet standardised should remain marked as `TBD` until agreed in the protocol specification.
+
+## Implementation Considerations
+
+### ENR Freshness
+
+Advertisers should send their current ENR when registering an advertisement.
+
+Registrars should store the ENR that was admitted and return that ENR in lookup responses until the advertisement
+expires or is renewed.
+
+### ENR Validation
+
+Registrars and discoverers must validate ENRs according to the ENR rules before storing or using them.
+
+Invalid ENRs are ignored.
+
+### Clocks
+
+DISC-NG does not require clock synchronisation between advertisers and registrars.
+
+Tickets carry registrar-generated timing information. Advertisers only need to wait for the duration indicated by
+the registrar before retrying.
+
+### Response Splitting
+
+DISC-NG responses may be split across multiple packets when supported by the wire protocol.
+
+Implementations should collect all response packets belonging to the same request until the announced response count
+is reached or the request times out.
+
+### Wire Encoding
+
+This document describes algorithms and data structures.
+
+The exact encoding of DISC-NG messages, ticket signatures, request identifiers, response splitting, returned
+advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
+document.
+
