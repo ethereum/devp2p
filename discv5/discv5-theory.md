@@ -656,6 +656,24 @@ Registration responses may include additional ENRs selected from the registrar's
 advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs and checking DISC-NG
 capability.
 
+When the wire-format request carries a list of topic-distances at which the requester's own service table has
+free space, the registrar SHOULD bias the selection of auxiliary ENRs toward those distances. The recommended
+algorithm is:
+
+1. For each topic-distance in the requester's list, in order, select at most one ENR from the corresponding
+   bucket `bd(s)` of the registrar's own service table.
+2. Stop once an implementation-defined cap on the number of auxiliary ENRs has been reached, or once every
+   requested distance has been visited.
+
+Picking at most one ENR per requested distance keeps the response compact and spreads coverage across the
+requester's free buckets rather than overrepresenting a single distance. It also serves as a security measure
+against Sybil and eclipse attacks: a registrar whose service table happens to contain many ENRs at one distance
+— for example because an attacker controls a cluster of node identities clustered in that bucket — cannot
+flood a single response with those ENRs and thereby colonise the requester's `B(s)` at that distance. ENRs
+that fail local validation rules (for example endpoint-versus-source checks) SHOULD be skipped.
+
+The same auxiliary-ENR selection rule applies to lookup responses (see [Lookup Responses](#lookup-responses)).
+
 ### Renewal
 
 An admitted advertisement remains stored until its expiry time `E`.
@@ -698,6 +716,8 @@ A registrar receiving a lookup request for service `s` returns up to `Freturn` a
 The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same advertisers across repeated lookup requests.
 
 A registrar can also return additional ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
+
+The auxiliary-ENR selection rule defined for registration responses (see [Registration Procedure](#registration-procedure)) applies here as well: when the wire-format request carries a list of topic-distances, the registrar SHOULD bias its selection toward those distances using the same one-ENR-per-requested-distance algorithm.
 
 The registrar SHOULD select additional ENRs across buckets of its service table, for example by returning at most one randomly selected node from each bucket. This helps the requester improve its local service table `B(s)` across the service-centred key space, rather than only learning nodes closest to `s`.
 
