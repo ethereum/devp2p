@@ -415,6 +415,110 @@ when they should increase their advertising efforts. One possible solution is fo
 to also act as clients just to test the server capabilities of other advertisers. It is
 also possible to implement a feedback system between trusted clients and servers.
 
+## Service Discovery Security Goals
+
+The following security goals are specific to DISC-NG service discovery. They complement the Node Discovery v5 security goals listed above.
+
+### Advertisement Flooding
+
+A malicious advertiser attempts to fill registrar ad caches with its own advertisements,or with advertisements for services it controls, so that honest advertisements are delayed or excluded.
+
+DISC-NG mitigates this attack by using bounded ad caches and waiting-time-based admission control. Advertisements that increase cache occupancy or reduce cache diversity receive longer waiting times.
+
+### Registrar Resource Exhaustion
+
+A malicious node sends many registration attempts, retries, or malformed requests in an attempt to exhaust registrar memory, CPU, or bandwidth. DISC-NG mitigates memory exhaustion by avoiding unbounded per-request registrar state for pending registrations. Pending registration state is carried by advertisers in signed tickets. Registrars may also apply local rate limits, request validation, and temporary exclusion policies for nodes that repeatedly fail DISC-NG operations.
+
+### Service Censorship
+
+A malicious actor attempts to prevent honest advertisements for a target service from being discovered. This may be attempted by flooding registrars with competing advertisements, by returning incomplete or misleading lookup responses, or by trying to control nodes in parts of the key space relevant to a service. DISC-NG mitigates this risk by distributing advertisement placement across the service-centred key space, by using multiple registrars, and by allowing discoverers to query registrars across multiple buckets rather than relying on a single service-specific location.
+
+### Service Eclipse
+
+A malicious actor attempts to make discoverers of a target service receive only advertisements for malicious nodes. DISC-NG reduces the effectiveness of this attack by requiring discoverers to collect advertisements from multiple registrars and by encouraging diversity in registrar ad caches. Parameters such as `Flookup`, `Freturn`, `Klookup`, and `Kregister` control the trade-off between lookup cost and diversity of sources.
+
+### Service-Table Poisoning
+
+TODO: A malicious registrar may return misleading neighbour ENRs in DISC-NG responses in order to pollute the requester’s service table. 
+
+### Advertisement Redirection
+
+A malicious node may attempt to advertise an ENR that directs discoverers to a victim endpoint or to a node that does not actually participate in the advertised service. DISC-NG relies on ENR validation and on the self-signed nature of node records to prevent intermediaries from modifying advertised node information. Applications using discovered advertisements should still perform their normal service-level checks before relying on the discovered peer.
+
+## Service Discovery with DISC-NG
+
+Ordinary Node Discovery v5 maintains a global discovery network and allows nodes to discover other nodes. Applications use this global discovery substrate to find peers that participate in higher-level services. The participants of a service form a service-specific overlay.
+
+Without a service-discovery extension, a node can search for service-specific peers by sampling nodes through ordinary node discovery and then checking whether the sampled nodes support the desired service. This check is outside the ordinary node discovery algorithm: depending on the application, service support may be inferred from information in the ENR, discovered by establishing a higher-layer connection and negotiating supported protocols, or determined by a service-specific query.
+
+This random-sampling approach has a useful security property: the search is spread across the global discovery network rather than being concentrated at a small set of predictable service-specific nodes. However, it is inefficient, especially when the target service is supported by only a small fraction of nodes. In that case, many unrelated nodes must be contacted before enough service peers are found.
+
+DISC-NG adds explicit service discovery to Node Discovery v5. Nodes that participate in a service can advertise that participation. Other nodes can query for advertisements for the service and use the returned ENRs as candidate peers.
+
+### Why Not Use Separate Discovery Networks?
+
+A simple way to discover service-specific peers would be to run a separate discovery network for each service. Nodes interested in a service would join that service's discovery network directly.
+
+This approach makes each service responsible for its own bootstrapping and security. New or small services would have few participants and would therefore be easier to isolate or eclipse. Running many small discovery networks would also duplicate infrastructure and fragment the global peer-discovery ecosystem.
+
+Instead, DISC-NG reuses the ordinary Node Discovery v5 network. Services benefit from the existing global discovery network, and nodes can discover peers for many services without joining a separate discovery DHT for each one.
+
+### Why Not Store Advertisements Only Near the Service Identifier?
+
+A simple DHT-style design would store all advertisements for a service at the nodes whose node IDs are closest to the service identifier. Advertisers and discoverers would then know where to place and retrieve advertisements. This design is efficient, but it concentrates load and trust near the service identifier. Popular services would create hotspots around their service identifiers. More importantly, an adversary could generate node IDs close to a chosen service identifier and attempt to control advertisement storage or lookup results for that service. Therefore, DISC-NG does not rely only on the closest nodes to a service identifier. Advertisements are placed across buckets of a service-centred table, and lookups progress from buckets far from the service identifier towards buckets closer to it. This keeps discovery distributed while still giving advertisers and discoverers a structured way to meet.
+
+### Why Use Service-Centred Tables?
+
+The ordinary node table is centred on the local node ID. It is useful for maintaining the global discovery network and for finding nodes close to arbitrary node IDs. For service discovery, however, advertisers and discoverers need a shared reference point: the service identifier. A service table is centred on the service identifier rather than on the local node ID. This gives advertisers and discoverers for the same service a compatible view of the key space. An advertiser uses the service table to choose registrars for advertisement placement. A discoverer uses the service table to choose registrars for lookup. Service tables do not replace the ordinary node table. They are derived from ordinary node discovery state and refined using additional nodes returned by DISC-NG responses.
+
+### Why Use Registrars?
+
+A registrar is a DISC-NG-capable node that stores admitted advertisements and returns them to discoverers. Registrars decouple advertisers from discoverers. Advertisers do not need to be online at the exact moment a discoverer performs a lookup, as long as their advertisements remain stored at registrars. Discoverers do not need to contact arbitrary nodes and test their service membership one by one; they can query registrars for advertisements that have already been placed. Because any DISC-NG-capable node can act as a registrar, the design does not depend on a central registry or trusted service-specific bootstrap node.
+
+### Why Use Admission Control?
+
+Registrars have finite storage. If every registration request were admitted immediately, popular services or malicious advertisers could dominate the ad cache and crowd out other advertisements. DISC-NG uses admission control to decide when an advertisement may enter the cache. Admission is based on a waiting-time function. Advertisements that would increase cache occupancy or reduce diversity receive longer waiting times. This makes flooding more expensive, promotes diversity across services and IP prefixes, and helps ensure that less popular services can still obtain representation in registrar caches.
+
+### Why Should Advertisers Wait?
+
+Waiting time is the registrar's main admission-control mechanism. The waiting time makes it costly to flood registrars with advertisements, limits the rate at which the ad cache fills, and gives the registrar a way to prefer advertisements that improve cache diversity. An advertiser that receives a waiting time must come back later with a valid ticket before the advertisement can be admitted. Waiting also avoids a simple replacement-policy problem. If registrars used only policies such as least-recently-used replacement, an attacker could repeatedly send new advertisements to evict honest ones. With waiting-time admission, the attacker must pay the cost of waiting before advertisements are admitted.
+
+### Why Use Tickets?
+
+Tickets allow a registrar to enforce waiting without storing unbounded per-request state. A ticket records the advertisement and timing information needed to show that the advertiser has waited. The ticket is carried by the advertiser and returned to the registrar on retry. The registrar verifies the ticket and recomputes the waiting time against the current cache state. This design prevents pending registrations from consuming unbounded registrar memory. If an advertiser never returns, the registrar does not need to clean up per-request state for that advertiser.
+
+### Why Recompute Waiting Times?
+
+The state of the ad cache may change while an advertiser is waiting. Advertisements may expire, new advertisements may be admitted, and the diversity of the cache may change. For this reason, the waiting time in a ticket is not binding. When the advertiser retries, the registrar recomputes the waiting time using the current cache state. The advertiser is admitted only if its accumulated waiting time is sufficient according to the recomputed value. This prevents stale tickets from forcing admission under cache conditions that no longer justify it.
+
+### Why Include Service Similarity?
+
+The service-similarity component increases waiting time when the incoming advertisement is for a service that is already well represented in the registrar's ad cache. This prevents popular services from crowding out less represented services. It also helps less popular services obtain cache entries even when the total registration demand is high.
+
+### Why Include IP Similarity?
+
+A malicious actor may create many node identities from a small number of physical hosts or IP prefixes. Counting only node IDs would not distinguish this behaviour from a diverse set of independent advertisers. The IP-similarity component increases waiting time for advertisements whose IP prefixes are already overrepresented in the cache. This discourages a small number of IP prefixes from dominating the ad cache. This approach is more flexible than a fixed rule such as "only one node per prefix". Fixed prefix limits can harm honest users behind NATs, shared hosting providers, or other common infrastructure. A similarity score instead increases cost gradually as concentration increases.
+
+### Why Use a Safety Constant?
+
+If an advertisement is for an underrepresented service and comes from an underrepresented IP prefix, the service-similarity and IP-similarity components may both be small. The safety constant ensures that the waiting time does not become zero in such cases. This provides a baseline admission cost and helps prevent the ad cache from being filled too quickly by advertisements that appear diverse only because they use random service identifiers or diverse IP prefixes.
+
+TODO: Check if this constant was mentioned in the theory document
+
+### Why Use a Waiting-Time Lower Bound?
+
+If waiting times could decrease freely as the ad cache changes, advertisers would be incentivised to repeatedly request new tickets in the hope of obtaining a shorter wait. This would create unnecessary traffic and processing load. The lower-bound mechanism ensures that a new waiting time cannot improve on a previous waiting time by more than the elapsed time. It removes the incentive to repeatedly request new tickets while keeping registrar state bounded.
+
+The lower-bound state is maintained only for bounded structures, such as services already present in the ad cache and prefixes represented in the IP similarity tree.
+
+### Why Return Neighbour ENRs?
+
+A service table is initially derived from the ordinary node table. However, the ordinary node table is centred on the local node ID, not on the service identifier. It may therefore contain few nodes in buckets that are important for a particular service. DISC-NG responses can include additional neighbour ENRs selected from the responder's view of the service-centred key space. Advertisers and discoverers can use these ENRs to refine their local service tables. Returned ENRs are auxiliary routing information, not lookup results. Implementations must validate them and check DISC-NG capability before inserting them into service tables.
+
+### Why Support Mixed Deployments?
+
+DISC-NG is an extension to Node Discovery v5. During deployment, some nodes may support only ordinary Node Discovery v5 while others support both ordinary Node Discovery v5 and DISC-NG. Nodes that do not support DISC-NG remain useful for maintaining the ordinary discovery network. They are not selected for DISC-NG registration or lookup operations, but they can still participate in ordinary node discovery. DISC-NG-capable nodes advertise support in their ENR. This allows implementations to build service tables from ordinary node discovery state while selecting only nodes that can handle DISC-NG messages.
+
 # References
 
 - Petar Maymounkov and David Mazières.
