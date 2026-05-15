@@ -472,7 +472,7 @@ Implementations may maintain additional indices for efficient retrieval by servi
 IP prefix.
 
 Expired advertisements are removed automatically. Once an advertisement expires, it is no longer returned in
-lookup responses and no longer contributes to waiting-time calculations.
+lookup responses.
 
 If a registrar receives a registration request for an advertisement that is already present in its ad cache, the
 registrar may treat the request as a renewal or ignore it, depending on the renewal semantics specified by the
@@ -484,7 +484,7 @@ service.
 Registrars use admission control to decide whether and when an incoming registration request for an advertisement may be admitted to the
 ad cache.
 
-Admission is based on a waiting-time mechanism. If an advertisement is not admitted immediately, the registrar
+Admission is based on a **waiting-time mechanism**. If an advertisement is not admitted immediately, the registrar
 returns a ticket and a waiting time. This mechanism promotes diversity in the ad cache and avoids requiring
 registrars to keep unbounded per-request state for pending registrations.
 
@@ -506,27 +506,25 @@ registrar treats the request as a new registration attempt or rejects it, depend
 
 A ticket is a registrar-issued object that allows an advertiser to retry a registration attempt after waiting.
 
-A ticket is bound to the advertisement, the registrar, and timing information. The advertiser uses the latest
-ticket issued by the registrar when retrying the registration. The exact ticket encoding, signature format, and
-signature domain are specified in the wire-format document.
+A ticket is bound to the advertisement, the registrar, and timing information. The advertiser uses the latest ticket issued by the registrar when retrying the registration. The exact ticket encoding, signature format, and signature domain are specified in the wire-format document.
 
 Algorithmically, a ticket contains enough information for the registrar to verify:
 
 - the advertisement to which the ticket applies;
-- the time at which the ticket was first issued;
-- the time at which the ticket was last updated;
-- the remaining waiting time reported to the advertiser;
+- the registrar time at which the ticket was first issued;
+- the registrar time at which the ticket was last updated;
+- the remaining waiting duration reported to the advertiser;
 - that the ticket was issued by the registrar.
+
+The timestamps in the ticket are generated and interpreted by the registrar. The advertiser does not need to compare those timestamps with its own local clock. The advertiser only needs to wait for the relative waiting duration reported by the registrar before retrying.
 
 A retry is valid only during the registration window associated with the ticket:
 
     tmod + twait ≤ now ≤ tmod + twait + δ
 
-where `tmod` is the ticket modification time, `twait` is the remaining wait time reported in the ticket, and `δ`
-is the registration window duration.
+where `tmod` is the ticket modification time according to the registrar's clock, `twait` is the remaining waiting duration reported to the advertiser, `δ` is the registration window duration, and `now` is the registrar's current time when processing the retry.
 
-If the advertiser retries before the scheduled time, the registrar may ignore the request. If the advertiser
-retries after the registration window, the advertiser loses the accumulated waiting time and must start over.
+The advertiser does not use `tmod` to schedule the retry and does not need its clock to be synchronised with the registrar's clock. The advertiser waits for the relative duration `twait` using its own local timer, then retries with the ticket. The registrar validates the retry window using its own clock when the ticket is presented again.
 
 ### Waiting-Time Function
 
@@ -588,7 +586,7 @@ The tree is updated when advertisements are admitted or expire. When an advertis
 the path corresponding to the advertiser's IP address are incremented. When the advertisement expires or is removed,
 those counters are decremented.
 
-The same principle can be applied to IPv6 by using the IPv6 address length.
+TODO: IPv6 
 
 ### Waiting-Time Lower Bound
 
@@ -646,17 +644,13 @@ An advertiser registers an advertisement by sending a registration request to a 
 The first registration request for an advertisement is sent without a ticket. The registrar either admits the
 advertisement immediately or returns a ticket and a waiting time.
 
-If the registrar returns a ticket, the advertiser waits for the indicated duration and retries with the latest
-ticket. If the registrar recomputes the waiting time and determines that more waiting is required, it returns an
-updated ticket and waiting time. The advertiser repeats this process until the advertisement is admitted or the
-attempt fails.
+If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar still cannot admit the advertisement after the retry, it may return an updated ticket and a new waiting time.
 
-A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, or
-is otherwise considered unusable according to local DISC-NG liveness policy. On failure, the advertiser removes
-the registrar from the pending state for that bucket and may select another registrar.
+The protocol does not define a fixed maximum total duration for a registration attempt. An implementation MAY abandon an attempt after a local timeout, after a configured maximum number of retries, or if the registrar is considered unusable according to local DISC-NG liveness policy.
 
-When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed
-earlier by registrar policy.
+A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, the registration window is missed, a local retry or timeout limit is reached, or the registrar is otherwise considered unusable according to local DISC-NG liveness policy. On failure, the advertiser removes the registrar from the pending state for that bucket and may select another registrar.
+
+When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed earlier by registrar policy.
 
 Registration responses may include additional ENRs selected from the registrar's view of the service table. The
 advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs and checking DISC-NG
@@ -683,49 +677,31 @@ set of registrars, but to maintain sufficient active or pending placements acros
 
 A discoverer looking for service `s` queries registrars selected from its search table `B(s)`.
 
-Lookup starts from the furthest bucket from `s` and progresses towards the closest bucket. The discoverer queries
-up to `Klookup` registrars per bucket and stops when it has collected at least `Flookup` distinct advertisers or
-when no unqueried registrars remain.
+Lookup proceeds bucket by bucket, starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to `Klookup` of them.
 
-For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from the bucket. The same registrar should not
-be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses
-to retry according to local policy.
+A registrar may return advertisements for service `s`. The discoverer validates the returned advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity. Advertisements are candidate results for the target service.
 
-If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query
-as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded
-from DISC-NG operations.
+The lookup terminates when the discoverer has collected enough distinct advertisers for its local or service-specific purpose, or when no unqueried registrars remain. The required number of advertisers is determined by the application or service using DISC-NG, rather than by the DISC-NG lookup procedure itself.
 
-Lookup responses may include advertisements and additional ENRs. Advertisements are candidate results for the target
-service. Additional ENRs are used to improve the discoverer's search table `B(s)`.
+The same registrar should not be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses to retry according to local policy.
+
+If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded from DISC-NG operations.
+
+Lookup responses may also include additional ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`.
 
 The discoverer validates returned ENRs before using them. Invalid ENRs are ignored.
 
 ### Lookup Responses
 
-A registrar receiving a lookup request for service `s` returns up to `Freturn` advertisements for that service from
-its ad cache.
+A registrar receiving a lookup request for service `s` returns up to `Freturn` advertisements for that service from its ad cache.
 
-A registrar may also return additional ENRs selected from its view of the service table. The requester uses these
-ENRs to update its local service table `B(s)`. The exact encoding of returned advertisements and neighbour ENRs is
-specified in the wire-format document.
+The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same advertisers across repeated lookup requests.
 
-The registrar should return only non-expired advertisements. It may choose which advertisements to return when more
-than `Freturn` advertisements for the service are present in its ad cache.
+A registrar can also return additional ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
 
-Additional neighbour ENRs are not themselves lookup results. They are auxiliary routing information used to improve
-future registration and lookup operations.
+The registrar SHOULD select additional ENRs across buckets of its service table, for example by returning at most one randomly selected node from each bucket. This helps the requester improve its local service table `B(s)` across the service-centred key space, rather than only learning nodes closest to `s`.
 
-### Distinct Advertisers
-
-Lookup termination is based on the number of distinct advertisers, not the number of raw advertisements or ENRs
-received.
-
-A discoverer may receive the same advertiser from multiple registrars and de-duplicates results before deciding
-whether `Flookup` has been reached.
-
-Two advertisements identify the same advertiser if they resolve to the same advertised node identity according to
-the ENR identity scheme. Implementations should use the ENR node ID, rather than response source or registrar
-identity, for de-duplication.
+The requester uses returned neighbour ENRs to update its local service table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The exact encoding of returned advertisements and neighbour ENRs is specified in the wire-format document.
 
 ### Updating the Search Table During Lookup
 
@@ -738,9 +714,7 @@ An ENR learned through lookup is eligible for insertion into `B(s)` only if:
 3. the node is not temporarily excluded by local DISC-NG usability policy;
 4. the node satisfies ordinary Discovery v5 liveness requirements, or is scheduled for ordinary liveness verification.
 
-Implementations may insert learned ENRs immediately with an unverified flag and verify liveness asynchronously, or
-may require liveness verification before insertion. However, implementations should avoid selecting unverified nodes
-for DISC-NG operations if doing so would conflict with ordinary Discovery v5 table-maintenance rules.
+Implementations may insert learned ENRs immediately with an unverified flag and verify liveness asynchronously. 
 
 ## Parameters
 
@@ -754,11 +728,9 @@ The DISC-NG algorithms use the following parameters:
 | `Flookup` | Target number of distinct advertisers collected by lookup | `30` |
 | `E` | Advertisement expiry duration | `15 min` |
 | `C` | Registrar ad cache capacity | `1000` |
-| `δ` | Registration retry window duration | `TBD` |
+| `δ` | Registration retry window duration | **`TBD`** |
 | `Pocc` | Occupancy exponent in the waiting-time function | `10` |
 | `G` | Safety constant in the waiting-time function | `10^-7` |
-
-Parameters that are not yet standardised should remain marked as `TBD` until agreed in the protocol specification.
 
 ## Implementation Considerations
 
@@ -768,12 +740,6 @@ Advertisers should send their current ENR when registering an advertisement.
 
 Registrars should store the ENR that was admitted and return that ENR in lookup responses until the advertisement
 expires or is renewed.
-
-### ENR Validation
-
-Registrars and discoverers must validate ENRs according to the ENR rules before storing or using them.
-
-Invalid ENRs are ignored.
 
 ### Clocks
 
@@ -796,4 +762,3 @@ This document describes algorithms and data structures.
 The exact encoding of DISC-NG messages, ticket signatures, request identifiers, response splitting, returned
 advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
 document.
-
