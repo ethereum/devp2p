@@ -240,23 +240,24 @@ response data.
 
 ### REGTOPIC Request (0x07)
 
-    message-data = [request-id, topic, ENR, ticket, [bucket₁, bucket₂, ..., bucketₙ]]
-    message-type = 0x07
-    topic        = 32-byte service / topic identifier
-    ENR          = current node record of sender
-    ticket       = opaque byte array containing a ticket previously issued by the
-                   recipient registrar; empty (`0x80`) on first attempt
-    bucketₙ      = positive integer log2 distance from `topic` where the sender's
-                   service table `B(topic)` still has space
+    message-data    = [request-id, topic, ENR, ticket,
+                       [topic-distance₁, topic-distance₂, ..., topic-distanceₙ]]
+    message-type    = 0x07
+    topic           = 32-byte service / topic identifier
+    ENR             = current node record of sender
+    ticket          = opaque byte array containing a ticket previously issued by the
+                      recipient registrar; empty (`0x80`) on first attempt
+    topic-distanceₙ = positive integer log2 distance from `topic` where the sender's
+                      service table `B(topic)` still has space
 
 REGTOPIC asks the recipient registrar to register the sender (identified by `ENR`) for
 service `topic`. If the sender has a ticket from a previous registration attempt with this
 registrar, it must present the ticket; otherwise `ticket` is the empty byte array.
 
-The `bucket` list carries the sender's "fill these buckets" hint to the recipient: when
-returning auxiliary ENRs, the recipient should prefer ENRs that fall into one of the
-listed log2 distances from `topic`, so the response helps the sender populate its service
-table.
+The `topic-distance` list carries the sender's "send me ENRs at these distances" hint to
+the recipient: when returning auxiliary ENRs, the recipient should prefer ENRs whose log2
+distance to `topic` matches one of the listed values, so the response helps the sender
+populate its service table.
 
 REGTOPIC is always answered with a single REGCONFIRMATION response. The recipient may
 additionally send zero or more NODES responses carrying auxiliary ENRs selected from its
@@ -293,19 +294,20 @@ NODES messages carrying auxiliary ENRs) that the registrar will send for this re
 
 ### TOPICQUERY Request (0x09)
 
-    message-data = [request-id, topic, [bucket₁, bucket₂, ..., bucketₙ]]
-    message-type = 0x09
-    topic        = 32-byte service / topic identifier
-    bucketₙ      = positive integer log2 distance from `topic` where the sender's
-                   service table `B(topic)` still has space
+    message-data    = [request-id, topic,
+                       [topic-distance₁, topic-distance₂, ..., topic-distanceₙ]]
+    message-type    = 0x09
+    topic           = 32-byte service / topic identifier
+    topic-distanceₙ = positive integer log2 distance from `topic` where the sender's
+                      service table `B(topic)` still has space
 
 TOPICQUERY asks the recipient to return registered advertisers for the given `topic` from
 its ad cache. The recipient sends zero or more TOPICNODES responses containing matching
 advertiser ENRs, and may additionally send zero or more NODES responses carrying
 auxiliary ENRs selected from its service-table view (see NODES).
 
-The `bucket` list serves the same purpose as in REGTOPIC: it tells the recipient which
-log2 distances from `topic` the sender's service table still has room for, so the
+The `topic-distance` list serves the same purpose as in REGTOPIC: it tells the recipient
+which log2 distances from `topic` the sender's service table still has room for, so the
 recipient can choose useful auxiliary ENRs to include in its NODES responses.
 
 See the [theory section on lookup responses] for the discoverer-side termination semantics
