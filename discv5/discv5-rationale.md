@@ -344,9 +344,43 @@ responses within a session.
 
 # Topic-based Service Discovery Protocol v5 - Rationale
 
-This section explains the rationale for TopDisc, the topic-based service discovery extension to Node Discovery v5.
+This section explains the rationale for TopDisc, the topic-based service discovery extension to Node Discovery v5. TopDisc is based on the DISC-NG design described in [DISC-NG].
 
 TopDisc addresses the problem of discovering peers that participate in a particular decentralised service or application. The participants of such a service form a service-specific overlay, but the discovery mechanism should not require each service to operate a separate discovery network. In this document, a topic is the protocol-level identifier for a service. The terms topic-based discovery and service discovery refer to the same mechanism: discovering peers for the service identified by a topic.
+
+## Service Discovery Performance Goals
+
+The following performance goals are specific to TopDisc service discovery.
+
+### Progressive Lookup Toward the Topic Identifier
+
+Lookup should be able to find advertisements without immediately concentrating requests at the nodes closest to the topic identifier.
+
+TopDisc lookup starts from buckets far from the topic identifier and progresses towards buckets closer to it. In each bucket, the discoverer queries up to `Klookup` registrars. This allows popular topics to be discovered before reaching the closest buckets, reducing hotspots near the topic identifier.
+
+For less popular topics, lookup can continue toward buckets closer to the topic identifier, where advertisers and discoverers are more likely to overlap. This provides a structured search process while avoiding the cost of blind random sampling across the whole discovery network.
+
+### Efficient Discovery for Small Topics
+
+Topic discovery should remain efficient even when the target topic is advertised by only a small fraction of nodes in the global discovery network.
+
+Random sampling over the ordinary node discovery network is robust, but it may require many probes before finding enough peers for a rare topic. TopDisc reduces this cost by allowing advertisers to place topic advertisements at registrars and allowing discoverers to query registrars selected from topic-centred service tables.
+
+### Bounded Registrar Storage
+
+A registrar should be able to bound the amount of memory it dedicates to topic discovery. TopDisc addresses this through a bounded ad cache with capacity `C`. Advertisements are soft state and expire after duration `E`, so storage is reclaimed automatically unless advertisers renew their advertisements.
+
+### Stateless Registration Operations
+
+A registrar should not be required to store any state for advertisers waiting to be admitted. TopDisc uses tickets to carry pending-registration state back to the advertiser. The registrar can validate a returning advertiser using the ticket, without keeping per-request state for every pending registration attempt.
+
+### Compact Responses
+
+TopDisc responses should remain small enough for UDP-based discovery. Advertisements returned by a registrar are capped by `Freturn`. Auxiliary ENRs are selected with an implementation-defined total cap, and the recommended selection rule returns at most one auxiliary ENR per requested topic-distance. This keeps responses compact while still helping requesters improve their service tables.
+
+### Incremental Service-Table Improvement
+
+A node should be able to start TopDisc operations before it has a complete service table for a topic. A service table is soft state. It is initially derived from the ordinary node table and then refined using auxiliary ENRs returned by TopDisc responses. This allows lookup and advertisement placement to begin with partial knowledge and improve over time.
 
 ## Service Discovery Security Goals
 
@@ -390,6 +424,8 @@ A malicious node may attempt to advertise an ENR that directs discoverers to a v
 
 TopDisc relies on ENR validation and on the self-signed nature of node records to prevent intermediaries from modifying advertised node information. Applications using discovered advertisements should still perform their normal service-level checks before relying on the discovered peer.
 
+# Rationale
+
 ## Why Not Use Separate Discovery Networks?
 
 A simple way to discover service-specific peers would be to run a separate discovery network for each service. Nodes interested in a service would join that service's discovery network directly.
@@ -412,7 +448,7 @@ A simple DHT-style design would store all advertisements for a topic at the node
 
 This design is efficient, but it concentrates load and trust near the topic identifier. Popular topics would create hotspots around their identifiers. More importantly, an adversary could generate node IDs close to a chosen topic identifier and attempt to control advertisement storage or lookup results for that topic.
 
-TopDisc therefore does not rely only on the closest nodes to a topic identifier. Advertisements are placed across buckets of a topic-centred table, and lookups progress from buckets far from the topic identifier towards buckets closer to it. This keeps discovery distributed while still giving advertisers and discoverers a structured way to meet.
+TopDisc therefore does not rely only on the closest nodes to a topic identifier. Advertisers maintain placements across buckets of a topic-centred table. Discoverers query registrars starting from buckets far from the topic identifier and progress towards buckets closer to it, querying up to `Klookup` registrars per bucket. This keeps discovery distributed while still ensuring that advertiser and discoverer walks converge toward the topic identifier when more search effort is needed.
 
 ## Why Use Topic-Centred Tables?
 
@@ -549,6 +585,10 @@ TopDisc-capable nodes advertise support in their ENR. This allows implementation
 - Yuval Marcus, Ethan Heilman, Sharon Goldberg.
   *Low-Resource Eclipse Attacks on Ethereum’s Peer-to-Peer Network.* 2018.\
   <https://eprint.iacr.org/2018/236.pdf>
+
+- Michał Król, Onur Ascigil, Sergi Rene, Alberto Sonnino, Matthieu Pigaglio, Ramin Sadre, Felix Lange, and Etienne Rivière.
+  *DISC-NG: Robust Service Discovery in the Ethereum Global Network.* 2024 IEEE 9th European Symposium on Security and Privacy (EuroS&P), pp. 193–215. IEEE, 2024.\
+  <https://ieeexplore.ieee.org/document/10629017>
 
 [wire protocol]: ./discv5-wire.md
 [node records]: ../enr.md
