@@ -404,7 +404,7 @@ If the ordinary node table contains too few nodes that can be used for DISC-NG o
 A service table is maintained from two sources:
 
 1. the ordinary Discovery v5 node table; and
-2. auxiliary ENRs learned through DISC-NG responses.
+2. **auxiliary ENRs** learned through DISC-NG responses.
 
 When a newly verified node advertising DISC-NG capability is learned through ordinary discovery, it becomes
 eligible for insertion into relevant service tables.
@@ -415,6 +415,24 @@ and any local DISC-NG usability checks.
 
 Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary local node
 table, while still remaining anchored in ordinary Discovery v5 state.
+
+### Auxiliary ENR Selection
+
+DISC-NG responses may include auxiliary ENRs. Auxiliary ENRs are routing information used by the requester to improve its local service table `B(s)`.
+
+When the wire-format request carries a list of topic-distances at which the requester's service table has free space, the registrar SHOULD use that list to select auxiliary ENRs. For each requested topic-distance `d`, the registrar selects at most one ENR from the corresponding bucket `b_d(s)` of its own service table `B(s)`.
+
+A recommended selection algorithm is:
+
+1. iterate over the topic-distances supplied by the requester;
+2. for each distance `d`, inspect the registrar's bucket `b_d(s)`;
+3. select at most one ENR from `b_d(s)`, preferably pseudo-randomly among eligible entries;
+4. skip ENRs that fail local validation or DISC-NG usability checks;
+5. stop when all requested distances have been considered or when an implementation-defined cap on auxiliary ENRs has been reached.
+
+Selecting at most one ENR per requested distance keeps responses compact and spreads coverage across the requester's free buckets. It avoids overrepresenting a single distance and reduces the ability of a registrar to fill a response with many ENRs from one bucket.
+
+The same auxiliary-ENR selection rule applies to registration responses and lookup responses.
 
 ### DISC-NG Liveness and Temporary Exclusion
 
@@ -639,10 +657,9 @@ advertisements remain available despite expiry, churn, registrar failure, and ch
 
 ### Registration Procedure
 
-An advertiser registers an advertisement by sending a registration request to a selected registrar.
+An advertiser registers an advertisement by sending a registration request to a selected registrar. The corresponding wire-format request is specified in [REGTOPIC].
 
-The first registration request for an advertisement is sent without a ticket. The registrar either admits the
-advertisement immediately or returns a ticket and a waiting time.
+The first registration request for an advertisement is sent without a ticket. The registrar either admits the advertisement immediately or returns a ticket and a waiting time. Ticket and confirmation responses are specified in [TICKET] and [REGCONFIRMATION].
 
 If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar still cannot admit the advertisement after the retry, it may return an updated ticket and a new waiting time.
 
@@ -652,27 +669,7 @@ A registration attempt fails if the registrar is unreachable, rejects the reques
 
 When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed earlier by registrar policy.
 
-Registration responses may include additional ENRs selected from the registrar's view of the service table. The
-advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs and checking DISC-NG
-capability.
-
-When the wire-format request carries a list of topic-distances at which the requester's own service table has
-free space, the registrar SHOULD bias the selection of auxiliary ENRs toward those distances. The recommended
-algorithm is:
-
-1. For each topic-distance in the requester's list, in order, select at most one ENR from the corresponding
-   bucket `bd(s)` of the registrar's own service table.
-2. Stop once an implementation-defined cap on the number of auxiliary ENRs has been reached, or once every
-   requested distance has been visited.
-
-Picking at most one ENR per requested distance keeps the response compact and spreads coverage across the
-requester's free buckets rather than overrepresenting a single distance. It also serves as a security measure
-against Sybil and eclipse attacks: a registrar whose service table happens to contain many ENRs at one distance
-— for example because an attacker controls a cluster of node identities clustered in that bucket — cannot
-flood a single response with those ENRs and thereby colonise the requester's `B(s)` at that distance. ENRs
-that fail local validation rules (for example endpoint-versus-source checks) SHOULD be skipped.
-
-The same auxiliary-ENR selection rule applies to lookup responses (see [Lookup Responses](#lookup-responses)).
+Registration responses may include auxiliary ENRs selected from the registrar's view of the service table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 ### Renewal
 
@@ -693,7 +690,7 @@ set of registrars, but to maintain sufficient active or pending placements acros
 
 ### Lookup Procedure
 
-A discoverer looking for service `s` queries registrars selected from its search table `B(s)`.
+A discoverer looking for service `s` queries registrars selected from its search table `B(s)`. The corresponding wire-format request is specified in [TOPICQUERY].
 
 Lookup proceeds bucket by bucket, starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to `Klookup` of them.
 
@@ -705,23 +702,19 @@ The same registrar should not be queried repeatedly during a single lookup unles
 
 If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded from DISC-NG operations.
 
-Lookup responses may also include additional ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`.
+Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 The discoverer validates returned ENRs before using them. Invalid ENRs are ignored.
 
 ### Lookup Responses
 
-A registrar receiving a lookup request for service `s` returns up to `Freturn` advertisements for that service from its ad cache.
+A registrar receiving a lookup request for service `s` returns advertisements for that service from its ad cache. Lookup responses are encoded as specified in [NODES] or in the DISC-NG-specific response format defined by the wire specification.
 
 The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same advertisers across repeated lookup requests.
 
-A registrar can also return additional ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
+A registrar may also return auxiliary ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
 
-The auxiliary-ENR selection rule defined for registration responses (see [Registration Procedure](#registration-procedure)) applies here as well: when the wire-format request carries a list of topic-distances, the registrar SHOULD bias its selection toward those distances using the same one-ENR-per-requested-distance algorithm.
-
-The registrar SHOULD select additional ENRs across buckets of its service table, for example by returning at most one randomly selected node from each bucket. This helps the requester improve its local service table `B(s)` across the service-centred key space, rather than only learning nodes closest to `s`.
-
-The requester uses returned neighbour ENRs to update its local service table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The exact encoding of returned advertisements and neighbour ENRs is specified in the wire-format document.
+The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The exact encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the wire-format document.
 
 ### Updating the Search Table During Lookup
 
@@ -745,7 +738,7 @@ The DISC-NG algorithms use the following parameters:
 | `Kregister` | Target number of active or pending registrations per bucket | `5` |
 | `Klookup` | Maximum number of registrar queries per bucket during lookup | `5` |
 | `Freturn` | Maximum number of advertisements returned by one registrar | `10` |
-| `Flookup` | Target number of distinct advertisers collected by lookup | `30` |
+| `Flookup` | Optional local or service-specific target for the number of distinct advertisers to collect during lookup | `30` |
 | `E` | Advertisement expiry duration | `15 min` |
 | `C` | Registrar ad cache capacity | `1000` |
 | `δ` | Registration retry window duration | **`TBD`** |
@@ -782,3 +775,9 @@ This document describes algorithms and data structures.
 The exact encoding of DISC-NG messages, ticket signatures, request identifiers, response splitting, returned
 advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
 document.
+
+[REGTOPIC]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#regtopic-request-0x07
+[TICKET]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#ticket-response-0x08
+[REGCONFIRMATION]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#regconfirmation-response-0x09
+[TOPICQUERY]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#topicquery-request-0x0a
+[NODES]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#nodes-response-0x04
