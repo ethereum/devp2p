@@ -444,20 +444,6 @@ Failure of a TopDisc request does not by itself require removal from the ordinar
 Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and table-maintenance
 rules.
 
-## Advertisements
-
-An advertisement states that an advertiser participates in a service.
-
-An advertisement identifies the advertiser by its ENR. Service-specific connection metadata should be encoded in
-the ENR where possible. If a service requires additional advertisement payload, its format is defined by the
-relevant service binding and encoded as specified in the wire-format document.
-
-An advertisement is specific to a service. A node that participates in multiple services advertises each service
-separately.
-
-Registrars store admitted advertisements in their ad cache. Discoverers collect advertisements from registrars
-and use the advertised ENRs as candidate peers for the target service.
-
 ## Registrar Behaviour
 
 ### Ad Cache
@@ -487,6 +473,29 @@ registrar may treat the request as a renewal or ignore it, depending on the rene
 wire-format document. The registrar must not store duplicate active advertisements for the same advertiser and
 service.
 
+### Advertisements
+
+An advertisement states that the node identified by an ENR participates in a service/topic.
+
+An advertisement is defined as:
+
+    ad = [topic, ENR]
+
+where:
+
+- `topic` is the 32-byte service/topic identifier;
+- `ENR` is the advertised node record.
+
+The advertisement digest is:
+
+    ad-digest = H(ad)
+
+where `H` is the digest function defined for ticket construction.
+
+If future versions allow service-specific advertisement payloads, the advertisement definition becomes:
+
+    ad = [topic, ENR, payload]
+
 ### Admission Control
 
 Registrars use admission control to decide whether and when an incoming registration request for an advertisement may be admitted to the
@@ -512,21 +521,27 @@ registrar treats the request as a new registration attempt or rejects it, depend
 
 ### Tickets
 
-A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a registration attempt after waiting. A ticket is bound to a specific advertisement and registrar. The advertisement binding includes the service identifier and a digest of the advertised ENR. If the advertisement includes service-specific payload, the ticket also covers that payload. The advertiser uses the latest ticket issued by the registrar when retrying the registration. A ticket issued for one service, advertised ENR, advertisement payload, or registrar MUST NOT be accepted for a different registration request.
+### Tickets
 
-The ticket is opaque to the advertiser. The advertiser does not interpret the ticket contents; it stores the latest ticket returned by the registrar and presents it in the next registration attempt to the same registrar. The exact ticket encoding, authentication mechanism, signature format, and signature domain are specified in the wire-format document.
+A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a registration attempt after waiting.
+
+A ticket is bound to a specific advertisement and registrar. The advertisement is denoted `ad` and includes the service identifier, the advertised ENR, and any service-specific advertisement payload. The ticket contains a digest of this advertisement, denoted `adDigest`.
+
+The advertiser uses the latest ticket issued by the registrar when retrying the registration. A ticket issued for one advertisement or registrar MUST NOT be accepted for a different registration request. In particular, a ticket issued for one service, advertised ENR, or advertisement payload MUST NOT be reused for another.
+
+The ticket is opaque to the advertiser. The advertiser does not interpret the ticket contents; it stores the latest ticket returned by the registrar and presents it in the next registration attempt to the same registrar. The exact ticket encoding, digest function, authentication mechanism, signature format, and signature domain are specified in the wire-format document.
 
 Algorithmically, a ticket contains enough authenticated information for the registrar to verify:
 
-- `serviceID`: the service identifier to which the ticket applies;
-- `enrDigest`: the digest of the advertised ENR to which the ticket applies;
-- `payloadDigest`: the digest of any service-specific advertisement payload covered by the registration, if such a payload exists;
+- `adDigest`: the digest of the advertisement to which the ticket applies;
 - `tinit`: the registrar-local time at which the ticket was first issued;
 - `tmod`: the registrar-local time at which the ticket was last modified;
 - `twait`: the remaining waiting duration reported to the advertiser;
 - `auth`: registrar authentication over the ticket contents.
 
-The registrar authenticates the ticket, for example by signing the ticket body or applying a registrar-local MAC. A registrar MUST reject a ticket that fails authentication or that was not issued by that registrar. The timestamps `tinit` and `tmod` are generated and interpreted only by the registrar. They are local to the registrar and are not compared against the advertiser's clock. The only timing value used by the advertiser is the relative waiting duration `twait` reported by the registrar in the registration response.
+The registrar authenticates the ticket, for example by signing the ticket body or applying a registrar-local MAC. A registrar MUST reject a ticket that fails authentication or that was not issued by that registrar.
+
+The timestamps `tinit` and `tmod` are generated and interpreted only by the registrar. They are local to the registrar and are not compared against the advertiser's clock. The only timing value used by the advertiser is the relative waiting duration `twait` reported by the registrar in the registration response.
 
 A retry is valid only during the registration window associated with the ticket:
 
@@ -542,7 +557,9 @@ When a returning advertiser presents a valid ticket, the registrar computes the 
 
 where `now` and `tinit` are both interpreted according to the registrar's local clock.
 
-If the retry is too early, too late, does not include the latest ticket, includes a ticket whose `serviceID`, `enrDigest`, or `payloadDigest` does not match the current registration request, or includes an invalid ticket, the registrar SHOULD reject the request or treat it as a new registration attempt according to the registration rules. Because the ticket is bound to the digest of the advertised ENR, updating the advertised ENR during a registration attempt requires starting a new registration attempt or obtaining a new ticket for the updated ENR.
+If the retry is too early, too late, does not include the latest ticket, includes a ticket whose `adDigest` does not match the advertisement in the current registration request, or includes an invalid ticket, the registrar SHOULD reject the request or treat it as a new registration attempt according to the registration rules.
+
+Because the ticket is bound to `adDigest`, changing the service identifier, advertised ENR, or service-specific advertisement payload during a registration attempt requires starting a new registration attempt or obtaining a new ticket for the updated advertisement.
 
 ### Waiting-Time Function
 
