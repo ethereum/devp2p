@@ -293,7 +293,7 @@ k-buckets on `B`:
 Node `A` now sorts all received nodes by distance to the lookup target and proceeds by repeating the lookup
 procedure on another, closer node.
 
-# Service Discovery
+# Topic-based Service Discovery
 
 ## Overview
 
@@ -301,38 +301,31 @@ Node Discovery v5 maintains the global Discv5 discovery network and each node's 
 
 Currently, a node can search for service-specific peers by sampling nodes through node discovery and then checking whether the sampled nodes support the desired service. This check is outside the ordinary node discovery algorithm: depending on the application, service support may be inferred from information in the ENR, discovered by establishing a devp2p/RLPx connection and negotiating supported subprotocols, or determined by a service-specific protocol query.
 
-This random-sampling approach preserves the security benefits of sampling from the global discovery network, because the search is not concentrated around a small set of service-specific locations. However, it is inefficient, especially when the target service is supported by only a small fraction of nodes.
+Discv5's random-sampling approach preserves the security benefits of sampling from the global discovery network, because the search is not concentrated around a small set of service-specific locations in the DHT keyspace. However, it is inefficient, especially when the target service is supported by only a small fraction of nodes.
 
-DISC-NG extends Node Discovery v5 with service discovery. It allows nodes to advertise participation in a service and allows other nodes to discover those advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet format, and authenticated session machinery.
-
+Discv5 topic-based discovery (**TopDisc**) extends Discovery v5 with topic-based service discovery. It allows nodes to advertise participation in a service and allows other nodes to discover those advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet format, and authenticated session machinery.
 
 ## Co-existence with Node Discovery
 
-DISC-NG is layered on top of Node Discovery v5. A DISC-NG-capable node first uses the Node Discovery v5 to join the global discovery network, populate its local node table, and learn DISC-NG-capable nodes. These nodes are then used to bootstrap DISC-NG. As DISC-NG registration and lookup operations proceed, DISC-NG-capable nodes can also return additional nodes to improve those service-specific tables, as described below.
+TopDisc is layered on top of Discovery v5. A TopDisc-capable node first uses the Node Discovery v5 to join the global discovery network, populate its local node table, and learn TopDisc-capable nodes. These nodes are then used to bootstrap TopDisc. As TopDisc registration and lookup operations proceed, TopDisc-capable nodes can also return additional nodes to improve those service-specific tables, as described below.
 
-A DISC-NG failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable for ordinary
-node discovery but unusable for DISC-NG registration or lookup. Conversely, a node that fails ordinary Discovery
-v5 liveness checks ceases to be eligible for insertion into DISC-NG service tables.
+A TopDisc failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable for ordinary
+node discovery but unusable for TopDisc registration or lookup. Conversely, a node that fails ordinary Discovery
+v5 liveness checks ceases to be eligible for insertion into TopDisc service tables.
 
-## DISC-NG Capability
+## TopDisc Capability
 
-A node indicates support for DISC-NG by including the following key-value pair in its ENR:
+A node indicates support for TopDisc by including the `topic-discovery` entry in its ENR.
 
-    discng = <version>
+    topic-discovery = <version>
 
-The `discng` ENR entry signals that the node implements the DISC-NG messages and can participate in DISC-NG service discovery, subject to local policy.
-
-The value of `discng` is an unsigned integer identifying the supported DISC-NG protocol version. A node supporting the version one of DISC-NG described in this document sets:
-
-    discng = 1.0
-
-Nodes whose ENR does not contain `discng`, or whose `discng` value is not supported by the local implementation are not inserted into service tables and are not selected for DISC-NG registration or lookup requests.
+The value of `topic-discovery` is an unsigned integer identifying the supported TopDisc protocol version. Nodes whose ENR does not contain `topic-discovery`, or whose `topic-discovery` value is not supported by the local implementation are not inserted into service tables and are not selected for TopDisc registration or lookup requests.
 
 ## Services and Service Identifiers
 
-DISC-NG operates on 32-byte service identifiers. A service identifier denotes a higher-level service, subnetwork, overlay, or protocol-specific discovery target.
+TopDisc operates on 32-byte service identifiers. A service identifier denotes a higher-level service, subnetwork, overlay, or protocol-specific discovery target.
 
-Service identifiers are in the same 256-bit identifier space as Node IDs. This allows DISC-NG to apply the Node Discovery v5 XOR distance function between service identifiers and node IDs.
+Service identifiers are in the same 256-bit identifier space as Node IDs. This allows TopDisc to apply the Node Discovery v5 XOR distance function between service identifiers and node IDs.
 
 The mapping from higher-level service names or application-specific parameters to service identifiers is defined by the relevant service binding. Such parameters MAY include, for example, protocol name, network name, fork identifier, client capability, subnet identifier, or other service-specific values.
 
@@ -340,11 +333,11 @@ This document does not define a canonical derivation rule for service identifier
 
 ## Node Roles
 
-A node that advertises DISC-NG capability in its ENR acts as a registrar, subject to local policy and resource limits.
+A node that advertises TopDisc capability in its ENR acts as a registrar, subject to local policy and resource limits.
 
-A **registrar** accepts DISC-NG registration and lookup requests, admits advertisements into its local **ad cache**, and returns admitted advertisements to discoverers.
+A **registrar** accepts TopDisc registration and lookup requests, admits advertisements into its local **ad cache**, and returns admitted advertisements to discoverers.
 
-A DISC-NG-capable node may also act as an advertiser, a discoverer, or both.
+A TopDisc-capable node may also act as an advertiser, a discoverer, or both.
 
 An **advertiser** participates in a service and registers advertisements for that service with registrars. A node acts as an advertiser only for services that it chooses to advertise.
 
@@ -358,19 +351,19 @@ A service table `B(s)` is a per-service node table centred on service identifier
 
 Similar to the ordinary Node Table, `B(s)` is divided into distance buckets. The difference is the reference point used to assign nodes to buckets. In the ordinary node table, a node `n` is placed according to `logdistance(self, n)`, where `self` is the local node ID. In a service table, the same node `n` is placed according to `logdistance(s, n)`, where `s` is the service identifier.
 
-For each `0 ≤ i < 256`, bucket `bᵢ(s)` contains DISC-NG-capable nodes whose node IDs are at logarithmic distance `i` from the service identifier:
+For each `0 ≤ i < 256`, bucket `bᵢ(s)` contains TopDisc-capable nodes whose node IDs are at logarithmic distance `i` from the service identifier:
 
     bᵢ(s) = { n | logdistance(s, n) = i }
 
 Thus, `B(s)` gives the local node a service-centred view of the discovery network. Buckets closer to `s` contain nodes whose IDs are closer to the service identifier, while buckets farther from `s` contain nodes from progressively larger regions of the key space.
 
-A node may maintain a service table for each service identifier for which it performs DISC-NG operations. Advertisers use `B(s)` as an advertise table for service `s`; discoverers use `B(s)` as a search table for service `s`.
+A node may maintain a service table for each service identifier for which it performs TopDisc operations. Advertisers use `B(s)` as an advertise table for service `s`; discoverers use `B(s)` as a search table for service `s`.
 
 The registrar ad cache is separate from service tables. A registrar does not need to maintain `B(s)` for every service represented in its ad cache.
 
 ### Bootstrap from Ordinary Node Discovery
 
-A node does not start DISC-NG advertisement placement or lookup from an empty service table.
+A node does not start TopDisc advertisement placement or lookup from an empty service table.
 
 The node first joins the Node Discovery v5 network using the standard bootstrapping procedure. It populates its ordinary local node table through the existing `PING`, `PONG`, `FINDNODE`, lookup, refresh, and liveness mechanisms.
 
@@ -378,79 +371,76 @@ For a service identifier `s`, the initial service table
 
     B(s) = { b₀(s), b₁(s), ..., b₂₅₅(s) }
 
-is derived by filtering the ordinary node table to nodes that can be used for DISC-NG operations and inserting each remaining node into the appropriate bucket of `B(s)`.
-
-A node can be used for DISC-NG operations if it:
-
-1. is present in the ordinary node table;
-2. advertises a supported DISC-NG version in its ENR;
-3. satisfies the ordinary Node Discovery v5 liveness requirements;
-4. is not currently excluded by local DISC-NG usability policy.
-
-The initial contents of `B(s)` are derived from the ordinary node table. When constructing this initial service table, implementations should:
+is derived from the ordinary node table. When constructing this initial service table, implementations should:
 
 1. take nodes currently known in the ordinary node table;
-2. discard nodes whose ENR does not advertise a supported DISC-NG version;
+2. discard nodes whose ENR does not advertise a supported TopDisc version;
 3. discard nodes whose liveness has not been verified by the ordinary Node Discovery v5 table-maintenance rules;
-4. discard nodes currently excluded by local DISC-NG usability policy;
+4. discard nodes currently excluded by local TopDisc usability policy;
 5. insert each remaining node into the corresponding bucket of `B(s)`.
 
-The resulting `B(s)` is soft state. It need not be complete before DISC-NG operations begin.
-
-If the ordinary node table contains too few nodes that can be used for DISC-NG operations, implementations should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are learned.
+The resulting `B(s)` is soft state. It need not be complete before TopDisc operations begin. If the ordinary node table contains too few nodes that can be used for TopDisc operations, implementations should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are learned.
 
 ### Ongoing Maintenance of `B(s)`
 
 A service table is maintained from two sources:
 
 1. the ordinary Discovery v5 node table; and
-2. **auxiliary ENRs** learned through DISC-NG responses.
+2. **auxiliary ENRs** learned through TopDisc responses.
 
-When a newly verified node advertising DISC-NG capability is learned through ordinary discovery, it becomes
+When a newly verified node advertising TopDisc capability is learned through ordinary discovery, it becomes
 eligible for insertion into relevant service tables.
 
-Responses to DISC-NG registration and lookup requests may include additional ENRs selected from the responder's
+Responses to TopDisc registration and lookup requests may include auxiliary ENRs selected from the responder's
 view of the service table. Such ENRs may be inserted into `B(s)` only after ENR validation, capability checking,
-and any local DISC-NG usability checks.
+and any local TopDisc usability checks.
 
 Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary local node
 table, while still remaining anchored in ordinary Discovery v5 state.
 
 ### Auxiliary ENR Selection
 
-DISC-NG responses may include auxiliary ENRs. Auxiliary ENRs are routing information used by the requester to improve its local service table `B(s)`.
+TopDisc responses may include auxiliary ENRs. Auxiliary ENRs are routing information used by the requester to improve its local service table `B(s)`; they are not service lookup results.
 
-When the wire-format request carries a list of topic-distances at which the requester's service table has free space, the registrar SHOULD use that list to select auxiliary ENRs. For each requested topic-distance `d`, the registrar selects at most one ENR from the corresponding bucket `b_d(s)` of its own service table `B(s)`.
+A request may carry a list of topic-distances at which the requester's service table has free space. A topic-distance is a logarithmic distance from the service identifier `s` to a node ID, and therefore identifies a bucket of `B(s)`.
+
+When such a list is present, the registrar SHOULD use it as a hint for auxiliary ENR selection. For each requested topic-distance `d`, the registrar SHOULD return at most one ENR for a TopDisc-capable node `n` such that:
+
+    logdistance(s, n) = d
+
+The registrar may obtain such ENRs from any local source of known TopDisc-capable nodes, including an existing service table `B(s)`, the ordinary node table filtered to TopDisc-capable nodes, or an implementation-local cache. A registrar is not required to maintain a service table for every service represented in its ad cache.
 
 A recommended selection algorithm is:
 
 1. iterate over the topic-distances supplied by the requester;
-2. for each distance `d`, inspect the registrar's bucket `b_d(s)`;
-3. select at most one ENR from `b_d(s)`, preferably pseudo-randomly among eligible entries;
-4. skip ENRs that fail local validation or DISC-NG usability checks;
+2. for each distance `d`, select at most one known TopDisc-capable node whose node ID satisfies `logdistance(s, n) = d`;
+3. prefer pseudo-random selection when multiple eligible ENRs are available for the same distance;
+4. skip ENRs that fail local validation or TopDisc usability checks;
 5. stop when all requested distances have been considered or when an implementation-defined cap on auxiliary ENRs has been reached.
 
-Selecting at most one ENR per requested distance keeps responses compact and spreads coverage across the requester's free buckets. It avoids overrepresenting a single distance and reduces the ability of a registrar to fill a response with many ENRs from one bucket.
+Selecting at most one ENR per requested distance keeps responses compact and spreads coverage across the requester's free buckets. It avoids overrepresenting a single distance and reduces the ability of a responder to fill a response with many ENRs from one bucket.
+
+If the registrar has no eligible ENR for a requested distance, it omits that auxiliary ENR.
 
 The same auxiliary-ENR selection rule applies to registration responses and lookup responses.
 
-### DISC-NG Liveness and Temporary Exclusion
+### TopDisc Liveness and Temporary Exclusion
 
-A node advertising DISC-NG capability is not automatically a usable registrar for every DISC-NG operation. It may
+A node advertising TopDisc capability is not automatically a usable registrar for every TopDisc operation. It may
 time out, return malformed responses, reject requests, or fail to implement the extension correctly.
 
-Implementations should therefore maintain DISC-NG-level usability state for nodes in `B(s)`.
+Implementations should therefore maintain TopDisc-level usability state for nodes in `B(s)`.
 
 If a node in `B(s)` repeatedly fails to answer registration or lookup requests, times out, or returns malformed
-responses, implementations should temporarily exclude that node from selection for DISC-NG operations. Temporary
+responses, implementations should temporarily exclude that node from selection for TopDisc operations. Temporary
 exclusion may be implemented by removing the node from `B(s)`, suppressing its selection for a backoff period,
 or assigning it lower selection priority.
 
 Temporary exclusion is not a permanent blacklist. After the backoff period expires, the node may become eligible
-for re-insertion into `B(s)` if it is still present in the ordinary node table, still advertises DISC-NG capability,
+for re-insertion into `B(s)` if it is still present in the ordinary node table, still advertises TopDisc capability,
 and still satisfies ordinary Discovery v5 liveness requirements.
 
-Failure of a DISC-NG request does not by itself require removal from the ordinary Discovery v5 node table.
+Failure of a TopDisc request does not by itself require removal from the ordinary Discovery v5 node table.
 Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and table-maintenance
 rules.
 
@@ -507,7 +497,7 @@ returns a ticket and a waiting time. This mechanism promotes diversity in the ad
 registrars to keep unbounded per-request state for pending registrations.
 
 When a registrar receives a registration request, it computes a waiting time from the current state of the ad
-cache and the incoming advertisement. If the effective remaining waiting time is zero, the
+cache and the incoming advertisement. If the effective remaining waiting time is less than or equal to zero, the
 advertisement is admitted. Otherwise, the registrar returns a ticket and a waiting time.
 
 The registrar does not need to keep per-request state for pending registrations. Instead, the state needed to
@@ -522,27 +512,37 @@ registrar treats the request as a new registration attempt or rejects it, depend
 
 ### Tickets
 
-A ticket is a registrar-issued object that allows an advertiser to retry a registration attempt after waiting.
+A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a registration attempt after waiting. A ticket is bound to a specific advertisement and registrar. The advertisement binding includes the service identifier and a digest of the advertised ENR. If the advertisement includes service-specific payload, the ticket also covers that payload. The advertiser uses the latest ticket issued by the registrar when retrying the registration. A ticket issued for one service, advertised ENR, advertisement payload, or registrar MUST NOT be accepted for a different registration request.
 
-A ticket is bound to the advertisement, the registrar, and timing information. The advertiser uses the latest ticket issued by the registrar when retrying the registration. The exact ticket encoding, signature format, and signature domain are specified in the wire-format document.
+The ticket is opaque to the advertiser. The advertiser does not interpret the ticket contents; it stores the latest ticket returned by the registrar and presents it in the next registration attempt to the same registrar. The exact ticket encoding, authentication mechanism, signature format, and signature domain are specified in the wire-format document.
 
-Algorithmically, a ticket contains enough information for the registrar to verify:
+Algorithmically, a ticket contains enough authenticated information for the registrar to verify:
 
-- the advertisement to which the ticket applies;
-- the registrar time at which the ticket was first issued;
-- the registrar time at which the ticket was last updated;
-- the remaining waiting duration reported to the advertiser;
-- that the ticket was issued by the registrar.
+- `serviceID`: the service identifier to which the ticket applies;
+- `enrDigest`: the digest of the advertised ENR to which the ticket applies;
+- `payloadDigest`: the digest of any service-specific advertisement payload covered by the registration, if such a payload exists;
+- `tinit`: the registrar-local time at which the ticket was first issued;
+- `tmod`: the registrar-local time at which the ticket was last modified;
+- `twait`: the remaining waiting duration reported to the advertiser;
+- `auth`: registrar authentication over the ticket contents.
 
-The timestamps in the ticket are generated and interpreted by the registrar. The advertiser does not need to compare those timestamps with its own local clock. The advertiser only needs to wait for the relative waiting duration reported by the registrar before retrying.
+The registrar authenticates the ticket, for example by signing the ticket body or applying a registrar-local MAC. A registrar MUST reject a ticket that fails authentication or that was not issued by that registrar. The timestamps `tinit` and `tmod` are generated and interpreted only by the registrar. They are local to the registrar and are not compared against the advertiser's clock. The only timing value used by the advertiser is the relative waiting duration `twait` reported by the registrar in the registration response.
 
 A retry is valid only during the registration window associated with the ticket:
 
     tmod + twait ≤ now ≤ tmod + twait + δ
 
-where `tmod` is the ticket modification time according to the registrar's clock, `twait` is the remaining waiting duration reported to the advertiser, `δ` is the registration window duration, and `now` is the registrar's current time when processing the retry.
+where `now` is the registrar's current local time when processing the retry, and `δ` is the registration window duration.
 
-The advertiser does not use `tmod` to schedule the retry and does not need its clock to be synchronised with the registrar's clock. The advertiser waits for the relative duration `twait` using its own local timer, then retries with the ticket. The registrar validates the retry window using its own clock when the ticket is presented again.
+The advertiser does not use `tmod` to schedule the retry and does not need its clock to be synchronised with the registrar's clock. The advertiser waits for the relative duration `twait` using its own local timer, then retries with the latest ticket. The registrar validates the retry window using its own clock when the ticket is presented again.
+
+When a returning advertiser presents a valid ticket, the registrar computes the accumulated waiting duration as:
+
+    waited = now - tinit
+
+where `now` and `tinit` are both interpreted according to the registrar's local clock.
+
+If the retry is too early, too late, does not include the latest ticket, includes a ticket whose `serviceID`, `enrDigest`, or `payloadDigest` does not match the current registration request, or includes an invalid ticket, the registrar SHOULD reject the request or treat it as a new registration attempt according to the registration rules. Because the ticket is bound to the digest of the advertised ENR, updating the advertised ENR during a registration attempt requires starting a new registration attempt or obtaining a new ticket for the updated ENR.
 
 ### Waiting-Time Function
 
@@ -560,9 +560,9 @@ where:
 
 - `E` is the advertisement expiry duration;
 - `C` is the ad cache capacity;
-- `c` is the current number of advertisements in the cache;
+- `c` is the current number of advertisements in the cache; when `c = 0`, the service-similarity term is defined as `0`.
 - `c(ad.service)` is the number of cached advertisements for the same service;
-- `score(ad.IP)` is the IP similarity score of the advertiser;
+- `score(ad.IP)` is the IP similarity score computed from the advertiser's IP (ad.IP) in the advertised ENR;
 - `Pocc` is the occupancy exponent;
 - `G` is the safety constant.
 
@@ -604,7 +604,7 @@ The tree is updated when advertisements are admitted or expire. When an advertis
 the path corresponding to the advertiser's IP address are incremented. When the advertisement expires or is removed,
 those counters are decremented.
 
-TODO: IPv6 
+For IPv6, the same construction applies over 128 address bits. Implementations that support both IPv4 and IPv6 should define whether separate trees are maintained or whether addresses are mapped into a common representation.
 
 ### Waiting-Time Lower Bound
 
@@ -663,13 +663,13 @@ The first registration request for an advertisement is sent without a ticket. Th
 
 If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar still cannot admit the advertisement after the retry, it may return an updated ticket and a new waiting time.
 
-The protocol does not define a fixed maximum total duration for a registration attempt. An implementation MAY abandon an attempt after a local timeout, after a configured maximum number of retries, or if the registrar is considered unusable according to local DISC-NG liveness policy.
+The protocol does not define a fixed maximum total duration for a registration attempt. An implementation MAY abandon an attempt after a local timeout, after a configured maximum number of retries, or if the registrar is considered unusable according to local TopDisc liveness policy.
 
-A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, the registration window is missed, a local retry or timeout limit is reached, or the registrar is otherwise considered unusable according to local DISC-NG liveness policy. On failure, the advertiser removes the registrar from the pending state for that bucket and may select another registrar.
+A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, the registration window is missed, a local retry or timeout limit is reached, or the registrar is otherwise considered unusable according to local TopDisc liveness policy. On failure, the advertiser removes the registrar from the pending state for that bucket and may select another registrar.
 
 When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed earlier by registrar policy.
 
-Registration responses may include auxiliary ENRs selected from the registrar's view of the service table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
+Registration responses may include auxiliary ENRs selected from the registrar's view of the service table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 ### Renewal
 
@@ -690,48 +690,40 @@ set of registrars, but to maintain sufficient active or pending placements acros
 
 ### Lookup Procedure
 
-A discoverer looking for service `s` queries registrars selected from its search table `B(s)`. The corresponding wire-format request is specified in [TOPICQUERY].
+A discoverer looking for service `s` queries registrars selected from its search table `B(s)`. The corresponding wire-format request is specified in [TOPICQUERY]. Lookup proceeds bucket by bucket, starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to `Klookup` of them.
 
-Lookup proceeds bucket by bucket, starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to `Klookup` of them.
+A registrar may return advertisements for service `s`. The discoverer validates the returned advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity. Advertisements are candidate results for the target service. The lookup terminates when the discoverer has collected enough distinct advertisers for its local or service-specific purpose, or when no unqueried registrars remain. This local target is denoted `Flookup` in this document. The value of `Flookup` is determined by the application, service binding, or local implementation policy, rather than by the TopDisc lookup procedure itself. If fewer than `Flookup` advertisers are found before all available candidate registrars are exhausted, the lookup returns the valid advertisers collected so far.
 
-A registrar may return advertisements for service `s`. The discoverer validates the returned advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity. Advertisements are candidate results for the target service.
+The same registrar should not be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses to retry according to local policy. If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded from TopDisc operations.
 
-The lookup terminates when the discoverer has collected enough distinct advertisers for its local or service-specific purpose, or when no unqueried registrars remain. The required number of advertisers is determined by the application or service using DISC-NG, rather than by the DISC-NG lookup procedure itself.
-
-The same registrar should not be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses to retry according to local policy.
-
-If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded from DISC-NG operations.
-
-Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
-
-The discoverer validates returned ENRs before using them. Invalid ENRs are ignored.
+Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection). 
 
 ### Lookup Responses
 
-A registrar receiving a lookup request for service `s` returns advertisements for that service from its ad cache. Lookup responses are encoded as specified in [NODES] or in the DISC-NG-specific response format defined by the wire specification.
+A registrar receiving a lookup request for service `s` returns advertisements for that service from its ad cache. A registrar receiving a [TOPICQUERY] request for service `s` returns advertisements and auxiliary ENRs using the response format defined for `TOPICQUERY` in the wire specification.
 
 The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same advertisers across repeated lookup requests.
 
 A registrar may also return auxiliary ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
 
-The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating the ENRs, checking DISC-NG capability, and applying local DISC-NG usability policy. The exact encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the wire-format document.
+The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The exact encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the wire-format document.
 
 ### Updating the Search Table During Lookup
 
-The discoverer updates `B(s)` using additional ENRs returned in lookup responses.
+The discoverer updates `B(s)` using auxiliary ENRs returned in lookup responses.
 
 An ENR learned through lookup is eligible for insertion into `B(s)` only if:
 
 1. the ENR is valid;
-2. the ENR advertises DISC-NG capability;
-3. the node is not temporarily excluded by local DISC-NG usability policy;
+2. the ENR advertises TopDisc capability;
+3. the node is not temporarily excluded by local TopDisc usability policy;
 4. the node satisfies ordinary Discovery v5 liveness requirements, or is scheduled for ordinary liveness verification.
 
 Implementations may insert learned ENRs immediately with an unverified flag and verify liveness asynchronously. 
 
 ## Parameters
 
-The DISC-NG algorithms use the following parameters:
+The TopDisc algorithms use the following parameters:
 
 | Parameter | Meaning | Default |
 |---|---|---|
@@ -756,14 +748,14 @@ expires or is renewed.
 
 ### Clocks
 
-DISC-NG does not require clock synchronisation between advertisers and registrars.
+TopDisc does not require clock synchronisation between advertisers and registrars.
 
 Tickets carry registrar-generated timing information. Advertisers only need to wait for the duration indicated by
 the registrar before retrying.
 
 ### Response Splitting
 
-DISC-NG responses may be split across multiple packets when supported by the wire protocol.
+TopDisc responses may be split across multiple packets when supported by the wire protocol.
 
 Implementations should collect all response packets belonging to the same request until the announced response count
 is reached or the request times out.
@@ -772,7 +764,7 @@ is reached or the request times out.
 
 This document describes algorithms and data structures.
 
-The exact encoding of DISC-NG messages, ticket signatures, request identifiers, response splitting, returned
+The exact encoding of TopDisc messages, ticket signatures, request identifiers, response splitting, returned
 advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
 document.
 
