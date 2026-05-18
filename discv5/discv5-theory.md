@@ -785,8 +785,9 @@ The exact encoding of TopDisc messages, ticket signatures, request identifiers, 
 advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
 document.
 
-[REGTOPIC]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#regtopic-request-0x07
-[TICKET]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#ticket-response-0x08
-[REGCONFIRMATION]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#regconfirmation-response-0x09
-[TOPICQUERY]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#topicquery-request-0x0a
-[NODES]: https://github.com/ethereum/devp2p/blob/master/discv5/discv5-wire.md#nodes-response-0x04
+[REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
+[TICKET]: ./discv5-wire.md#ticket-response-0x08
+[REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x08
+[TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
+[TOPICNODES]: ./discv5-wire.md#topicnodes-response-0x0a
+[NODES]: ./discv5-wire.md#nodes-response-0x04
