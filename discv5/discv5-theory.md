@@ -521,8 +521,6 @@ registrar treats the request as a new registration attempt or rejects it, depend
 
 ### Tickets
 
-### Tickets
-
 A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a registration attempt after waiting.
 
 A ticket is bound to a specific advertisement and registrar. The advertisement is denoted `ad` and includes the service identifier, the advertised ENR, and any service-specific advertisement payload. The ticket contains a digest of this advertisement, denoted `adDigest`.
@@ -578,7 +576,7 @@ where:
 - `E` is the advertisement expiry duration;
 - `C` is the ad cache capacity;
 - `c` is the current number of advertisements in the cache; when `c = 0`, the service-similarity term is defined as `0`.
-- `c(ad.service)` is the number of cached advertisements for the same service;
+- `c(ad.service)` is the number of cached advertisements for the service being advertised;
 - `score(ad.IP)` is the IP similarity score computed from the advertiser's IP (ad.IP) in the advertised ENR;
 - `Pocc` is the occupancy exponent;
 - `G` is the safety constant.
