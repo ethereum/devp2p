@@ -570,7 +570,7 @@ given block hashes. The number of BALs that can be requested in a single message
 subject to implementation-defined limits.
 
 BALs are only available for blocks after [EIP-7928] activation and within the retention
-period defined therein. Requests for unavailable BALs return empty entries.
+period defined therein.
 
 ### BlockAccessLists (0x13)
 
