@@ -315,11 +315,13 @@ v5 liveness checks ceases to be eligible for insertion into TopDisc service tabl
 
 ## TopDisc Capability
 
-A node indicates support for TopDisc by including the `topic-discovery` entry in its ENR.
+A node indicates support for TopDisc by including the [`topic-discovery`][topic-discovery-entry] entry in its ENR.
 
     topic-discovery = <version>
 
 The value of `topic-discovery` is an unsigned integer identifying the supported TopDisc protocol version. Nodes whose ENR does not contain `topic-discovery`, or whose `topic-discovery` value is not supported by the local implementation are not inserted into service tables and are not selected for TopDisc registration or lookup requests.
+
+[topic-discovery-entry]: ../enr-entries/topic-discovery.md
 
 ## Services and Service Identifiers
 
