@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Wire Protocol
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 This document specifies the wire protocol of Node Discovery v5.
 
@@ -32,11 +32,10 @@ the recipient doesn't respond.
 The maximum size of any packet is 1280 bytes. Implementations should not generate or
 process packets larger than this size. Most messages are smaller than this limit by
 definition, the exception being the NODES message. FINDNODE returns up to 16 records, plus
-other data, and TOPICQUERY may also distribute a significantly long list of ENRs. As per
-specification the maximum size of an ENR is 300 bytes. A NODES message containing all
-FINDNODE response records would be at least 4800 bytes, not including additional data such
-as the header. To stay below the size limit, NODES responses are sent as multiple messages
-and specify the total number of responses in the message.
+other data. As per specification the maximum size of an ENR is 300 bytes. A NODES message
+containing all FINDNODE response records would be at least 4800 bytes, not including
+additional data such as the header. To stay below the size limit, NODES responses are sent
+as multiple messages and specify the total number of responses in the message.
 
 The minimum size of any Discovery v5 packet is 63 bytes. Implementations should reject
 packets smaller than this size.
@@ -50,9 +49,11 @@ the request.
 
 ## Packet Encoding
 
-The protocol deals with three distinct kinds of packets:
+The protocol deals with four distinct kinds of packets:
 
 - Ordinary message packets, which carry an encrypted/authenticated message.
+- Session message packets. These are identical to an ordinary message packets, but cannot
+  trigger a handshake.
 - WHOAREYOU packets, which are sent when the recipient of an ordinary message packet
   cannot decrypt/authenticate the packet's message.
 - Handshake message packets, which are sent following WHOAREYOU. These packets establish a
@@ -83,7 +84,7 @@ The `masked-header` contains the actual packet header, which starts with a fixed
     header        = static-header || authdata
     static-header = protocol-id || version || flag || nonce || authdata-size
     protocol-id   = "discv5"
-    version       = 0x0001
+    version       = 0x0002
     authdata-size = uint16    -- byte length of authdata
     flag          = uint8     -- packet type identifier
     nonce         = uint96    -- nonce of message
@@ -115,6 +116,15 @@ For message packets, the `authdata` section is just the source node ID.
     authdata-size = 32
 
 ![message packet layout](./img/message-packet-layout.png)
+
+### Session Message Packet (`flag = 3`)
+
+The structure of this type is identical to an [ordinary message packet], apart from the
+different `flag` value.
+
+Session packets are used to send a message that assumes an existing session. When a packet
+with this flag value is received and cannot be decrypted, the packet should be dropped,
+and not trigger a WHOAREYOU response.
 
 ### WHOAREYOU Packet (`flag = 1`)
 
@@ -154,15 +164,25 @@ handshake packet.
 
 ![handshake packet layout](./img/handshake-packet-layout.png)
 
-## Protocol Messages
+## Messages
 
-This section lists all defined messages which can be sent and received. The hexadecimal
-value in parentheses is the `message-type`.
+Messages are the payloads of packets. A message is identified by its `message-type` and
+contain `message-data` specific to each type.
 
-The first element of every `message-data` list is the request ID. `request-id` is an RLP
-byte array of length <= 8 bytes. For requests, this value is assigned by the requester.
-The recipient of a message must mirror the value in the `request-id` element of the
-response. The selection of appropriate values for request IDs is left to the implementation.
+There are three classes of messages:
+
+- *Request* messages are sent as a [message packet] or [handshake message packet].
+- *Responses* are the answers to requests, and are sent using a [session message packet].
+- *Notifications* do not require a response, They are also sent as a [session message packet].
+
+For request and response messages, the first element of every `message-data` list is the
+request ID. `request-id` is an RLP byte array of length <= 8 bytes. For requests, this
+value is assigned by the requester. The recipient of a message must mirror the value in
+the `request-id` element of the response. The selection of appropriate values for request
+IDs is left to the implementation.
+
+All defined protocol messages are listed below. The hexadecimal value in parentheses is
+the `message-type`.
 
 ### PING Request (0x01)
 
@@ -203,7 +223,7 @@ the result set. The recommended result limit for FINDNODE queries is 16 nodes.
     message-type = 0x04
     total        = total number of responses to the request
 
-NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
+NODES is the response to a FINDNODE. Multiple NODES messages may be
 sent as responses to a single query. Implementations may place a limit on the allowed
 maximum for `total`. If exceeded, additional responses may be ignored.
 
@@ -232,72 +252,39 @@ containing empty `response` data.
 TALKRESP is the response to TALKREQ. The `response` is a RLP byte array containing the
 response data.
 
-### REGTOPIC Request (0x07)
+### RELAYINIT Notification (0x07)
 
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
+    message-data      = [initiator-enr, target-id, nonce]
+    notification-type = 0x07
+    target-id         = 256-bit node ID of target
+    nonce             = uint96    -- nonce of timed out request
 
-    message-data = [request-id, topic, ENR, ticket]
-    message-type = 0x07
-    node-record  = current node record of sender
-    ticket       = byte array containing ticket content
+RELAYINIT is a notification sent from the initiator of a hole punch attempt to a relay.
+The sender sets the `initiator-enr` to its own ENR.
 
-REGTOPIC attempts to register the sender for the given topic. If the requesting node has a
-ticket from a previous registration attempt, it must present the ticket. Otherwise
-`ticket` is the empty byte array (RLP: `0x80`). The ticket must be valid and its waiting
-time must have elapsed before using the ticket.
+The relay looks up the ENR of `target-id` in its node table, and if it exists relays the
+`initiator-enr` and `nonce` to the target in a RELAYMSG notification.
 
-REGTOPIC is always answered by a TICKET response. The requesting node may also receive a
-REGCONFIRMATION response when registration is successful. It may take up to 10s for the
-confirmation to be sent.
+### RELAYMSG Notification (0x08)
 
-### TICKET Response (0x08)
+    message-data      = [initiator-enr, nonce]
+    notification-type = 0x08
+    nonce             = uint96    -- nonce of timed out request
 
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, ticket, wait-time]
-    message-type = 0x08
-    ticket       = an opaque byte array representing the ticket
-    wait-time    = time to wait before registering, in seconds
-
-TICKET is the response to REGTOPIC. It contains a ticket which can be used to register for
-the requested topic after `wait-time` has elapsed. See the [theory section on tickets] for
-more information.
-
-### REGCONFIRMATION Response (0x09)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic]
-    message-type = 0x09
-    request-id   = request-id of REGTOPIC
-
-REGCONFIRMATION notifies the recipient about a successful registration for the given
-topic. This call is sent by the advertisement medium after the time window for
-registration has elapsed on a topic queue.
-
-### TOPICQUERY Request (0x0A)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic]
-    message-type = 0x0a
-    topic        = 32-byte topic hash
-
-TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
-request must send one or more NODES messages containing node records registered for the
-topic.
+RELAYMSG is a notification from the relay in a hole punch attempt to the target. The
+receiver sends the `nonce` back to the initiator in a [WHOAREYOU packet] using the
+`initiator-enr` to address it.
 
 ## Test Vectors
 
 A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
+[ordinary message packet]: #ordinary-message-packet-flag--0
+[message packet]: #ordinary-message-packet-flag--0
+[WHOAREYOU packet]: #whoareyou-packet-flag--1
+[handshake message packet]: #handshake-message-packet-flag--2
+[session message packet]: #session-message-packet-flag--3
 [handshake section]: ./discv5-theory.md#handshake-steps
-[topic queue]: ./discv5-theory.md#topic-table
-[theory section on tickets]: ./discv5-theory.md#tickets
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md

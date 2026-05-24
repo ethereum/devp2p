@@ -1,6 +1,6 @@
 # Node Discovery Protocol v5 - Rationale
 
-**Protocol version v5.1**
+**Protocol version v5.2**
 
 Note that this specification is a work in progress and may change incompatibly without
 prior notice.
@@ -176,8 +176,7 @@ discovery mechanism must be chosen.
 Another reason for UDP is communication latency: participants in the discovery protocol
 must be able to communicate with a large number of other nodes within a short time frame
 to establish and maintain the neighbor set and must perform regular liveness checks on
-their neighbors. For the topic advertisement system, registrants collect tickets and must
-use them as soon as the ticket expires to place an ad in a topic queue.
+their neighbors.
 
 These protocol interactions are difficult to implement in a TCP setting where connections
 require multiple round-trips before application data can be sent and the connection
@@ -207,7 +206,7 @@ understandable while providing a distributed database that scales with the numbe
 participants. Our system also relies on the routing table to allow enumeration and random
 traversal of the whole network, i.e. all participants can be found. Most importantly,
 having a structured network with routing enables thinking about DHT 'address space' and
-'regions of address space'. These concepts are used to build the [topic-based node index].
+'regions of address space'.
 
 Kademlia is often criticized as a naive design with obvious weaknesses. We believe that
 most issues with simple Kademlia can be overcome by careful programming and the benefits
@@ -219,8 +218,7 @@ The well-known 'sybil attack' is based on the observation that creating node ide
 essentially free. In any system using a measure of proximity among node identities, an
 adversary may place nodes close to a chosen node by generating suitable identities. For
 basic node discovery through network enumeration, the 'sybil attack' poses no significant
-challenge. Sybils are a serious issue for the topic-based node index, especially for
-topics provided by few participants, because the index relies on node distance.
+challenge.
 
 An 'eclipse attack' is usually based on generating sybil nodes with the goal of polluting
 the victim node's routing table. Once the table is overtaken, the victim has no way to
@@ -307,7 +305,7 @@ Go implementation shows that the handshake computation takes 500µs on a 2014-er
 using the default secp256k1/keccak256 identity scheme. That's a lot, but note the cost
 amortizes because nodes commonly exchange multiple packets. Subsequent packets in the same
 conversation can be decrypted and authenticated in just 2µs. The most common protocol
-interaction is a FINDNODE or TOPICQUERY request on an unknown node with 4 NODES responses.
+interaction is a FINDNODE request on an unknown node with 4 NODES responses.
 
 To put things into perspective: encryption and authentication in Discovery v5 is still a
 significant improvement over the authentication scheme used in Discovery v4, which
@@ -341,79 +339,6 @@ An adversary may also try to replay previously sent/seen packets to impersonate 
 disturb the operation of the protocol. Session keys per node-ID/IP generally prevent
 replay across sessions. The `request-id`, mirrored in response packets, prevents replay of
 responses within a session.
-
-## The Topic Index
-
-Using FINDNODE queries with appropriately chosen targets, the entire DHT can be sampled by
-a random walk to find all other participants. When building a distributed application, it
-is often desirable to restrict the search to participants which provide a certain service.
-A simple solution to this problem would be to simply split up the network and require
-participation in many smaller application-specific networks. However, such networks are
-hard to bootstrap and also more vulnerable to attacks which could isolate nodes.
-
-The topic index provides discovery by provided service in a different way. Nodes maintain
-a single node table tracking their neighbors and advertise 'topics' on nodes found by
-randomly walking the DHT. While the 'global' topic index can be also spammed, it makes
-complete isolation a lot harder. To prevent nodes interested in a certain topic from
-finding each other, the entire discovery network would have to be overpowered.
-
-To make the index useful, searching for nodes by topic must be efficient regardless of the
-number of advertisers. This is achieved by estimating the topic 'radius', i.e. the
-percentage of all live nodes which are advertising the topic. Advertisement and search
-activities are restricted to a region of DHT address space around the topic's 'center'.
-
-We also want the index to satisfy another property: When a topic advertisement is placed,
-it should last for a well-defined amount of time. This ensures nodes may rely on their
-advertisements staying placed rather than worrying about keeping them alive.
-
-Finally, the index should consume limited resources. Just as the node table is limited in
-number and size of buckets, the size of the index data structure on each node is limited.
-
-### Why should advertisers wait?
-
-Advertisers must wait a certain amount of time before they can be registered. Enforcing
-this time limit prevents misuse of the topic index because any topic must be important
-enough to outweigh the cost of waiting. Imagine a group phone call: announcing the
-participants of the call using topic advertisement isn't a good use of the system because
-the topic exists only for a short time and will have very few participants. The waiting
-time prevents using the index for this purpose because the call might already be over
-before everyone could get registered.
-
-### Dealing with Topic Spam
-
-Our model is based on the following assumptions:
-
-- Anyone can place their own advertisements under any topics and the rate of placing ads
-  is not limited globally. The number of active ads for any node is roughly proportional
-  to the resources (network bandwidth, mostly) spent on advertising.
-- Honest actors whose purpose is to connect to other honest actors will spend an adequate
-  amount of efforts on registering and searching for ads, depending on the rate of newly
-  established connections they are targeting. If the given topic is used only by honest
-  actors, a few registrations per minute will be satisfactory, regardless of the size of
-  the subnetwork.
-- Dishonest actors may want to place an excessive amount of ads just to disrupt the
-  discovery service. This will reduce the effectiveness of honest registration efforts by
-  increasing the topic radius and/or topic queue waiting times. If the attacker(s) can
-  place a comparable amount or more ads than all honest actors combined then the rate of
-  new (useful) connections established throughout the network will reduce proportionally
-  to the `honest / (dishonest + honest)` registration rates.
-
-This adverse effect can be countered by honest actors increasing their registration and
-search efforts. Fortunately, the rate of established connections between them will
-increase proportionally both with increased honest registration and search efforts. If
-both are increased in response to an attack, the required factor of increased efforts from
-honest actors is proportional to the square root of the attacker's efforts.
-
-### Detecting a useless registration attack
-
-In the case of a symmetrical protocol, where nodes are both searching and advertising
-under the same topic, it is easy to detect when most of the found ads turn out to be
-useless and increase both registration and query frequency. It is a bit harder but still
-possible with asymmetrical (client-server) protocols, where only clients can easily detect
-useless registrations, while advertisers (servers) do not have a direct way of detecting
-when they should increase their advertising efforts. One possible solution is for servers
-to also act as clients just to test the server capabilities of other advertisers. It is
-also possible to implement a feedback system between trusted clients and servers.
 
 # References
 
@@ -451,5 +376,4 @@ also possible to implement a feedback system between trusted clients and servers
   <https://eprint.iacr.org/2018/236.pdf>
 
 [wire protocol]: ./discv5-wire.md
-[topic-based node index]: ./discv5-theory.md#topic-advertisement
 [node records]: ../enr.md

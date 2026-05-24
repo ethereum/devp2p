@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant Alice
+    participant Relay
+    participant Bob
+
+    Relay-->>Alice: s(NODES[Bob's ENR])
+    Alice->>Bob: m(nonce,FINDNODE)
+    Note left of Alice:Hole punched in Alice's NAT for Bob
+    Note left of Alice:FINDNODE timed out
+    Alice->>Relay: s(RELAYINIT[nonce])
+    Relay->>Bob: s(RELAYMSG[nonce])
+    Bob-->>Alice: whoareyou(nonce)
+    Note right of Bob: Hole punched in Bob's NAT for Alice
+    Alice-->>Bob: H(FINDNODE)
