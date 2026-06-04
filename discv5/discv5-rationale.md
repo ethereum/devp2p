@@ -48,11 +48,13 @@ Discovery v4 trusts other nodes to return neighbors according to an agreed dista
 metric. Mismatches in implementation can make it hard for nodes to join the network, or
 lead to network fragmentation.
 
-#### 1.1.6 Secondary topic-based node index
+#### 1.1.6 Topic-based Service Discovery
 
-The protocol must support discovery of nodes via an arbitrary topic identifier. Finding
-nodes belonging to a topic should be as fast or faster than finding a node with a certain
-ID.
+The protocol must support discovery of nodes that participate in a higher-level service or topic. A topic is identified by a fixed-length topic identifier in the same key space as node IDs.
+
+Topic-based service discovery should reuse the ordinary Node Discovery v5 network rather than requiring each service to operate its own bootstrap network or discovery DHT.
+
+Finding nodes that participate in a topic should be efficient even when the topic is supported by only a small fraction of the discovery network. At the same time, topic discovery should preserve the security benefits of sampling from a large global discovery network and should not concentrate discovery for a topic at a small set of predictable nodes.
 
 #### 1.1.7 Change replay prevention
 
@@ -131,7 +133,7 @@ These attacks rely on being able to create many real nodes, or spoof many logica
 for a small number of physical endpoints, to form a large, isolated area of the network
 under the control of the malicious actor. The victim's discovery findings are directed
 into that part of the network, either to manipulate their traffic or to fully isolate them
-from the network.
+from the network. Additional security goals specific to topic-based service discovery (TopDisc) are listed in the Topic-based Service Discovery Protocol v5 rationale section below.
 
 ## Version Interoperability / Upgrade Paths
 
@@ -176,8 +178,7 @@ discovery mechanism must be chosen.
 Another reason for UDP is communication latency: participants in the discovery protocol
 must be able to communicate with a large number of other nodes within a short time frame
 to establish and maintain the neighbor set and must perform regular liveness checks on
-their neighbors. For the topic advertisement system, registrants collect tickets and must
-use them as soon as the ticket expires to place an ad in a topic queue.
+their neighbors. For TopDisc, advertisers collect tickets from registrars and retry registration after the indicated waiting time. Low-latency request/response interactions help advertisers renew advertisements and maintain placements despite churn.
 
 These protocol interactions are difficult to implement in a TCP setting where connections
 require multiple round-trips before application data can be sent and the connection
@@ -207,7 +208,7 @@ understandable while providing a distributed database that scales with the numbe
 participants. Our system also relies on the routing table to allow enumeration and random
 traversal of the whole network, i.e. all participants can be found. Most importantly,
 having a structured network with routing enables thinking about DHT 'address space' and
-'regions of address space'. These concepts are used to build the [topic-based node index].
+'regions of address space'. These concepts are used by TopDisc to construct service tables centred on topic identifiers.
 
 Kademlia is often criticized as a naive design with obvious weaknesses. We believe that
 most issues with simple Kademlia can be overcome by careful programming and the benefits
@@ -219,8 +220,7 @@ The well-known 'sybil attack' is based on the observation that creating node ide
 essentially free. In any system using a measure of proximity among node identities, an
 adversary may place nodes close to a chosen node by generating suitable identities. For
 basic node discovery through network enumeration, the 'sybil attack' poses no significant
-challenge. Sybils are a serious issue for the topic-based node index, especially for
-topics provided by few participants, because the index relies on node distance.
+challenge. Sybils are a serious issue for topic-based service discovery, especially for topics provided by few participants. An adversary may try to generate node IDs close to a chosen topic identifier, dominate registrars selected for that topic, or flood registrar ad caches with advertisements under its control.
 
 An 'eclipse attack' is usually based on generating sybil nodes with the goal of polluting
 the victim node's routing table. Once the table is overtaken, the victim has no way to
@@ -342,78 +342,214 @@ disturb the operation of the protocol. Session keys per node-ID/IP generally pre
 replay across sessions. The `request-id`, mirrored in response packets, prevents replay of
 responses within a session.
 
-## The Topic Index
+# Topic-based Service Discovery Protocol v5 - Rationale
 
-Using FINDNODE queries with appropriately chosen targets, the entire DHT can be sampled by
-a random walk to find all other participants. When building a distributed application, it
-is often desirable to restrict the search to participants which provide a certain service.
-A simple solution to this problem would be to simply split up the network and require
-participation in many smaller application-specific networks. However, such networks are
-hard to bootstrap and also more vulnerable to attacks which could isolate nodes.
+This section explains the rationale for TopDisc, the topic-based service discovery extension to Node Discovery v5. TopDisc is based on the DISC-NG design described in [DISC-NG].
 
-The topic index provides discovery by provided service in a different way. Nodes maintain
-a single node table tracking their neighbors and advertise 'topics' on nodes found by
-randomly walking the DHT. While the 'global' topic index can be also spammed, it makes
-complete isolation a lot harder. To prevent nodes interested in a certain topic from
-finding each other, the entire discovery network would have to be overpowered.
+TopDisc addresses the problem of discovering peers that participate in a particular decentralised service or application. The participants of such a service form a service-specific overlay, but the discovery mechanism should not require each service to operate a separate discovery network. In this document, a topic is the protocol-level identifier for a service. The terms topic-based discovery and service discovery refer to the same mechanism: discovering peers for the service identified by a topic.
 
-To make the index useful, searching for nodes by topic must be efficient regardless of the
-number of advertisers. This is achieved by estimating the topic 'radius', i.e. the
-percentage of all live nodes which are advertising the topic. Advertisement and search
-activities are restricted to a region of DHT address space around the topic's 'center'.
+## Service Discovery Performance Goals
 
-We also want the index to satisfy another property: When a topic advertisement is placed,
-it should last for a well-defined amount of time. This ensures nodes may rely on their
-advertisements staying placed rather than worrying about keeping them alive.
+The following performance goals are specific to TopDisc service discovery.
 
-Finally, the index should consume limited resources. Just as the node table is limited in
-number and size of buckets, the size of the index data structure on each node is limited.
+### Progressive Lookup Toward the Topic Identifier
 
-### Why should advertisers wait?
+Lookup should be able to find advertisements without immediately concentrating requests at the nodes closest to the topic identifier.
 
-Advertisers must wait a certain amount of time before they can be registered. Enforcing
-this time limit prevents misuse of the topic index because any topic must be important
-enough to outweigh the cost of waiting. Imagine a group phone call: announcing the
-participants of the call using topic advertisement isn't a good use of the system because
-the topic exists only for a short time and will have very few participants. The waiting
-time prevents using the index for this purpose because the call might already be over
-before everyone could get registered.
+TopDisc lookup starts from buckets far from the topic identifier and progresses towards buckets closer to it. In each bucket, the discoverer queries up to `Klookup` registrars. This allows popular topics to be discovered before reaching the closest buckets, reducing hotspots near the topic identifier.
 
-### Dealing with Topic Spam
+For less popular topics, lookup can continue toward buckets closer to the topic identifier, where advertisers and discoverers are more likely to overlap. This provides a structured search process while avoiding the cost of blind random sampling across the whole discovery network.
 
-Our model is based on the following assumptions:
+### Efficient Discovery for Small Topics
 
-- Anyone can place their own advertisements under any topics and the rate of placing ads
-  is not limited globally. The number of active ads for any node is roughly proportional
-  to the resources (network bandwidth, mostly) spent on advertising.
-- Honest actors whose purpose is to connect to other honest actors will spend an adequate
-  amount of efforts on registering and searching for ads, depending on the rate of newly
-  established connections they are targeting. If the given topic is used only by honest
-  actors, a few registrations per minute will be satisfactory, regardless of the size of
-  the subnetwork.
-- Dishonest actors may want to place an excessive amount of ads just to disrupt the
-  discovery service. This will reduce the effectiveness of honest registration efforts by
-  increasing the topic radius and/or topic queue waiting times. If the attacker(s) can
-  place a comparable amount or more ads than all honest actors combined then the rate of
-  new (useful) connections established throughout the network will reduce proportionally
-  to the `honest / (dishonest + honest)` registration rates.
+Topic discovery should remain efficient even when the target topic is advertised by only a small fraction of nodes in the global discovery network.
 
-This adverse effect can be countered by honest actors increasing their registration and
-search efforts. Fortunately, the rate of established connections between them will
-increase proportionally both with increased honest registration and search efforts. If
-both are increased in response to an attack, the required factor of increased efforts from
-honest actors is proportional to the square root of the attacker's efforts.
+Random sampling over the ordinary node discovery network is robust, but it may require many probes before finding enough peers for a rare topic. TopDisc reduces this cost by allowing advertisers to place topic advertisements at registrars and allowing discoverers to query registrars selected from topic-centred service tables.
 
-### Detecting a useless registration attack
+### Bounded Registrar Storage
 
-In the case of a symmetrical protocol, where nodes are both searching and advertising
-under the same topic, it is easy to detect when most of the found ads turn out to be
-useless and increase both registration and query frequency. It is a bit harder but still
-possible with asymmetrical (client-server) protocols, where only clients can easily detect
-useless registrations, while advertisers (servers) do not have a direct way of detecting
-when they should increase their advertising efforts. One possible solution is for servers
-to also act as clients just to test the server capabilities of other advertisers. It is
-also possible to implement a feedback system between trusted clients and servers.
+A registrar should be able to bound the amount of memory it dedicates to topic discovery. TopDisc addresses this through a bounded ad cache with capacity `C`. Advertisements are soft state and expire after duration `E`, so storage is reclaimed automatically unless advertisers renew their advertisements.
+
+### Stateless Registration Operations
+
+A registrar should not be required to store any state for advertisers waiting to be admitted. TopDisc uses tickets to carry pending-registration state back to the advertiser. The registrar can validate a returning advertiser using the ticket, without keeping per-request state for every pending registration attempt.
+
+### Compact Responses
+
+TopDisc responses should remain small enough for UDP-based discovery. Advertisements returned by a registrar are capped by `Freturn`. Auxiliary ENRs are selected with an implementation-defined total cap, and the recommended selection rule returns at most one auxiliary ENR per requested topic-distance. This keeps responses compact while still helping requesters improve their service tables.
+
+### Incremental Service-Table Improvement
+
+A node should be able to start TopDisc operations before it has a complete service table for a topic. A service table is soft state. It is initially derived from the ordinary node table and then refined using auxiliary ENRs returned by TopDisc responses. This allows lookup and advertisement placement to begin with partial knowledge and improve over time.
+
+## Service Discovery Security Goals
+
+The following security goals are specific to TopDisc service discovery. They complement the Node Discovery v5 security goals listed above.
+
+### Advertisement Flooding
+
+A malicious advertiser may attempt to fill registrar ad caches with its own advertisements, or with advertisements for services it controls, so that honest advertisements are delayed or excluded.
+
+TopDisc mitigates this attack by using bounded ad caches and waiting-time-based admission control. Advertisements that increase cache occupancy or reduce cache diversity receive longer waiting times.
+
+### Registrar Resource Exhaustion
+
+A malicious node may send many registration attempts, retries, or malformed requests in an attempt to exhaust registrar memory, CPU, or bandwidth.
+
+TopDisc mitigates memory exhaustion by avoiding unbounded per-request registrar state for pending registrations. Pending registration state is carried by advertisers in registrar-authenticated tickets. Registrars may also apply local rate limits, request validation, and temporary exclusion policies for nodes that repeatedly fail TopDisc operations.
+
+### Service Censorship
+
+A malicious actor may attempt to prevent honest advertisements for a target topic from being discovered.
+
+This may be attempted by flooding registrars with competing advertisements, by returning incomplete or misleading lookup responses, or by trying to control nodes in parts of the key space relevant to a topic.
+
+TopDisc mitigates this risk by distributing advertisement placement across the topic-centred key space, by using multiple registrars, and by allowing discoverers to query registrars across multiple buckets rather than relying on a single topic-specific location.
+
+### Service Eclipse
+
+A malicious actor may attempt to make discoverers of a target topic receive only advertisements for malicious nodes.
+
+TopDisc reduces the effectiveness of this attack by requiring discoverers to collect advertisements from multiple registrars and by encouraging diversity in registrar ad caches. Parameters such as `Flookup`, `Freturn`, `Klookup`, and `Kregister` control the trade-off between lookup cost and diversity of sources.
+
+### Service-Table Poisoning
+
+A malicious registrar may return misleading auxiliary ENRs in TopDisc responses in order to pollute the requester's service table.
+
+Implementations mitigate this by validating returned ENRs, requiring a supported TopDisc capability before inserting nodes into service tables, applying ordinary Node Discovery v5 liveness checks, and temporarily excluding nodes that repeatedly fail TopDisc operations. Auxiliary ENRs are routing information, not lookup results, and should not be treated as proof that a node participates in the requested topic.
+
+### Advertisement Redirection
+
+A malicious node may attempt to advertise an ENR that directs discoverers to a victim endpoint or to a node that does not actually participate in the advertised service.
+
+TopDisc relies on ENR validation and on the self-signed nature of node records to prevent intermediaries from modifying advertised node information. Applications using discovered advertisements should still perform their normal service-level checks before relying on the discovered peer.
+
+# Rationale
+
+## Why Not Use Separate Discovery Networks?
+
+A simple way to discover service-specific peers would be to run a separate discovery network for each service. Nodes interested in a service would join that service's discovery network directly.
+
+This approach makes each service responsible for its own bootstrapping and security. New or small services would have few participants and would therefore be easier to isolate or eclipse. Running many small discovery networks would also duplicate infrastructure and fragment the global peer-discovery ecosystem.
+
+TopDisc instead reuses the ordinary Node Discovery v5 network. Services benefit from the existing global discovery network, and nodes can discover peers for many services without joining a separate discovery DHT for each one.
+
+## Why Not Use Only Random Sampling?
+
+Ordinary Node Discovery v5 can be used to sample nodes from the global discovery network. A service-specific protocol can then check whether each sampled node supports the desired topic or service.
+
+This approach has a useful security property: the search is spread across the global discovery network rather than being concentrated at a small set of predictable service-specific nodes. However, it is inefficient when the target topic is supported by only a small fraction of nodes. In that case, many unrelated nodes must be contacted before enough useful service peers are found.
+
+TopDisc keeps the benefit of using the global discovery network, but adds explicit topic advertisements so that discoverers do not need to test many unrelated nodes.
+
+## Why Not Store Advertisements Only Near the Topic Identifier?
+
+A simple DHT-style design would store all advertisements for a topic at the nodes whose node IDs are closest to the topic identifier. Advertisers and discoverers would then know where to place and retrieve advertisements.
+
+This design is efficient, but it concentrates load and trust near the topic identifier. Popular topics would create hotspots around their identifiers. More importantly, an adversary could generate node IDs close to a chosen topic identifier and attempt to control advertisement storage or lookup results for that topic.
+
+TopDisc therefore does not rely only on the closest nodes to a topic identifier. Advertisers maintain placements across buckets of a topic-centred table. Discoverers query registrars starting from buckets far from the topic identifier and progress towards buckets closer to it, querying up to `Klookup` registrars per bucket. This keeps discovery distributed while still ensuring that advertiser and discoverer walks converge toward the topic identifier when more search effort is needed.
+
+## Why Use Topic-Centred Tables?
+
+The ordinary node table is centred on the local node ID. It is useful for maintaining the global discovery network and for finding nodes close to arbitrary node IDs. For topic discovery, however, advertisers and discoverers need a shared reference point: the topic identifier.
+
+A service table is centred on the topic identifier rather than on the local node ID. This gives advertisers and discoverers for the same topic a compatible view of the key space. An advertiser uses the service table to choose registrars for advertisement placement. A discoverer uses the service table to choose registrars for lookup.
+
+Service tables do not replace the ordinary node table. They are derived from ordinary node discovery state and refined using auxiliary ENRs returned by TopDisc responses.
+
+## Why Use Registrars?
+
+A registrar is a TopDisc-capable node that stores admitted advertisements and returns them to discoverers.
+
+Registrars decouple advertisers from discoverers. Advertisers do not need to be online at the exact moment a discoverer performs a lookup, as long as their advertisements remain stored at registrars. Discoverers do not need to contact arbitrary nodes and test their service membership one by one; they can query registrars for advertisements that have already been placed.
+
+Because any TopDisc-capable node can act as a registrar, the design does not depend on a central registry or trusted topic-specific bootstrap node.
+
+## Why Use an Ad Cache?
+
+A registrar stores admitted advertisements in an ad cache. The ad cache has bounded capacity, and each advertisement expires after a fixed duration. The fixed advertisement lifetime gives advertisers predictable soft state. Once admitted, an advertisement remains available. Advertisers can therefore schedule renewal rather than continuously re-registering at every moment.
+
+The cache bounds registrar storage and makes advertisements soft state. Advertisers must renew or replace advertisements over time, which allows the system to adapt to churn, failures, and changes in service participation.
+
+The ad cache is separate from the service table. The service table is used to select registrars for registration and lookup. The ad cache is the registrar's local storage of advertisements that can be returned to discoverers. 
+
+## Why Use Admission Control?
+
+Registrars have finite storage. If every registration request were admitted immediately, popular topics or malicious advertisers could dominate the ad cache and crowd out other advertisements.
+
+TopDisc uses admission control to decide when an advertisement may enter the cache. Admission is based on a waiting-time function. Advertisements that would increase cache occupancy or reduce diversity receive longer waiting times.
+
+This makes flooding more expensive, promotes diversity across topics and IP prefixes, and helps ensure that less popular topics can still obtain representation in registrar caches.
+
+## Why Should Advertisers Wait?
+
+Waiting time is the registrar's main admission-control mechanism.
+
+The waiting time makes it costly to flood registrars with advertisements, limits the rate at which the ad cache fills, and gives the registrar a way to prefer advertisements that improve cache diversity. An advertiser that receives a waiting time must come back later with a valid ticket before the advertisement can be admitted.
+
+Waiting also avoids a simple replacement-policy problem. If registrars used only policies such as least-recently-used replacement, an attacker could repeatedly send new advertisements to evict honest ones. With waiting-time admission, the attacker must pay the cost of waiting before advertisements are admitted.
+
+## Why Use Tickets?
+
+Tickets allow a registrar to enforce waiting without storing unbounded per-request state.
+
+A ticket records the advertisement binding and registrar-generated timing information needed to show that the advertiser has waited. The ticket is carried by the advertiser and returned to the registrar on retry. The registrar verifies the ticket and recomputes the waiting time against the current cache state.
+
+This design prevents pending registrations from consuming unbounded registrar memory. If an advertiser never returns, the registrar does not need to clean up per-request state for that advertiser.
+
+Tickets are bound to the advertisement being registered. This prevents a ticket issued for one topic or advertised ENR from being reused to register a different advertisement.
+
+## Why Recompute Waiting Times?
+
+The state of the ad cache may change while an advertiser is waiting. Advertisements may expire, new advertisements may be admitted, and the diversity of the cache may change.
+
+For this reason, the waiting time in a ticket is not binding. When the advertiser retries, the registrar recomputes the waiting time using the current cache state. The advertiser is admitted only if its accumulated waiting time is sufficient according to the recomputed value.
+
+This prevents stale tickets from forcing admission under cache conditions that no longer justify it.
+
+## Why Include Service Similarity?
+
+The service-similarity component increases waiting time when the incoming advertisement is for a topic that is already well represented in the registrar's ad cache.
+
+This prevents popular topics from crowding out less represented topics. It also helps less popular topics obtain cache entries even when the total registration demand is high.
+
+## Why Include IP Similarity?
+
+A malicious actor may create many node identities from a small number of physical hosts or IP prefixes. Counting only node IDs would not distinguish this behaviour from a diverse set of independent advertisers.
+
+The IP-similarity component increases waiting time for advertisements whose IP prefixes are already overrepresented in the cache. This discourages a small number of IP prefixes from dominating the ad cache.
+
+This approach is more flexible than a fixed rule such as "only one node per prefix". Fixed prefix limits can harm honest users behind NATs, shared hosting providers, or other common infrastructure. A similarity score instead increases cost gradually as concentration increases.
+
+## Why Use a Safety Constant?
+
+If an advertisement is for an underrepresented topic and comes from an underrepresented IP prefix, the service-similarity and IP-similarity components may both be small.
+
+The safety constant ensures that the waiting time does not become zero in such cases. This provides a baseline admission cost and helps prevent the ad cache from being filled too quickly by advertisements that appear diverse only because they use random topic identifiers or diverse IP prefixes.
+
+## Why Use a Waiting-Time Lower Bound?
+
+If waiting times could decrease freely as the ad cache changes, advertisers would be incentivised to repeatedly request new tickets in the hope of obtaining a shorter wait. This would create unnecessary traffic and processing load.
+
+The lower-bound mechanism ensures that a new waiting time cannot improve on a previous waiting time by more than the elapsed time. It removes the incentive to repeatedly request new tickets while keeping registrar state bounded.
+
+The lower-bound state is maintained only for bounded structures, such as topics already present in the ad cache and prefixes represented in the IP similarity tree.
+
+## Why Return Auxiliary ENRs?
+
+A service table is initially derived from the ordinary node table. However, the ordinary node table is centred on the local node ID, not on the topic identifier. It may therefore contain few nodes in buckets that are important for a particular topic. TopDisc responses can include auxiliary ENRs selected from the responder's view of the topic-centred key space. Advertisers and discoverers can use these ENRs to refine their local service tables. Returned ENRs are auxiliary routing information, not lookup results. Implementations must validate them and check TopDisc capability in the ENR before inserting them into service tables. 
+
+When a request includes topic-distances where the requester has free space, the responder returns at most one auxiliary ENR per requested distance. This keeps responses compact and avoids overrepresenting a single bucket. It also limits the ability of a malicious responder to flood the requester’s service table with many ENRs from one distance.
+
+## Why Support Mixed Deployments?
+
+TopDisc is an extension to Node Discovery v5. During deployment, some nodes may support only ordinary Node Discovery v5 while others support both ordinary Node Discovery v5 and TopDisc.
+
+Nodes that do not support TopDisc remain useful for maintaining the ordinary discovery network. They are not selected for TopDisc registration or lookup operations, but they can still participate in ordinary node discovery.
+
+TopDisc-capable nodes advertise support in their ENR. This allows implementations to build service tables from ordinary node discovery state while selecting only nodes that can handle TopDisc messages.
+
 
 # References
 
@@ -450,6 +586,10 @@ also possible to implement a feedback system between trusted clients and servers
   *Low-Resource Eclipse Attacks on Ethereum’s Peer-to-Peer Network.* 2018.\
   <https://eprint.iacr.org/2018/236.pdf>
 
+- Michał Król, Onur Ascigil, Sergi Rene, Alberto Sonnino, Matthieu Pigaglio, Ramin Sadre, Felix Lange, and Etienne Rivière.
+  *DISC-NG: Robust Service Discovery in the Ethereum Global Network.* 2024 IEEE 9th European Symposium on Security and Privacy (EuroS&P), pp. 193–215. IEEE, 2024.\
+  <https://ieeexplore.ieee.org/document/10629017>
+
 [wire protocol]: ./discv5-wire.md
-[topic-based node index]: ./discv5-theory.md#topic-advertisement
 [node records]: ../enr.md
+[TopDisc theory]: ./discv5-theory.md#topic-based-service-discovery
