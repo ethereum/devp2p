@@ -109,10 +109,14 @@ function.
     dest-pubkey        = public key corresponding to node B's static private key
     secret             = ecdh(dest-pubkey, ephemeral-key)
     kdf-info           = "discovery v5 key agreement" || node-id-A || node-id-B
-    prk                = HKDF-Extract(secret, challenge-data)
+    prk                = HKDF-Extract(challenge-data, secret)
     key-data           = HKDF-Expand(prk, kdf-info)
     initiator-key      = key-data[:16]
     recipient-key      = key-data[16:]
+
+Here `HKDF-Extract(salt, IKM)` and `HKDF-Expand` are the functions defined in [RFC 5869]
+using HMAC-SHA-256. The salt is `challenge-data` and the input keying material is `secret`;
+`HKDF-Expand` is invoked with `kdf-info` and produces 32 bytes of output.
 
 Node A creates the `id-signature`, which proves that it controls the private key which
 signed its node record. The signature also prevents replay of the handshake.
@@ -535,3 +539,4 @@ registration algorithm if the same topic is being registered and searched for.
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
 [REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x09
 [TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x0a
+[RFC 5869]: https://www.rfc-editor.org/rfc/rfc5869
