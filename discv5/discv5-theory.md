@@ -750,7 +750,7 @@ lower-bound state using a maximum.
 
 ### Advertisement Placement
 
-For each service `s` that a node advertises, the advertiser attempts to maintain up to `Kregister`
+For each service `s` that a node advertises, the advertiser attempts to maintain up to `K_register`
 active or pending registrations in each bucket of its advertise table `B(s)`.
 
 Candidate registrars are selected from the corresponding bucket of the advertise table. Placement
@@ -764,7 +764,7 @@ Within a placement cycle, registrar selection should not repeatedly return the s
 the same bucket.
 
 For each bucket `bᵢ(s)`, while the number of active or pending registrations in that bucket is below
-`Kregister`, the advertiser selects a candidate registrar from `bᵢ(s)` and starts a registration
+`K_register`, the advertiser selects a candidate registrar from `bᵢ(s)` and starts a registration
 attempt.
 
 If no eligible registrar remains in the bucket, the advertiser stops trying to fill that bucket
@@ -833,15 +833,15 @@ A discoverer looking for service `s` queries registrars selected from its search
 corresponding wire-format request is specified in [TOPICQUERY]. Lookup proceeds bucket by bucket,
 starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each
 bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to
-`Klookup` of them.
+`K_lookup` of them.
 
 A registrar may return advertisements for service `s`. The discoverer validates the returned
 advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity.
 Advertisements are candidate results for the target service. The lookup terminates when the
 discoverer has collected enough distinct advertisers for its local or service-specific purpose, or
-when no unqueried registrars remain. This local target is denoted `Flookup` in this document. The
-value of `Flookup` is determined by the application, service binding, or local implementation
-policy, rather than by the TopDisc lookup procedure itself. If fewer than `Flookup` advertisers are
+when no unqueried registrars remain. This local target is denoted `F_lookup` in this document. The
+value of `F_lookup` is determined by the application, service binding, or local implementation
+policy, rather than by the TopDisc lookup procedure itself. If fewer than `F_lookup` advertisers are
 found before all available candidate registrars are exhausted, the lookup returns the valid
 advertisers collected so far.
 
@@ -861,7 +861,7 @@ A registrar receiving a lookup request for service `s` returns advertisements fo
 its ad cache. A registrar receiving a [TOPICQUERY] request for service `s` returns advertisements
 and auxiliary ENRs using the response format defined for `TOPICQUERY` in the wire specification.
 
-The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the
+The registrar MUST NOT return expired advertisements. If more than `F_return` advertisements for the
 service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most
 `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same
 advertisers across repeated lookup requests.
@@ -894,17 +894,17 @@ asynchronously.
 
 The TopDisc algorithms use the following parameters:
 
-| Parameter   | Meaning                                                                                                   | Default   |
-|-------------|-----------------------------------------------------------------------------------------------------------|-----------|
-| `Kregister` | Target number of active or pending registrations per bucket                                               | `5`       |
-| `Klookup`   | Maximum number of registrar queries per bucket during lookup                                              | `5`       |
-| `Freturn`   | Maximum number of advertisements returned by one registrar                                                | `10`      |
-| `Flookup`   | Optional local or service-specific target for the number of distinct advertisers to collect during lookup | `30`      |
-| `E`         | Advertisement expiry duration                                                                             | `15 min`  |
-| `C`         | Registrar ad cache capacity                                                                               | `1000`    |
-| `δ`         | Registration retry window duration                                                                        | **`TBD`** |
-| `Pocc`      | Occupancy exponent in the waiting-time function                                                           | `10`      |
-| `G`         | Safety constant in the waiting-time function                                                              | `10^-7`   |
+| Parameter    | Meaning                                                                | Default   |
+|--------------|------------------------------------------------------------------------|-----------|
+| `K_register` | Target number of active or pending registrations per bucket            | `5`       |
+| `K_lookup`   | Maximum number of registrar queries per bucket during lookup           | `5`       |
+| `F_return`   | Maximum number of advertisements returned by one registrar             | `10`      |
+| `F_lookup`   | Target for the number of distinct advertisers to collect during lookup | `30`      |
+| `E`          | Advertisement expiry duration                                          | `15 min`  |
+| `C`          | Registrar ad cache capacity                                            | `1000`    |
+| `δ`          | Registration retry window duration                                     | **`TBD`** |
+| `Pocc`       | Occupancy exponent in the waiting-time function                        | `10`      |
+| `G`          | Safety constant in the waiting-time function                           | `10^-7`   |
 
 ## Implementation Considerations
 
