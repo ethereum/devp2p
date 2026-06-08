@@ -297,83 +297,127 @@ procedure on another, closer node.
 
 ## Overview
 
-Node Discovery v5 maintains the global Discv5 discovery network and each node's local node table. Applications use this node discovery substrate to discover peers that participate in higher-level services, so that the participants of each service form a service-specific overlay.
+Node Discovery v5 maintains the global Discv5 discovery network and each node's local node table.
+Applications use this node discovery substrate to discover peers that participate in higher-level
+services, so that the participants of each service form a service-specific overlay.
 
-Currently, a node can search for service-specific peers by sampling nodes through node discovery and then checking whether the sampled nodes support the desired service. This check is outside the ordinary node discovery algorithm: depending on the application, service support may be inferred from information in the ENR, discovered by establishing a devp2p/RLPx connection and negotiating supported subprotocols, or determined by a service-specific protocol query.
+Currently, a node can search for service-specific peers by sampling nodes through node discovery and
+then checking whether the sampled nodes support the desired service. This check is outside the
+ordinary node discovery algorithm: depending on the application, service support may be inferred
+from information in the ENR, discovered by establishing a devp2p/RLPx connection and negotiating
+supported subprotocols, or determined by a service-specific protocol query.
 
-Discv5's random-sampling approach preserves the security benefits of sampling from the global discovery network, because the search is not concentrated around a small set of service-specific locations in the DHT keyspace. However, it is inefficient, especially when the target service is supported by only a small fraction of nodes.
+Discv5's random-sampling approach preserves the security benefits of sampling from the global
+discovery network, because the search is not concentrated around a small set of service-specific
+locations in the DHT keyspace. However, it is inefficient, especially when the target service is
+supported by only a small fraction of nodes.
 
-Discv5 topic-based discovery (**TopDisc**) extends Discovery v5 with topic-based service discovery. It allows nodes to advertise participation in a service and allows other nodes to discover those advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet format, and authenticated session machinery.
+Discv5 topic-based discovery (**TopDisc**) extends Discovery v5 with topic-based service discovery.
+It allows nodes to advertise participation in a service and allows other nodes to discover those
+advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet
+format, and authenticated session machinery.
 
 ## Co-existence with Node Discovery
 
-TopDisc is layered on top of Discovery v5. A TopDisc-capable node first uses the Node Discovery v5 to join the global discovery network, populate its local node table, and learn TopDisc-capable nodes. These nodes are then used to bootstrap TopDisc. As TopDisc registration and lookup operations proceed, TopDisc-capable nodes can also return additional nodes to improve those service-specific tables, as described below.
+TopDisc is layered on top of Discovery v5. A TopDisc-capable node first uses the Node Discovery v5
+to join the global discovery network, populate its local node table, and learn TopDisc-capable
+nodes. These nodes are then used to bootstrap TopDisc. As TopDisc registration and lookup operations
+proceed, TopDisc-capable nodes can also return additional nodes to improve those service-specific
+tables, as described below.
 
-A TopDisc failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable for ordinary
-node discovery but unusable for TopDisc registration or lookup. Conversely, a node that fails ordinary Discovery
-v5 liveness checks ceases to be eligible for insertion into TopDisc service tables.
+A TopDisc failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable
+for ordinary node discovery but unusable for TopDisc registration or lookup. Conversely, a node that
+fails ordinary Discovery v5 liveness checks ceases to be eligible for insertion into TopDisc service
+tables.
 
 ## TopDisc Capability
 
-A node indicates support for TopDisc by including the [`topic-discovery`][topic-discovery-entry] entry in its ENR.
+A node indicates support for TopDisc by including the [`topic-discovery`][topic-discovery-entry]
+entry in its ENR.
 
     topic-discovery = <version>
 
-The value of `topic-discovery` is an unsigned integer identifying the supported TopDisc protocol version. Nodes whose ENR does not contain `topic-discovery`, or whose `topic-discovery` value is not supported by the local implementation are not inserted into service tables and are not selected for TopDisc registration or lookup requests.
+The value of `topic-discovery` is an unsigned integer identifying the supported TopDisc protocol
+version. Nodes whose ENR does not contain `topic-discovery`, or whose `topic-discovery` value is not
+supported by the local implementation are not inserted into service tables and are not selected for
+TopDisc registration or lookup requests.
 
 [topic-discovery-entry]: ../enr-entries/topic-discovery.md
 
 ## Services and Service Identifiers
 
-TopDisc operates on 32-byte service identifiers. A service identifier denotes a higher-level service, subnetwork, overlay, or protocol-specific discovery target.
+TopDisc operates on 32-byte service identifiers. A service identifier denotes a higher-level
+service, subnetwork, overlay, or protocol-specific discovery target.
 
-Service identifiers are in the same 256-bit identifier space as Node IDs. This allows TopDisc to apply the Node Discovery v5 XOR distance function between service identifiers and node IDs.
+Service identifiers are in the same 256-bit identifier space as Node IDs. This allows TopDisc to
+apply the Node Discovery v5 XOR distance function between service identifiers and node IDs.
 
-The mapping from higher-level service names or application-specific parameters to service identifiers is defined by the relevant service binding. Such parameters MAY include, for example, protocol name, network name, fork identifier, client capability, subnet identifier, or other service-specific values.
+The mapping from higher-level service names or application-specific parameters to service
+identifiers is defined by the relevant service binding. Such parameters MAY include, for example,
+protocol name, network name, fork identifier, client capability, subnet identifier, or other
+service-specific values.
 
 This document does not define a canonical derivation rule for service identifiers.
 
 ## Node Roles
 
-A node that advertises TopDisc capability in its ENR acts as a registrar, subject to local policy and resource limits.
+A node that advertises TopDisc capability in its ENR acts as a registrar, subject to local policy
+and resource limits.
 
-A **registrar** accepts TopDisc registration and lookup requests, admits advertisements into its local **ad cache**, and returns admitted advertisements to discoverers.
+A **registrar** accepts TopDisc registration and lookup requests, admits advertisements into its
+local **ad cache**, and returns admitted advertisements to discoverers.
 
 A TopDisc-capable node may also act as an advertiser, a discoverer, or both.
 
-An **advertiser** participates in a service and registers advertisements for that service with registrars. A node acts as an advertiser only for services that it chooses to advertise.
+An **advertiser** participates in a service and registers advertisements for that service with
+registrars. A node acts as an advertiser only for services that it chooses to advertise.
 
-A **discoverer** queries registrars to obtain advertisements for a target service. A node acts as a discoverer only when it is looking up peers for a service.
+A **discoverer** queries registrars to obtain advertisements for a target service. A node acts as a
+discoverer only when it is looking up peers for a service.
 
-The roles are not mutually exclusive. A single node can simultaneously act as a registrar, advertise one or more services, and discover peers for one or more services.
+The roles are not mutually exclusive. A single node can simultaneously act as a registrar, advertise
+one or more services, and discover peers for one or more services.
 
 ## Service Tables
 
-A service table `B(s)` is a per-service node table centred on service identifier `s`, rather than on the local node ID.
+A service table `B(s)` is a per-service node table centred on service identifier `s`, rather than on
+the local node ID.
 
-Similar to the ordinary Node Table, `B(s)` is divided into distance buckets. The difference is the reference point used to assign nodes to buckets. In the ordinary node table, a node `n` is placed according to `logdistance(self, n)`, where `self` is the local node ID. In a service table, the same node `n` is placed according to `logdistance(s, n)`, where `s` is the service identifier.
+Similar to the ordinary Node Table, `B(s)` is divided into distance buckets. The difference is the
+reference point used to assign nodes to buckets. In the ordinary node table, a node `n` is placed
+according to `logdistance(self, n)`, where `self` is the local node ID. In a service table, the same
+node `n` is placed according to `logdistance(s, n)`, where `s` is the service identifier.
 
-For each `0 ≤ i < 256`, bucket `bᵢ(s)` contains TopDisc-capable nodes whose node IDs are at logarithmic distance `i` from the service identifier:
+For each `0 ≤ i < 256`, bucket `bᵢ(s)` contains TopDisc-capable nodes whose node IDs are at
+logarithmic distance `i` from the service identifier:
 
     bᵢ(s) = { n | logdistance(s, n) = i }
 
-Thus, `B(s)` gives the local node a service-centred view of the discovery network. Buckets closer to `s` contain nodes whose IDs are closer to the service identifier, while buckets farther from `s` contain nodes from progressively larger regions of the key space.
+Thus, `B(s)` gives the local node a service-centred view of the discovery network. Buckets closer to
+`s` contain nodes whose IDs are closer to the service identifier, while buckets farther from `s`
+contain nodes from progressively larger regions of the key space.
 
-A node may maintain a service table for each service identifier for which it performs TopDisc operations. Advertisers use `B(s)` as an advertise table for service `s`; discoverers use `B(s)` as a search table for service `s`.
+A node may maintain a service table for each service identifier for which it performs TopDisc
+operations. Advertisers use `B(s)` as an advertise table for service `s`; discoverers use `B(s)` as
+a search table for service `s`.
 
-The registrar ad cache is separate from service tables. A registrar does not need to maintain `B(s)` for every service represented in its ad cache.
+The registrar ad cache is separate from service tables. A registrar does not need to maintain `B(s)`
+for every service represented in its ad cache.
 
 ### Bootstrap from Ordinary Node Discovery
 
 A node does not start TopDisc advertisement placement or lookup from an empty service table.
 
-The node first joins the Node Discovery v5 network using the standard bootstrapping procedure. It populates its ordinary local node table through the existing `PING`, `PONG`, `FINDNODE`, lookup, refresh, and liveness mechanisms.
+The node first joins the Node Discovery v5 network using the standard bootstrapping procedure. It
+populates its ordinary local node table through the existing `PING`, `PONG`, `FINDNODE`, lookup,
+refresh, and liveness mechanisms.
 
 For a service identifier `s`, the initial service table
 
     B(s) = { b₀(s), b₁(s), ..., b₂₅₅(s) }
 
-is derived from the ordinary node table. When constructing this initial service table, implementations should:
+is derived from the ordinary node table. When constructing this initial service table,
+implementations should:
 
 1. take nodes currently known in the ordinary node table;
 2. discard nodes whose ENR does not advertise a supported TopDisc version;
@@ -381,7 +425,10 @@ is derived from the ordinary node table. When constructing this initial service 
 4. discard nodes currently excluded by local TopDisc usability policy;
 5. insert each remaining node into the corresponding bucket of `B(s)`.
 
-The resulting `B(s)` is soft state. It need not be complete before TopDisc operations begin. If the ordinary node table contains too few nodes that can be used for TopDisc operations, implementations should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are learned.
+The resulting `B(s)` is soft state. It need not be complete before TopDisc operations begin. If the
+ordinary node table contains too few nodes that can be used for TopDisc operations, implementations
+should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are
+learned.
 
 ### Ongoing Maintenance of `B(s)`
 
@@ -390,37 +437,49 @@ A service table is maintained from two sources:
 1. the ordinary Discovery v5 node table; and
 2. **auxiliary ENRs** learned through TopDisc responses.
 
-When a newly verified node advertising TopDisc capability is learned through ordinary discovery, it becomes
-eligible for insertion into relevant service tables.
+When a newly verified node advertising TopDisc capability is learned through ordinary discovery, it
+becomes eligible for insertion into relevant service tables.
 
-Responses to TopDisc registration and lookup requests may include auxiliary ENRs selected from the responder's
-view of the service table. Such ENRs may be inserted into `B(s)` only after ENR validation, capability checking,
-and any local TopDisc usability checks.
+Responses to TopDisc registration and lookup requests may include auxiliary ENRs selected from the
+responder's view of the service table. Such ENRs may be inserted into `B(s)` only after ENR
+validation, capability checking, and any local TopDisc usability checks.
 
-Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary local node
-table, while still remaining anchored in ordinary Discovery v5 state.
+Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary
+local node table, while still remaining anchored in ordinary Discovery v5 state.
 
 ### Auxiliary ENR Selection
 
-TopDisc responses may include auxiliary ENRs. Auxiliary ENRs are routing information used by the requester to improve its local service table `B(s)`; they are not service lookup results.
+TopDisc responses may include auxiliary ENRs. Auxiliary ENRs are routing information used by the
+requester to improve its local service table `B(s)`; they are not service lookup results.
 
-A request may carry a list of topic-distances at which the requester's service table has free space. A topic-distance is a logarithmic distance from the service identifier `s` to a node ID, and therefore identifies a bucket of `B(s)`.
+A request may carry a list of topic-distances at which the requester's service table has free space.
+A topic-distance is a logarithmic distance from the service identifier `s` to a node ID, and
+therefore identifies a bucket of `B(s)`.
 
-When such a list is present, the registrar SHOULD use it as a hint for auxiliary ENR selection. For each requested topic-distance `d`, the registrar SHOULD return at most one ENR for a TopDisc-capable node `n` such that:
+When such a list is present, the registrar SHOULD use it as a hint for auxiliary ENR selection. For
+each requested topic-distance `d`, the registrar SHOULD return at most one ENR for a TopDisc-capable
+node `n` such that:
 
     logdistance(s, n) = d
 
-The registrar may obtain such ENRs from any local source of known TopDisc-capable nodes, including an existing service table `B(s)`, the ordinary node table filtered to TopDisc-capable nodes, or an implementation-local cache. A registrar is not required to maintain a service table for every service represented in its ad cache.
+The registrar may obtain such ENRs from any local source of known TopDisc-capable nodes, including
+an existing service table `B(s)`, the ordinary node table filtered to TopDisc-capable nodes, or an
+implementation-local cache. A registrar is not required to maintain a service table for every
+service represented in its ad cache.
 
 A recommended selection algorithm is:
 
 1. iterate over the topic-distances supplied by the requester;
-2. for each distance `d`, select at most one known TopDisc-capable node whose node ID satisfies `logdistance(s, n) = d`;
+2. for each distance `d`, select at most one known TopDisc-capable node whose node ID satisfies
+   `logdistance(s, n) = d`;
 3. prefer pseudo-random selection when multiple eligible ENRs are available for the same distance;
 4. skip ENRs that fail local validation or TopDisc usability checks;
-5. stop when all requested distances have been considered or when an implementation-defined cap on auxiliary ENRs has been reached.
+5. stop when all requested distances have been considered or when an implementation-defined cap on
+   auxiliary ENRs has been reached.
 
-Selecting at most one ENR per requested distance keeps responses compact and spreads coverage across the requester's free buckets. It avoids overrepresenting a single distance and reduces the ability of a responder to fill a response with many ENRs from one bucket.
+Selecting at most one ENR per requested distance keeps responses compact and spreads coverage across
+the requester's free buckets. It avoids overrepresenting a single distance and reduces the ability
+of a responder to fill a response with many ENRs from one bucket.
 
 If the registrar has no eligible ENR for a requested distance, it omits that auxiliary ENR.
 
@@ -428,23 +487,25 @@ The same auxiliary-ENR selection rule applies to registration responses and look
 
 ### TopDisc Liveness and Temporary Exclusion
 
-A node advertising TopDisc capability is not automatically a usable registrar for every TopDisc operation. It may
-time out, return malformed responses, reject requests, or fail to implement the extension correctly.
+A node advertising TopDisc capability is not automatically a usable registrar for every TopDisc
+operation. It may time out, return malformed responses, reject requests, or fail to implement the
+extension correctly.
 
 Implementations should therefore maintain TopDisc-level usability state for nodes in `B(s)`.
 
-If a node in `B(s)` repeatedly fails to answer registration or lookup requests, times out, or returns malformed
-responses, implementations should temporarily exclude that node from selection for TopDisc operations. Temporary
-exclusion may be implemented by removing the node from `B(s)`, suppressing its selection for a backoff period,
-or assigning it lower selection priority.
+If a node in `B(s)` repeatedly fails to answer registration or lookup requests, times out, or
+returns malformed responses, implementations should temporarily exclude that node from selection for
+TopDisc operations. Temporary exclusion may be implemented by removing the node from `B(s)`,
+suppressing its selection for a backoff period, or assigning it lower selection priority.
 
-Temporary exclusion is not a permanent blacklist. After the backoff period expires, the node may become eligible
-for re-insertion into `B(s)` if it is still present in the ordinary node table, still advertises TopDisc capability,
-and still satisfies ordinary Discovery v5 liveness requirements.
+Temporary exclusion is not a permanent blacklist. After the backoff period expires, the node may
+become eligible for re-insertion into `B(s)` if it is still present in the ordinary node table,
+still advertises TopDisc capability, and still satisfies ordinary Discovery v5 liveness
+requirements.
 
-Failure of a TopDisc request does not by itself require removal from the ordinary Discovery v5 node table.
-Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and table-maintenance
-rules.
+Failure of a TopDisc request does not by itself require removal from the ordinary Discovery v5 node
+table. Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and
+table-maintenance rules.
 
 ## Registrar Behaviour
 
@@ -452,10 +513,11 @@ rules.
 
 A registrar stores admitted advertisements in a bounded ad cache.
 
-Each admitted advertisement expires after duration `E`. The ad cache has capacity `C`. A registrar stores at most
-one active advertisement for the same advertiser and service.
+Each admitted advertisement expires after duration `E`. The ad cache has capacity `C`. A registrar
+stores at most one active advertisement for the same advertiser and service.
 
-The ad cache is not a service table. It is registrar-local storage used to answer service lookup requests.
+The ad cache is not a service table. It is registrar-local storage used to answer service lookup
+requests.
 
 An ad cache entry contains at least:
 
@@ -464,16 +526,16 @@ An ad cache entry contains at least:
 - the expiry time;
 - any advertisement payload defined by the service binding or wire-format document.
 
-Implementations may maintain additional indices for efficient retrieval by service, expiry time, advertiser, and
-IP prefix.
+Implementations may maintain additional indices for efficient retrieval by service, expiry time,
+advertiser, and IP prefix.
 
-Expired advertisements are removed automatically. Once an advertisement expires, it is no longer returned in
-lookup responses.
+Expired advertisements are removed automatically. Once an advertisement expires, it is no longer
+returned in lookup responses.
 
-If a registrar receives a registration request for an advertisement that is already present in its ad cache, the
-registrar may treat the request as a renewal or ignore it, depending on the renewal semantics specified by the
-wire-format document. The registrar must not store duplicate active advertisements for the same advertiser and
-service.
+If a registrar receives a registration request for an advertisement that is already present in its
+ad cache, the registrar may treat the request as a renewal or ignore it, depending on the renewal
+semantics specified by the wire-format document. The registrar must not store duplicate active
+advertisements for the same advertiser and service.
 
 ### Advertisements
 
@@ -494,42 +556,55 @@ The advertisement digest is:
 
 where `H` is the digest function defined for ticket construction.
 
-If future versions allow service-specific advertisement payloads, the advertisement definition becomes:
+If future versions allow service-specific advertisement payloads, the advertisement definition
+becomes:
 
     ad = [topic, ENR, payload]
 
 ### Admission Control
 
-Registrars use admission control to decide whether and when an incoming registration request for an advertisement may be admitted to the
-ad cache.
+Registrars use admission control to decide whether and when an incoming registration request for an
+advertisement may be admitted to the ad cache.
 
-Admission is based on a **waiting-time mechanism**. If an advertisement is not admitted immediately, the registrar
-returns a ticket and a waiting time. This mechanism promotes diversity in the ad cache and avoids requiring
-registrars to keep unbounded per-request state for pending registrations.
+Admission is based on a **waiting-time mechanism**. If an advertisement is not admitted immediately,
+the registrar returns a ticket and a waiting time. This mechanism promotes diversity in the ad cache
+and avoids requiring registrars to keep unbounded per-request state for pending registrations.
 
-When a registrar receives a registration request, it computes a waiting time from the current state of the ad
-cache and the incoming advertisement. If the effective remaining waiting time is less than or equal to zero, the
-advertisement is admitted. Otherwise, the registrar returns a ticket and a waiting time.
+When a registrar receives a registration request, it computes a waiting time from the current state
+of the ad cache and the incoming advertisement. If the effective remaining waiting time is less than
+or equal to zero, the advertisement is admitted. Otherwise, the registrar returns a ticket and a
+waiting time.
 
-The registrar does not need to keep per-request state for pending registrations. Instead, the state needed to
-prove accumulated waiting time is carried by the advertiser in the registrar-issued ticket.
+The registrar does not need to keep per-request state for pending registrations. Instead, the state
+needed to prove accumulated waiting time is carried by the advertiser in the registrar-issued
+ticket.
 
-The waiting time in a ticket is not binding. On each retry, the registrar recomputes the waiting time using the
-current ad cache state. The advertiser is admitted only when its accumulated waiting time is sufficient according
-to the recomputed waiting time.
+The waiting time in a ticket is not binding. On each retry, the registrar recomputes the waiting
+time using the current ad cache state. The advertiser is admitted only when its accumulated waiting
+time is sufficient according to the recomputed waiting time.
 
-If an advertiser retries too early, retries too late, omits the latest ticket, or presents an invalid ticket, the
-registrar treats the request as a new registration attempt or rejects it, depending on the wire-format rules.
+If an advertiser retries too early, retries too late, omits the latest ticket, or presents an
+invalid ticket, the registrar treats the request as a new registration attempt or rejects it,
+depending on the wire-format rules.
 
 ### Tickets
 
-A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a registration attempt after waiting.
+A ticket is a registrar-issued, registrar-authenticated object that allows an advertiser to retry a
+registration attempt after waiting.
 
-A ticket is bound to a specific advertisement and registrar. The advertisement is denoted `ad` and includes the service identifier, the advertised ENR, and any service-specific advertisement payload. The ticket contains a digest of this advertisement, denoted `adDigest`.
+A ticket is bound to a specific advertisement and registrar. The advertisement is denoted `ad` and
+includes the service identifier, the advertised ENR, and any service-specific advertisement payload.
+The ticket contains a digest of this advertisement, denoted `adDigest`.
 
-The advertiser uses the latest ticket issued by the registrar when retrying the registration. A ticket issued for one advertisement or registrar MUST NOT be accepted for a different registration request. In particular, a ticket issued for one service, advertised ENR, or advertisement payload MUST NOT be reused for another.
+The advertiser uses the latest ticket issued by the registrar when retrying the registration. A
+ticket issued for one advertisement or registrar MUST NOT be accepted for a different registration
+request. In particular, a ticket issued for one service, advertised ENR, or advertisement payload
+MUST NOT be reused for another.
 
-The ticket is opaque to the advertiser. The advertiser does not interpret the ticket contents; it stores the latest ticket returned by the registrar and presents it in the next registration attempt to the same registrar. The exact ticket encoding, digest function, authentication mechanism, signature format, and signature domain are specified in the wire-format document.
+The ticket is opaque to the advertiser. The advertiser does not interpret the ticket contents; it
+stores the latest ticket returned by the registrar and presents it in the next registration attempt
+to the same registrar. The exact ticket encoding, digest function, authentication mechanism,
+signature format, and signature domain are specified in the wire-format document.
 
 Algorithmically, a ticket contains enough authenticated information for the registrar to verify:
 
@@ -539,35 +614,50 @@ Algorithmically, a ticket contains enough authenticated information for the regi
 - `twait`: the remaining waiting duration reported to the advertiser;
 - `auth`: registrar authentication over the ticket contents.
 
-The registrar authenticates the ticket, for example by signing the ticket body or applying a registrar-local MAC. A registrar MUST reject a ticket that fails authentication or that was not issued by that registrar.
+The registrar authenticates the ticket, for example by signing the ticket body or applying a
+registrar-local MAC. A registrar MUST reject a ticket that fails authentication or that was not
+issued by that registrar.
 
-The timestamps `tinit` and `tmod` are generated and interpreted only by the registrar. They are local to the registrar and are not compared against the advertiser's clock. The only timing value used by the advertiser is the relative waiting duration `twait` reported by the registrar in the registration response.
+The timestamps `tinit` and `tmod` are generated and interpreted only by the registrar. They are
+local to the registrar and are not compared against the advertiser's clock. The only timing value
+used by the advertiser is the relative waiting duration `twait` reported by the registrar in the
+registration response.
 
 A retry is valid only during the registration window associated with the ticket:
 
     tmod + twait ≤ now ≤ tmod + twait + δ
 
-where `now` is the registrar's current local time when processing the retry, and `δ` is the registration window duration.
+where `now` is the registrar's current local time when processing the retry, and `δ` is the
+registration window duration.
 
-The advertiser does not use `tmod` to schedule the retry and does not need its clock to be synchronised with the registrar's clock. The advertiser waits for the relative duration `twait` using its own local timer, then retries with the latest ticket. The registrar validates the retry window using its own clock when the ticket is presented again.
+The advertiser does not use `tmod` to schedule the retry and does not need its clock to be
+synchronised with the registrar's clock. The advertiser waits for the relative duration `twait`
+using its own local timer, then retries with the latest ticket. The registrar validates the retry
+window using its own clock when the ticket is presented again.
 
-When a returning advertiser presents a valid ticket, the registrar computes the accumulated waiting duration as:
+When a returning advertiser presents a valid ticket, the registrar computes the accumulated waiting
+duration as:
 
     waited = now - tinit
 
 where `now` and `tinit` are both interpreted according to the registrar's local clock.
 
-If the retry is too early, too late, does not include the latest ticket, includes a ticket whose `adDigest` does not match the advertisement in the current registration request, or includes an invalid ticket, the registrar SHOULD reject the request or treat it as a new registration attempt according to the registration rules.
+If the retry is too early, too late, does not include the latest ticket, includes a ticket whose
+`adDigest` does not match the advertisement in the current registration request, or includes an
+invalid ticket, the registrar SHOULD reject the request or treat it as a new registration attempt
+according to the registration rules.
 
-Because the ticket is bound to `adDigest`, changing the service identifier, advertised ENR, or service-specific advertisement payload during a registration attempt requires starting a new registration attempt or obtaining a new ticket for the updated advertisement.
+Because the ticket is bound to `adDigest`, changing the service identifier, advertised ENR, or
+service-specific advertisement payload during a registration attempt requires starting a new
+registration attempt or obtaining a new ticket for the updated advertisement.
 
 ### Waiting-Time Function
 
 The waiting-time function determines how long an advertisement must wait before admission.
 
-The function depends on the current ad cache occupancy, the number of cached advertisements for the same service,
-the IP similarity of the advertiser, and a safety constant. The waiting time shapes the contents of the ad cache
-and provides flow control at the registrar.
+The function depends on the current ad cache occupancy, the number of cached advertisements for the
+same service, the IP similarity of the advertiser, and a safety constant. The waiting time shapes
+the contents of the ad cache and provides flow control at the registrar.
 
 The waiting time is:
 
@@ -577,25 +667,30 @@ where:
 
 - `E` is the advertisement expiry duration;
 - `C` is the ad cache capacity;
-- `c` is the current number of advertisements in the cache; when `c = 0`, the service-similarity term is defined as `0`.
+- `c` is the current number of advertisements in the cache; when `c = 0`, the service-similarity
+  term is defined as `0`.
 - `c(ad.service)` is the number of cached advertisements for the service being advertised;
-- `score(ad.IP)` is the IP similarity score computed from the advertiser's IP (ad.IP) in the advertised ENR;
+- `score(ad.IP)` is the IP similarity score computed from the advertiser's IP (ad.IP) in the
+  advertised ENR;
 - `Pocc` is the occupancy exponent;
 - `G` is the safety constant.
 
-The occupancy component increases the waiting time as the ad cache approaches capacity. This limits the rate at
-which new advertisements can be admitted.
+The occupancy component increases the waiting time as the ad cache approaches capacity. This limits
+the rate at which new advertisements can be admitted.
 
-The service-similarity component increases the waiting time for services that are already well represented in the
-cache. This makes it easier for less represented services to obtain cache entries.
+The service-similarity component increases the waiting time for services that are already well
+represented in the cache. This makes it easier for less represented services to obtain cache
+entries.
 
-The IP-similarity component increases the waiting time for advertisers whose IP prefixes are overrepresented in
-the cache. This discourages a small number of IP prefixes from dominating the registrar's ad cache.
+The IP-similarity component increases the waiting time for advertisers whose IP prefixes are
+overrepresented in the cache. This discourages a small number of IP prefixes from dominating the
+registrar's ad cache.
 
-The safety constant prevents the waiting time from becoming zero when the cache is sparsely populated and the
-incoming advertisement appears dissimilar to existing entries.
+The safety constant prevents the waiting time from becoming zero when the cache is sparsely
+populated and the incoming advertisement appears dissimilar to existing entries.
 
-When a returning advertiser presents a valid ticket, the registrar computes the effective remaining waiting time as:
+When a returning advertiser presents a valid ticket, the registrar computes the effective remaining
+waiting time as:
 
     tremaining = w(current-cache, ad) - (now - tinit)
 
@@ -605,125 +700,180 @@ where `tinit` is the ticket creation time. The advertisement is admitted when `t
 
 Registrars maintain an IP-prefix tree over the IP addresses of admitted advertisements.
 
-The tree is used to compute the IP similarity score. Prefixes that are overrepresented in the ad cache increase
-the score, causing advertisements from similar IP prefixes to receive higher waiting times.
+The tree is used to compute the IP similarity score. Prefixes that are overrepresented in the ad
+cache increase the score, causing advertisements from similar IP prefixes to receive higher waiting
+times.
 
-For IPv4, the tree has 32 levels below the root. Each edge corresponds to one bit of the IP address, and each
-vertex stores a counter. The root counter represents the total number of IP addresses represented in the ad cache.
+For IPv4, the tree has 32 levels below the root. Each edge corresponds to one bit of the IP address,
+and each vertex stores a counter. The root counter represents the total number of IP addresses
+represented in the ad cache.
 
-To score an IP address, the registrar walks the tree along the bits of the address. At each level, the registrar
-compares the observed counter for the corresponding prefix with the counter expected in a perfectly balanced tree.
-Prefixes that are overrepresented contribute to the score.
+To score an IP address, the registrar walks the tree along the bits of the address. At each level,
+the registrar compares the observed counter for the corresponding prefix with the counter expected
+in a perfectly balanced tree. Prefixes that are overrepresented contribute to the score.
 
 The resulting score is normalised to the interval `[0, 1]`.
 
-The tree is updated when advertisements are admitted or expire. When an advertisement is admitted, counters along
-the path corresponding to the advertiser's IP address are incremented. When the advertisement expires or is removed,
-those counters are decremented.
+The tree is updated when advertisements are admitted or expire. When an advertisement is admitted,
+counters along the path corresponding to the advertiser's IP address are incremented. When the
+advertisement expires or is removed, those counters are decremented.
 
-For IPv6, the same construction applies over 128 address bits. Implementations that support both IPv4 and IPv6 should define whether separate trees are maintained or whether addresses are mapped into a common representation.
+For IPv6, the same construction applies over 128 address bits. Implementations that support both
+IPv4 and IPv6 should define whether separate trees are maintained or whether addresses are mapped
+into a common representation.
 
 ### Waiting-Time Lower Bound
 
-Registrars enforce a lower bound on waiting times so that an advertiser cannot obtain a better effective waiting
-time by repeatedly requesting new tickets.
+Registrars enforce a lower bound on waiting times so that an advertiser cannot obtain a better
+effective waiting time by repeatedly requesting new tickets.
 
-Without a lower bound, a pending advertiser could repeatedly request new tickets in the hope that cache changes
-cause a lower waiting time. The lower-bound rule ensures that a new waiting time cannot improve on the old one
-by more than the elapsed time.
+Without a lower bound, a pending advertiser could repeatedly request new tickets in the hope that
+cache changes cause a lower waiting time. The lower-bound rule ensures that a new waiting time
+cannot improve on the old one by more than the elapsed time.
 
-Registrars do not maintain unbounded per-request lower-bound state for pending registrations. Lower-bound state is
-maintained only for bounded structures, such as:
+Registrars do not maintain unbounded per-request lower-bound state for pending registrations.
+Lower-bound state is maintained only for bounded structures, such as:
 
 - services already represented in the ad cache; and
 - prefixes represented in the IP similarity tree.
 
-When a service `s` enters the ad cache for the first time, the registrar initialises lower-bound state for `s`.
-When a later ticket request for `s` arrives, the registrar computes the service waiting-time component and applies
-the stored lower bound before issuing a new ticket.
+When a service `s` enters the ad cache for the first time, the registrar initialises lower-bound
+state for `s`. When a later ticket request for `s` arrives, the registrar computes the service
+waiting-time component and applies the stored lower bound before issuing a new ticket.
 
-For IP addresses, lower-bound state is maintained at the IP-tree vertex corresponding to the longest prefix match
-already present in the tree, without introducing new vertices only for pending requests. If multiple IP addresses
-map to the same vertex, the registrar aggregates their lower-bound state using a maximum.
+For IP addresses, lower-bound state is maintained at the IP-tree vertex corresponding to the longest
+prefix match already present in the tree, without introducing new vertices only for pending
+requests. If multiple IP addresses map to the same vertex, the registrar aggregates their
+lower-bound state using a maximum.
 
 ## Advertiser Behaviour
 
 ### Advertisement Placement
 
-For each service `s` that a node advertises, the advertiser attempts to maintain up to `Kregister` active or
-pending registrations in each bucket of its advertise table `B(s)`.
+For each service `s` that a node advertises, the advertiser attempts to maintain up to `Kregister`
+active or pending registrations in each bucket of its advertise table `B(s)`.
 
-Candidate registrars are selected from the corresponding bucket of the advertise table. Placement starts from
-the furthest bucket from `s` and progresses towards the closest bucket.
+Candidate registrars are selected from the corresponding bucket of the advertise table. Placement
+starts from the furthest bucket from `s` and progresses towards the closest bucket.
 
-The advertiser maintains per-bucket state for ongoing and active registrations. This state records the registrars
-for which an advertisement attempt is already pending or active, so that the advertiser does not repeatedly choose
-the same registrar when filling the same bucket.
+The advertiser maintains per-bucket state for ongoing and active registrations. This state records
+the registrars for which an advertisement attempt is already pending or active, so that the
+advertiser does not repeatedly choose the same registrar when filling the same bucket.
 
-Within a placement cycle, registrar selection should not repeatedly return the same registrar from the same bucket.
+Within a placement cycle, registrar selection should not repeatedly return the same registrar from
+the same bucket.
 
-For each bucket `bᵢ(s)`, while the number of active or pending registrations in that bucket is below `Kregister`,
-the advertiser selects a candidate registrar from `bᵢ(s)` and starts a registration attempt.
+For each bucket `bᵢ(s)`, while the number of active or pending registrations in that bucket is below
+`Kregister`, the advertiser selects a candidate registrar from `bᵢ(s)` and starts a registration
+attempt.
 
-If no eligible registrar remains in the bucket, the advertiser stops trying to fill that bucket during the current
-placement cycle. The bucket may be attempted again later after the service table is refreshed or after temporary
-exclusions expire.
+If no eligible registrar remains in the bucket, the advertiser stops trying to fill that bucket
+during the current placement cycle. The bucket may be attempted again later after the service table
+is refreshed or after temporary exclusions expire.
 
-Advertisement placement is continuous soft state. Advertisers periodically repeat placement and renewal so that
-advertisements remain available despite expiry, churn, registrar failure, and changes in the service table.
+Advertisement placement is continuous soft state. Advertisers periodically repeat placement and
+renewal so that advertisements remain available despite expiry, churn, registrar failure, and
+changes in the service table.
 
 ### Registration Procedure
 
-An advertiser registers an advertisement by sending a registration request to a selected registrar. The corresponding wire-format request is specified in [REGTOPIC].
+An advertiser registers an advertisement by sending a registration request to a selected registrar.
+The corresponding wire-format request is specified in [REGTOPIC].
 
-The first registration request for an advertisement is sent without a ticket. The registrar either admits the advertisement immediately or returns a ticket and a waiting time. Ticket and confirmation responses are specified in [TICKET] and [REGCONFIRMATION].
+The first registration request for an advertisement is sent without a ticket. The registrar either
+admits the advertisement immediately or returns a ticket and a waiting time. Ticket and confirmation
+responses are specified in [TICKET] and [REGCONFIRMATION].
 
-If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar still cannot admit the advertisement after the retry, it may return an updated ticket and a new waiting time.
+If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A
+single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar
+still cannot admit the advertisement after the retry, it may return an updated ticket and a new
+waiting time.
 
-The protocol does not define a fixed maximum total duration for a registration attempt. An implementation MAY abandon an attempt after a local timeout, after a configured maximum number of retries, or if the registrar is considered unusable according to local TopDisc liveness policy.
+The protocol does not define a fixed maximum total duration for a registration attempt. An
+implementation MAY abandon an attempt after a local timeout, after a configured maximum number of
+retries, or if the registrar is considered unusable according to local TopDisc liveness policy.
 
-A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed responses, the registration window is missed, a local retry or timeout limit is reached, or the registrar is otherwise considered unusable according to local TopDisc liveness policy. On failure, the advertiser removes the registrar from the pending state for that bucket and may select another registrar.
+A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed
+responses, the registration window is missed, a local retry or timeout limit is reached, or the
+registrar is otherwise considered unusable according to local TopDisc liveness policy. On failure,
+the advertiser removes the registrar from the pending state for that bucket and may select another
+registrar.
 
-When registration succeeds, the advertisement remains stored by the registrar until it expires, unless it is removed earlier by registrar policy.
+When registration succeeds, the advertisement remains stored by the registrar until it expires,
+unless it is removed earlier by registrar policy.
 
-Registration responses may include auxiliary ENRs selected from the registrar's view of the service table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
+Registration responses may include auxiliary ENRs selected from the registrar's view of the service
+table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the
+ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The recommended
+auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 ### Renewal
 
 An admitted advertisement remains stored until its expiry time `E`.
 
-Advertisers should renew advertisements before expiry, or continuously maintain enough active and pending
-registrations, to preserve the target number of placements in each bucket.
+Advertisers should renew advertisements before expiry, or continuously maintain enough active and
+pending registrations, to preserve the target number of placements in each bucket.
 
-A renewal is a new registration attempt for an advertisement already admitted or about to expire. The exact renewal
-encoding and the treatment of duplicate registrations are specified by the wire-format document.
+A renewal is a new registration attempt for an advertisement already admitted or about to expire.
+The exact renewal encoding and the treatment of duplicate registrations are specified by the
+wire-format document.
 
-If a renewal fails, the advertiser may attempt to register with another eligible registrar in the same bucket.
+If a renewal fails, the advertiser may attempt to register with another eligible registrar in the
+same bucket.
 
-Advertisers should treat registrations as soft state. The target is not to permanently bind a service to a fixed
-set of registrars, but to maintain sufficient active or pending placements across the service-centred key space.
+Advertisers should treat registrations as soft state. The target is not to permanently bind a
+service to a fixed set of registrars, but to maintain sufficient active or pending placements across
+the service-centred key space.
 
 ## Discoverer Behaviour
 
 ### Lookup Procedure
 
-A discoverer looking for service `s` queries registrars selected from its search table `B(s)`. The corresponding wire-format request is specified in [TOPICQUERY]. Lookup proceeds bucket by bucket, starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to `Klookup` of them.
+A discoverer looking for service `s` queries registrars selected from its search table `B(s)`. The
+corresponding wire-format request is specified in [TOPICQUERY]. Lookup proceeds bucket by bucket,
+starting from the bucket furthest from `s` and progressing towards buckets closer to `s`. For each
+bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to
+`Klookup` of them.
 
-A registrar may return advertisements for service `s`. The discoverer validates the returned advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity. Advertisements are candidate results for the target service. The lookup terminates when the discoverer has collected enough distinct advertisers for its local or service-specific purpose, or when no unqueried registrars remain. This local target is denoted `Flookup` in this document. The value of `Flookup` is determined by the application, service binding, or local implementation policy, rather than by the TopDisc lookup procedure itself. If fewer than `Flookup` advertisers are found before all available candidate registrars are exhausted, the lookup returns the valid advertisers collected so far.
+A registrar may return advertisements for service `s`. The discoverer validates the returned
+advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity.
+Advertisements are candidate results for the target service. The lookup terminates when the
+discoverer has collected enough distinct advertisers for its local or service-specific purpose, or
+when no unqueried registrars remain. This local target is denoted `Flookup` in this document. The
+value of `Flookup` is determined by the application, service binding, or local implementation
+policy, rather than by the TopDisc lookup procedure itself. If fewer than `Flookup` advertisers are
+found before all available candidate registrars are exhausted, the lookup returns the valid
+advertisers collected so far.
 
-The same registrar should not be queried repeatedly during a single lookup unless the implementation has exhausted other candidates and chooses to retry according to local policy. If a queried registrar is unreachable, times out, or returns a malformed response, the discoverer treats that query as failed and continues with another candidate. Repeated failures may cause the registrar to be temporarily excluded from TopDisc operations.
+The same registrar should not be queried repeatedly during a single lookup unless the implementation
+has exhausted other candidates and chooses to retry according to local policy. If a queried
+registrar is unreachable, times out, or returns a malformed response, the discoverer treats that
+query as failed and continues with another candidate. Repeated failures may cause the registrar to
+be temporarily excluded from TopDisc operations.
 
-Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection). 
+Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are
+auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended
+auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 ### Lookup Responses
 
-A registrar receiving a lookup request for service `s` returns advertisements for that service from its ad cache. A registrar receiving a [TOPICQUERY] request for service `s` returns advertisements and auxiliary ENRs using the response format defined for `TOPICQUERY` in the wire specification.
+A registrar receiving a lookup request for service `s` returns advertisements for that service from
+its ad cache. A registrar receiving a [TOPICQUERY] request for service `s` returns advertisements
+and auxiliary ENRs using the response format defined for `TOPICQUERY` in the wire specification.
 
-The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most `Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same advertisers across repeated lookup requests.
+The registrar MUST NOT return expired advertisements. If more than `Freturn` advertisements for the
+service are present in its ad cache, the registrar SHOULD return a pseudo-random subset of at most
+`Freturn` advertisements. The selection procedure SHOULD avoid deterministic bias towards the same
+advertisers across repeated lookup requests.
 
-A registrar may also return auxiliary ENRs selected from its view of the service table for `s`. These ENRs are not lookup results; they are auxiliary routing information used to improve future registration and lookup operations.
+A registrar may also return auxiliary ENRs selected from its view of the service table for `s`.
+These ENRs are not lookup results; they are auxiliary routing information used to improve future
+registration and lookup operations.
 
-The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The exact encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the wire-format document.
+The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating
+the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The exact
+encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the
+wire-format document.
 
 ### Updating the Search Table During Lookup
 
@@ -734,25 +884,27 @@ An ENR learned through lookup is eligible for insertion into `B(s)` only if:
 1. the ENR is valid;
 2. the ENR advertises TopDisc capability;
 3. the node is not temporarily excluded by local TopDisc usability policy;
-4. the node satisfies ordinary Discovery v5 liveness requirements, or is scheduled for ordinary liveness verification.
+4. the node satisfies ordinary Discovery v5 liveness requirements, or is scheduled for ordinary
+   liveness verification.
 
-Implementations may insert learned ENRs immediately with an unverified flag and verify liveness asynchronously. 
+Implementations may insert learned ENRs immediately with an unverified flag and verify liveness
+asynchronously.
 
 ## Parameters
 
 The TopDisc algorithms use the following parameters:
 
-| Parameter | Meaning | Default |
-|---|---|---|
-| `Kregister` | Target number of active or pending registrations per bucket | `5` |
-| `Klookup` | Maximum number of registrar queries per bucket during lookup | `5` |
-| `Freturn` | Maximum number of advertisements returned by one registrar | `10` |
-| `Flookup` | Optional local or service-specific target for the number of distinct advertisers to collect during lookup | `30` |
-| `E` | Advertisement expiry duration | `15 min` |
-| `C` | Registrar ad cache capacity | `1000` |
-| `δ` | Registration retry window duration | **`TBD`** |
-| `Pocc` | Occupancy exponent in the waiting-time function | `10` |
-| `G` | Safety constant in the waiting-time function | `10^-7` |
+| Parameter   | Meaning                                                                                                   | Default   |
+|-------------|-----------------------------------------------------------------------------------------------------------|-----------|
+| `Kregister` | Target number of active or pending registrations per bucket                                               | `5`       |
+| `Klookup`   | Maximum number of registrar queries per bucket during lookup                                              | `5`       |
+| `Freturn`   | Maximum number of advertisements returned by one registrar                                                | `10`      |
+| `Flookup`   | Optional local or service-specific target for the number of distinct advertisers to collect during lookup | `30`      |
+| `E`         | Advertisement expiry duration                                                                             | `15 min`  |
+| `C`         | Registrar ad cache capacity                                                                               | `1000`    |
+| `δ`         | Registration retry window duration                                                                        | **`TBD`** |
+| `Pocc`      | Occupancy exponent in the waiting-time function                                                           | `10`      |
+| `G`         | Safety constant in the waiting-time function                                                              | `10^-7`   |
 
 ## Implementation Considerations
 
@@ -760,30 +912,30 @@ The TopDisc algorithms use the following parameters:
 
 Advertisers should send their current ENR when registering an advertisement.
 
-Registrars should store the ENR that was admitted and return that ENR in lookup responses until the advertisement
-expires or is renewed.
+Registrars should store the ENR that was admitted and return that ENR in lookup responses until the
+advertisement expires or is renewed.
 
 ### Clocks
 
 TopDisc does not require clock synchronisation between advertisers and registrars.
 
-Tickets carry registrar-generated timing information. Advertisers only need to wait for the duration indicated by
-the registrar before retrying.
+Tickets carry registrar-generated timing information. Advertisers only need to wait for the duration
+indicated by the registrar before retrying.
 
 ### Response Splitting
 
 TopDisc responses may be split across multiple packets when supported by the wire protocol.
 
-Implementations should collect all response packets belonging to the same request until the announced response count
-is reached or the request times out.
+Implementations should collect all response packets belonging to the same request until the
+announced response count is reached or the request times out.
 
 ### Wire Encoding
 
 This document describes algorithms and data structures.
 
-The exact encoding of TopDisc messages, ticket signatures, request identifiers, response splitting, returned
-advertisements, neighbour ENRs, and any application-specific advertisement payload is specified in the wire-format
-document.
+The exact encoding of TopDisc messages, ticket signatures, request identifiers, response splitting,
+returned advertisements, neighbour ENRs, and any application-specific advertisement payload is
+specified in the wire-format document.
 
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
 [TICKET]: ./discv5-wire.md#ticket-response-0x08
