@@ -355,18 +355,18 @@ disturb the operation of the protocol. Session keys per node-ID/IP generally pre
 replay across sessions. The `request-id`, mirrored in response packets, prevents replay of
 responses within a session.
 
-# Topic-based Service Discovery Protocol v5 - Rationale
+# Topic-based Service Discovery
 
 This section explains the rationale for TopDisc, the topic-based service discovery
 extension to Node Discovery v5. TopDisc is based on the DISC-NG design described in
-[DISC-NG].
+[DISC-NG] paper.
 
 TopDisc addresses the problem of discovering peers that participate in a particular
 decentralised service or application. The participants of such a service form a
 service-specific overlay, but the discovery mechanism should not require each service to
-operate a separate discovery network. In this document, a topic is the protocol-level
-identifier for a service. The terms topic-based discovery and service discovery refer to
-the same mechanism: discovering peers for the service identified by a topic.
+operate a separate discovery network. A *topic* is the protocol-level identifier for a
+service. The terms *topic-based discovery* and *service discovery* refer to the same
+mechanism: discovering peers for the service identified by a topic.
 
 ## Service Discovery Performance Goals
 
@@ -378,7 +378,7 @@ Lookup should be able to find advertisements without immediately concentrating r
 the nodes closest to the topic identifier.
 
 TopDisc lookup starts from buckets far from the topic identifier and progresses towards
-buckets closer to it. In each bucket, the discoverer queries up to `Klookup` registrars.
+buckets closer to it. In each bucket, the discoverer queries up to `K_lookup` registrars.
 This allows popular topics to be discovered before reaching the closest buckets, reducing
 hotspots near the topic identifier.
 
@@ -414,7 +414,7 @@ per-request state for every pending registration attempt.
 ### Compact Responses
 
 TopDisc responses should remain small enough for UDP-based discovery. Advertisements
-returned by a registrar are capped by `Freturn`. Auxiliary ENRs are selected with an
+returned by a registrar are capped by `F_return`. Auxiliary ENRs are selected with an
 implementation-defined total cap, and the recommended selection rule returns at most one
 auxiliary ENR per requested topic-distance. This keeps responses compact while still
 helping requesters improve their service tables.
@@ -473,8 +473,8 @@ advertisements for malicious nodes.
 
 TopDisc reduces the effectiveness of this attack by requiring discoverers to collect
 advertisements from multiple registrars and by encouraging diversity in registrar ad
-caches. Parameters such as `Flookup`, `Freturn`, `Klookup`, and `Kregister` control the
-trade-off between lookup cost and diversity of sources.
+caches. Parameters such as `F_lookup`, `F_return`, `K_lookup`, and `K_register` control
+the trade-off between lookup cost and diversity of sources.
 
 ### Service-Table Poisoning
 
@@ -497,8 +497,6 @@ intermediaries from modifying advertised node information. Applications using di
 advertisements should still perform their normal service-level checks before relying on
 the discovered peer.
 
-# Rationale
-
 ## Why Not Use Separate Discovery Networks?
 
 A simple way to discover service-specific peers would be to run a separate discovery
@@ -510,15 +508,15 @@ or small services would have few participants and would therefore be easier to i
 eclipse. Running many small discovery networks would also duplicate infrastructure and
 fragment the global peer-discovery ecosystem.
 
-TopDisc instead reuses the ordinary Node Discovery v5 network. Services benefit from the
-existing global discovery network, and nodes can discover peers for many services without
-joining a separate discovery DHT for each one.
+TopDisc instead makes all nodes join the same network. Services benefit from the existing
+global discovery network, and nodes can discover peers for many services without joining a
+separate discovery DHT for each one.
 
 ## Why Not Use Only Random Sampling?
 
-Ordinary Node Discovery v5 can be used to sample nodes from the global discovery network.
-A service-specific protocol can then check whether each sampled node supports the desired
-topic or service.
+[FINDNODE] can be used to sample nodes from the discovery network, i.e. performing a
+random walk. A service-specific protocol could use a random walk and then check whether
+each sampled node supports the desired topic or service.
 
 This approach has a useful security property: the search is spread across the global
 discovery network rather than being concentrated at a small set of predictable
@@ -547,7 +545,7 @@ buckets closer to it, querying up to `Klookup` registrars per bucket. This keeps
 distributed while still ensuring that advertiser and discoverer walks converge toward the
 topic identifier when more search effort is needed.
 
-## Why Use Topic-Centred Tables?
+## Why Topic-Centered Service Tables?
 
 The ordinary node table is centred on the local node ID. It is useful for maintaining the
 global discovery network and for finding nodes close to arbitrary node IDs. For topic
@@ -723,7 +721,6 @@ still participate in ordinary node discovery.
 TopDisc-capable nodes advertise support in their ENR. This allows implementations to build
 service tables from ordinary node discovery state while selecting only nodes that can
 handle TopDisc messages.
-
 
 # References
 
