@@ -295,27 +295,10 @@ procedure on another, closer node.
 
 # Topic-based Service Discovery
 
-## Overview
-
-Node Discovery v5 maintains the global Discv5 discovery network and each node's local node table.
-Applications use this node discovery substrate to discover peers that participate in higher-level
-services, so that the participants of each service form a service-specific overlay.
-
-Currently, a node can search for service-specific peers by sampling nodes through node discovery and
-then checking whether the sampled nodes support the desired service. This check is outside the
-ordinary node discovery algorithm: depending on the application, service support may be inferred
-from information in the ENR, discovered by establishing a devp2p/RLPx connection and negotiating
-supported subprotocols, or determined by a service-specific protocol query.
-
-Discv5's random-sampling approach preserves the security benefits of sampling from the global
-discovery network, because the search is not concentrated around a small set of service-specific
-locations in the DHT keyspace. However, it is inefficient, especially when the target service is
-supported by only a small fraction of nodes.
-
-Discv5 topic-based discovery (**TopDisc**) extends Discovery v5 with topic-based service discovery.
-It allows nodes to advertise participation in a service and allows other nodes to discover those
-advertisements while reusing the existing Node Discovery v5 node table, ENR mechanism, packet
-format, and authenticated session machinery.
+Topic-based discovery (**TopDisc**) extends Discovery v5 with a mechanism to discover nodes
+according to their provided services (topics). It allows nodes to advertise participation in a
+service and allows other nodes to discover those advertisements while reusing the existing Node
+Table and ENR mechanisms.
 
 ## Co-existence with Node Discovery
 
@@ -330,19 +313,17 @@ for ordinary node discovery but unusable for TopDisc registration or lookup. Con
 fails ordinary Discovery v5 liveness checks ceases to be eligible for insertion into TopDisc service
 tables.
 
-## TopDisc Capability
+## ENR Capability
 
-A node indicates support for TopDisc by including the [`topic-discovery`][topic-discovery-entry]
+A node indicates support for service discovery messages by including the [`ng`][ng-entry]
 entry in its ENR.
 
-    topic-discovery = <version>
+    ng = <version>
 
-The value of `topic-discovery` is an unsigned integer identifying the supported TopDisc protocol
-version. Nodes whose ENR does not contain `topic-discovery`, or whose `topic-discovery` value is not
-supported by the local implementation are not inserted into service tables and are not selected for
+The value of `ng` is an unsigned integer identifying the supported TopDisc protocol
+version. Nodes whose ENR does not contain `ng`, or whose `ng` value is not supported by
+the local implementation are not inserted into service tables and are not selected for
 TopDisc registration or lookup requests.
-
-[topic-discovery-entry]: ../enr-entries/topic-discovery.md
 
 ## Services and Service Identifiers
 
@@ -943,3 +924,4 @@ specified in the wire-format document.
 [TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
 [TOPICNODES]: ./discv5-wire.md#topicnodes-response-0x0a
 [NODES]: ./discv5-wire.md#nodes-response-0x04
+[ng-entry]: ../enr-entries/ng.md
