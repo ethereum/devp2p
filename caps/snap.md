@@ -406,6 +406,13 @@ but there might be fewer is QoS limits are reached.
 
 ## Change Log
 
+### snap/2
+
+Version 2 replaces trie-node healing (0x06/0x07) with block-access-list based
+catch-up (0x08/0x09). It is specified separately in [snap2.md](./snap2.md) as a
+delta over this document; the messages 0x00–0x05 and all framing defined here
+are inherited unchanged.
+
 ### snap/1 (November 2020)
 
 Version 1 was the introduction of the snapshot protocol.
