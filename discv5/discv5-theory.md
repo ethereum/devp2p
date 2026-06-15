@@ -767,8 +767,7 @@ An advertiser registers an advertisement by sending a registration request to a 
 The corresponding wire-format request is specified in [REGTOPIC].
 
 The first registration request for an advertisement is sent without a ticket. The registrar either
-admits the advertisement immediately or returns a ticket and a waiting time. Ticket and confirmation
-responses are specified in [TICKET] and [REGCONFIRMATION].
+admits the advertisement immediately or returns a ticket and a waiting time in a [REGCONFIRMATION] response.
 
 If the registrar returns a ticket, the advertiser waits before retrying with the latest ticket. A
 single waiting interval SHOULD NOT exceed `E`, the advertisement expiry duration. If the registrar
@@ -926,7 +925,6 @@ specified in the wire-format document.
 [RFC 5869]: https://www.rfc-editor.org/rfc/rfc5869
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
-[TICKET]: ./discv5-wire.md#ticket-response-0x08
 [REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x08
 [TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
 [TOPICNODES]: ./discv5-wire.md#topicnodes-response-0x0a
