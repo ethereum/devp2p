@@ -23,16 +23,16 @@ The key/value pairs must be sorted by key and must be unique, i.e. any key may b
 only once. The keys can technically be any byte sequence, but ASCII text is preferred. Key
 names in the table below have pre-defined meaning.
 
-| Key         | Value                                      |
-|:------------|:-------------------------------------------|
-| `id`        | name of identity scheme, e.g. "v4"         |
-| `secp256k1` | compressed secp256k1 public key, 33 bytes  |
-| `ip`        | IPv4 address, 4 bytes                      |
-| `tcp`       | TCP port, big endian integer               |
-| `udp`       | UDP port, big endian integer               |
-| `ip6`       | IPv6 address, 16 bytes                     |
-| `tcp6`      | IPv6-specific TCP port, big endian integer |
-| `udp6`      | IPv6-specific UDP port, big endian integer |
+| Key               | Value                                              |
+|:------------------|:---------------------------------------------------|
+| `id`              | name of identity scheme, e.g. "v4"                 |
+| `secp256k1`       | compressed secp256k1 public key, 33 bytes          |
+| `ip`              | IPv4 address, 4 bytes                              |
+| `tcp`             | TCP port, big endian integer                       |
+| `udp`             | UDP port, big endian integer                       |
+| `ip6`             | IPv6 address, 16 bytes                             |
+| `tcp6`            | IPv6-specific TCP port, big endian integer         |
+| `udp6`            | IPv6-specific UDP port, big endian integer         |
 
 All keys except `id` are optional, including IP addresses and ports. A record without
 endpoint information is still valid as long as its signature is valid. If no `tcp6` /
