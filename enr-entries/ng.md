@@ -39,5 +39,4 @@ policy.
 The initial version of the "topic-discovery" entry is proposed in this document, alongside
 the TopDisc specification.
 
-[discv5]: ../discv5/discv5.md
 [TopDisc]: ../discv5/discv5-theory.md#topic-based-service-discovery
