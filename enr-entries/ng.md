@@ -1,8 +1,8 @@
 # The "topic-discovery" ENR entry
 
 This specification defines the "topic-discovery" ENR entry, which signals that a node
-implements the [TopDisc][topdisc] topic discovery capability for [Node Discovery v5][discv5]
-and is willing to participate in topic service tables, registrations, and lookups.
+implements the [TopDisc] capability for discv5 and is willing to participate in topic
+service tables, registrations, and lookups.
 
 ## Entry Format
 
@@ -10,7 +10,7 @@ and is willing to participate in topic service tables, registrations, and lookup
     entry-value = version
 
 Where `version` is an unsigned integer identifying the supported TopDisc protocol version.
-A node implementing the version described in the [TopDisc theory][topdisc] document sets:
+A node implementing the version described in the TopDisc document sets:
 
     topic-discovery = 1
 
@@ -37,8 +37,7 @@ policy.
 ### Initial version (2026)
 
 The initial version of the "topic-discovery" entry is proposed in this document, alongside
-the [Discv5 wire][discv5-wire] and [TopDisc theory][topdisc] specifications.
+the TopDisc specification.
 
 [discv5]: ../discv5/discv5.md
-[topdisc]: ../discv5/discv5-theory.md
-[discv5-wire]: ../discv5/discv5-wire.md
+[TopDisc]: ../discv5/discv5-theory.md#topic-based-service-discovery
