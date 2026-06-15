@@ -420,7 +420,7 @@ learned.
 A service table is maintained from two sources:
 
 1. the ordinary Discovery v5 node table; and
-2. **auxiliary ENRs** learned through responses.
+2. **auxiliary ENRs** learned through [NODES] delivered as a response to [TOPICQUERY].
 
 When a newly verified node advertising TopDisc capability is learned through ordinary discovery, it
 becomes eligible for insertion into relevant service tables.
@@ -819,15 +819,15 @@ starting from the bucket furthest from `s` and progressing towards buckets close
 bucket `bᵢ(s)`, the discoverer selects candidate registrars from that bucket and queries up to
 `K_lookup` of them.
 
-A registrar may return advertisements for service `s`. The discoverer validates the returned
-advertisements, extracts the advertised ENRs, and de-duplicates them by advertiser identity.
-Advertisements are candidate results for the target service. The lookup terminates when the
-discoverer has collected enough distinct advertisers for its local or service-specific purpose, or
-when no unqueried registrars remain. This local target is denoted `F_lookup` in this document. The
-value of `F_lookup` is determined by the application, service binding, or local implementation
-policy, rather than by the TopDisc lookup procedure itself. If fewer than `F_lookup` advertisers are
-found before all available candidate registrars are exhausted, the lookup returns the valid
-advertisers collected so far.
+A registrar returns advertisements for service `s` in [TOPICNODES] responses. The discoverer
+validates the returned advertisements, extracts the advertised ENRs, and de-duplicates them by
+advertiser identity. Advertisements are candidate results for the target service. The lookup
+terminates when the discoverer has collected enough distinct advertisers for its local or
+service-specific purpose, or when no unqueried registrars remain. This local target is denoted
+`F_lookup` in this document. The value of `F_lookup` is determined by the application, service
+binding, or local implementation policy, rather than by the TopDisc lookup procedure itself. If
+fewer than `F_lookup` advertisers are found before all available candidate registrars are exhausted,
+the lookup returns the valid advertisers collected so far.
 
 The same registrar should not be queried repeatedly during a single lookup unless the implementation
 has exhausted other candidates and chooses to retry according to local policy. If a queried
@@ -835,9 +835,10 @@ registrar is unreachable, times out, or returns a malformed response, the discov
 query as failed and continues with another candidate. Repeated failures may cause the registrar to
 be temporarily excluded from operations.
 
-Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are
-auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended
-auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
+Lookup responses may also include auxiliary ENRs in [NODES] responses. These ENRs are not lookup
+results; they are auxiliary routing information used to improve the discoverer's search table
+`B(s)`. The recommended auxiliary-ENR selection rule is described in [Auxiliary ENR
+Selection](#auxiliary-enr-selection).
 
 ### Lookup Responses
 
