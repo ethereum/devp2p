@@ -302,15 +302,15 @@ Table and ENR mechanisms.
 
 ## Co-existence with Node Discovery
 
-TopDisc is layered on top of Discovery v5. A TopDisc-capable node first uses the Node Discovery v5
-to join the global discovery network, populate its local node table, and learn TopDisc-capable
-nodes. These nodes are then used to bootstrap TopDisc. As TopDisc registration and lookup operations
-proceed, TopDisc-capable nodes can also return additional nodes to improve those service-specific
-tables, as described below.
+The TopDisc system builds on the basic routing of discv5. A TopDisc-capable node first
+joins the network using [FINDNODE] and populates its local node table, learning about
+TopDisc capable nodes. These nodes are then used to bootstrap service tables (see below).
+As registration and lookup operations proceed, TopDisc-capable nodes can also return
+additional nodes to improve the service tables, as described below.
 
 A TopDisc failure does not by itself imply an ordinary Discovery v5 failure. A node may be usable
-for ordinary node discovery but unusable for TopDisc registration or lookup. Conversely, a node that
-fails ordinary Discovery v5 liveness checks ceases to be eligible for insertion into TopDisc service
+for ordinary node discovery but unusable for registration or lookup. Conversely, a node that
+fails ordinary Discovery v5 liveness checks ceases to be eligible for insertion into service
 tables.
 
 ## ENR Capability
@@ -323,7 +323,7 @@ entry in its ENR.
 The value of `ng` is an unsigned integer identifying the supported TopDisc protocol
 version. Nodes whose ENR does not contain `ng`, or whose `ng` value is not supported by
 the local implementation are not inserted into service tables and are not selected for
-TopDisc registration or lookup requests.
+registration or lookup requests.
 
 ## Services and Service Identifiers
 
@@ -338,14 +338,15 @@ identifiers is defined by the relevant service binding. Such parameters MAY incl
 protocol name, network name, fork identifier, client capability, subnet identifier, or other
 service-specific values.
 
-This document does not define a canonical derivation rule for service identifiers.
+This document does not define a canonical derivation rule for service identifiers. The application
+can choose its identifiers freely.
 
 ## Node Roles
 
-A node that advertises TopDisc capability in its ENR acts as a registrar, subject to local policy
+A node that advertises `ng` capability in its ENR acts as a registrar, subject to local policy
 and resource limits.
 
-A **registrar** accepts TopDisc registration and lookup requests, admits advertisements into its
+A **registrar** accepts registration and lookup requests, admits advertisements into its
 local **ad cache**, and returns admitted advertisements to discoverers.
 
 A TopDisc-capable node may also act as an advertiser, a discoverer, or both.
@@ -387,7 +388,7 @@ for every service represented in its ad cache.
 
 ### Bootstrap from Ordinary Node Discovery
 
-A node does not start TopDisc advertisement placement or lookup from an empty service table.
+A node does not start advertisement placement or lookup from an empty service table.
 
 The node first joins the Node Discovery v5 network using the standard bootstrapping procedure. It
 populates its ordinary local node table through the existing `PING`, `PONG`, `FINDNODE`, lookup,
@@ -406,8 +407,8 @@ implementations should:
 4. discard nodes currently excluded by local TopDisc usability policy;
 5. insert each remaining node into the corresponding bucket of `B(s)`.
 
-The resulting `B(s)` is soft state. It need not be complete before TopDisc operations begin. If the
-ordinary node table contains too few nodes that can be used for TopDisc operations, implementations
+The resulting `B(s)` is soft state. It need not be complete before operations begin. If the
+ordinary node table contains too few nodes that can be used for operations, implementations
 should continue ordinary Node Discovery v5 refresh and lookup operations until more candidates are
 learned.
 
@@ -416,14 +417,14 @@ learned.
 A service table is maintained from two sources:
 
 1. the ordinary Discovery v5 node table; and
-2. **auxiliary ENRs** learned through TopDisc responses.
+2. **auxiliary ENRs** learned through responses.
 
 When a newly verified node advertising TopDisc capability is learned through ordinary discovery, it
 becomes eligible for insertion into relevant service tables.
 
-Responses to TopDisc registration and lookup requests may include auxiliary ENRs selected from the
+Responses to registration and lookup requests may include auxiliary ENRs selected from the
 responder's view of the service table. Such ENRs may be inserted into `B(s)` only after ENR
-validation, capability checking, and any local TopDisc usability checks.
+validation, capability checking, and any local usability checks.
 
 Over time, this causes `B(s)` to become better aligned with the service identifier than the ordinary
 local node table, while still remaining anchored in ordinary Discovery v5 state.
@@ -454,7 +455,7 @@ A recommended selection algorithm is:
 2. for each distance `d`, select at most one known TopDisc-capable node whose node ID satisfies
    `logdistance(s, n) = d`;
 3. prefer pseudo-random selection when multiple eligible ENRs are available for the same distance;
-4. skip ENRs that fail local validation or TopDisc usability checks;
+4. skip ENRs that fail local validation or usability checks;
 5. stop when all requested distances have been considered or when an implementation-defined cap on
    auxiliary ENRs has been reached.
 
@@ -476,7 +477,7 @@ Implementations should therefore maintain TopDisc-level usability state for node
 
 If a node in `B(s)` repeatedly fails to answer registration or lookup requests, times out, or
 returns malformed responses, implementations should temporarily exclude that node from selection for
-TopDisc operations. Temporary exclusion may be implemented by removing the node from `B(s)`,
+operations. Temporary exclusion may be implemented by removing the node from `B(s)`,
 suppressing its selection for a backoff period, or assigning it lower selection priority.
 
 Temporary exclusion is not a permanent blacklist. After the backoff period expires, the node may
@@ -484,9 +485,9 @@ become eligible for re-insertion into `B(s)` if it is still present in the ordin
 still advertises TopDisc capability, and still satisfies ordinary Discovery v5 liveness
 requirements.
 
-Failure of a TopDisc request does not by itself require removal from the ordinary Discovery v5 node
-table. Retention in the ordinary node table continues to follow ordinary Discovery v5 liveness and
-table-maintenance rules.
+Failure of a request does not by itself require removal from the ordinary Discovery v5
+node table. Retention in the ordinary node table continues to follow Discovery v5 liveness
+and table-maintenance rules.
 
 ## Registrar Behaviour
 
@@ -772,11 +773,11 @@ waiting time.
 
 The protocol does not define a fixed maximum total duration for a registration attempt. An
 implementation MAY abandon an attempt after a local timeout, after a configured maximum number of
-retries, or if the registrar is considered unusable according to local TopDisc liveness policy.
+retries, or if the registrar is considered unusable according to local liveness policy.
 
 A registration attempt fails if the registrar is unreachable, rejects the request, returns malformed
 responses, the registration window is missed, a local retry or timeout limit is reached, or the
-registrar is otherwise considered unusable according to local TopDisc liveness policy. On failure,
+registrar is otherwise considered unusable according to local liveness policy. On failure,
 the advertiser removes the registrar from the pending state for that bucket and may select another
 registrar.
 
@@ -785,7 +786,7 @@ unless it is removed earlier by registrar policy.
 
 Registration responses may include auxiliary ENRs selected from the registrar's view of the service
 table. The advertiser may use these ENRs to update its advertise table `B(s)` after validating the
-ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The recommended
+ENRs, checking TopDisc capability, and applying local usability policy. The recommended
 auxiliary-ENR selection rule is described in [Auxiliary ENR Selection](#auxiliary-enr-selection).
 
 ### Renewal
@@ -830,7 +831,7 @@ The same registrar should not be queried repeatedly during a single lookup unles
 has exhausted other candidates and chooses to retry according to local policy. If a queried
 registrar is unreachable, times out, or returns a malformed response, the discoverer treats that
 query as failed and continues with another candidate. Repeated failures may cause the registrar to
-be temporarily excluded from TopDisc operations.
+be temporarily excluded from operations.
 
 Lookup responses may also include auxiliary ENRs. These ENRs are not lookup results; they are
 auxiliary routing information used to improve the discoverer's search table `B(s)`. The recommended
@@ -852,7 +853,7 @@ These ENRs are not lookup results; they are auxiliary routing information used t
 registration and lookup operations.
 
 The requester uses returned auxiliary ENRs to update its local service table `B(s)` after validating
-the ENRs, checking TopDisc capability, and applying local TopDisc usability policy. The exact
+the ENRs, checking TopDisc capability, and applying local usability policy. The exact
 encoding of returned advertisements, auxiliary ENRs, and any topic-distance list is specified in the
 wire-format document.
 
@@ -918,6 +919,7 @@ The exact encoding of TopDisc messages, ticket signatures, request identifiers, 
 returned advertisements, neighbour ENRs, and any application-specific advertisement payload is
 specified in the wire-format document.
 
+[FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
 [TICKET]: ./discv5-wire.md#ticket-response-0x08
 [REGCONFIRMATION]: ./discv5-wire.md#regconfirmation-response-0x08
