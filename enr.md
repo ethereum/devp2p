@@ -33,9 +33,6 @@ names in the table below have pre-defined meaning.
 | `ip6`             | IPv6 address, 16 bytes                             |
 | `tcp6`            | IPv6-specific TCP port, big endian integer         |
 | `udp6`            | IPv6-specific UDP port, big endian integer         |
-| `topic-discovery` | [TopDisc] capability version, unsigned integer     |
-
-[TopDisc]: enr-entries/topic-discovery.md
 
 All keys except `id` are optional, including IP addresses and ports. A record without
 endpoint information is still valid as long as its signature is valid. If no `tcp6` /
