@@ -319,8 +319,7 @@ tables.
 
 ## ENR Capability
 
-A node indicates support for service discovery messages by including the [`ng`][ng-entry]
-entry in its ENR.
+A node indicates support for service discovery messages by including the [ng ENR entry].
 
     ng = <version>
 
@@ -929,4 +928,4 @@ specified in the wire-format document.
 [TOPICQUERY]: ./discv5-wire.md#topicquery-request-0x09
 [TOPICNODES]: ./discv5-wire.md#topicnodes-response-0x0a
 [NODES]: ./discv5-wire.md#nodes-response-0x04
-[ng-entry]: ../enr-entries/ng.md
+[ng ENR entry]: ../enr-entries/ng.md
