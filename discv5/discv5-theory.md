@@ -94,16 +94,20 @@ elliptic curve used by node B's identity scheme. As an example, let's assume the
 The ephemeral key is used to perform Diffie-Hellman key agreement with node B's static public key and the
 session keys are derived from it using the HKDF key derivation function.
 
-    dest-pubkey = public key corresponding to node B's static private key
-    secret = ecdh(dest-pubkey, ephemeral-key)
-    kdf-info = "discovery v5 key agreement" || node-id-A || node-id-B
-    prk = HKDF-Extract(secret, challenge-data)
-    key-data = HKDF-Expand(prk, kdf-info)
-    initiator-key = key-data[:16]
-    recipient-key = key-data[16:]
+    dest-pubkey        = public key corresponding to node B's static private key
+    secret             = ecdh(dest-pubkey, ephemeral-key)
+    kdf-info           = "discovery v5 key agreement" || node-id-A || node-id-B
+    prk                = HKDF-Extract(challenge-data, secret)
+    key-data           = HKDF-Expand(prk, kdf-info)
+    initiator-key      = key-data[:16]
+    recipient-key      = key-data[16:]
 
-Node A creates the `id-signature`, which proves that it controls the private key which signed its node
-record. The signature also prevents replay of the handshake.
+Here `HKDF-Extract(salt, IKM)` and `HKDF-Expand` are the functions defined in [RFC 5869]
+using HMAC-SHA-256. The salt is `challenge-data` and the input keying material is `secret`;
+`HKDF-Expand` is invoked with `kdf-info` and produces 32 bytes of output.
+
+Node A creates the `id-signature`, which proves that it controls the private key which
+signed its node record. The signature also prevents replay of the handshake.
 
     id-signature-text = "discovery v5 identity proof"
     id-signature-input = id-signature-text || challenge-data || ephemeral-pubkey || node-id-B
@@ -919,6 +923,7 @@ The exact encoding of TopDisc messages, ticket signatures, request identifiers, 
 returned advertisements, neighbour ENRs, and any application-specific advertisement payload is
 specified in the wire-format document.
 
+[RFC 5869]: https://www.rfc-editor.org/rfc/rfc5869
 [FINDNODE]: ./discv5-wire.md#findnode-request-0x03
 [REGTOPIC]: ./discv5-wire.md#regtopic-request-0x07
 [TICKET]: ./discv5-wire.md#ticket-response-0x08
