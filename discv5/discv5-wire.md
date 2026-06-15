@@ -343,7 +343,6 @@ A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
 [handshake section]: ./discv5-theory.md#handshake-steps
-[topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
 [theory section on registrar admission control]: ./discv5-theory.md#admission-control
 [theory section on the waiting-time function]: ./discv5-theory.md#waiting-time-function
