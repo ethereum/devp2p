@@ -140,7 +140,8 @@ These attacks rely on being able to create many real nodes, or spoof many logica
 for a small number of physical endpoints, to form a large, isolated area of the network
 under the control of the malicious actor. The victim's discovery findings are directed
 into that part of the network, either to manipulate their traffic or to fully isolate them
-from the network. Additional security goals specific to topic-based service discovery (TopDisc) are listed in the Topic-based Service Discovery Protocol v5 rationale section below.
+from the network. Additional security goals specific to topic-based service discovery
+([TopDisc]) are listed further below.
 
 ## Version Interoperability / Upgrade Paths
 
@@ -357,9 +358,9 @@ responses within a session.
 
 # Topic-based Service Discovery
 
-This section explains the rationale for TopDisc, the topic-based service discovery
-extension to Node Discovery v5. TopDisc is based on the DISC-NG design described in
-[DISC-NG] paper.
+This section explains the rationale for [TopDisc], the topic-based service discovery
+extension to Node Discovery v5. TopDisc is based on the design described in [DISC-NG]
+paper.
 
 TopDisc addresses the problem of discovering peers that participate in a particular
 decentralised service or application. The participants of such a service form a
@@ -763,4 +764,4 @@ handle TopDisc messages.
 
 [wire protocol]: ./discv5-wire.md
 [node records]: ../enr.md
-[TopDisc theory]: ./discv5-theory.md#topic-based-service-discovery
+[TopDisc]: ./discv5-theory.md#topic-based-service-discovery
