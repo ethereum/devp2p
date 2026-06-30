@@ -419,6 +419,6 @@ Also see the [initial snap-sync announcement].
 
 [RLPx]: ../rlpx.md
 [Data Retention Requirements]: #data-retention-requirements
-[initial snap-sync annoucement]: https://blog.ethereum.org/2020/07/17/ask-about-geth-snapshot-acceleration/
+[initial snap-sync announcement]: https://blog.ethereum.org/2020/07/17/ask-about-geth-snapshot-acceleration/
 [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-8189]: https://eips.ethereum.org/EIPS/eip-8189
