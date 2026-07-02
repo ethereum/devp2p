@@ -265,6 +265,7 @@ Ethereum block headers are encoded as follows:
         excess-blob-gas: P,
         parent-beacon-root: B_32,
         requests-hash: B_32,
+        block-access-list-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -301,6 +302,9 @@ headers are processed in sequence during chain synchronization, the following ru
   added by [EIP-4844] and [EIP-4788].
 - `requests-hash` must be present in headers after the Prague fork, and absent for
   earlier blocks. This rule was added by [EIP-7685].
+- `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
+  absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
+  `keccak256(rlp.encode(block_access_list))`.
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -358,6 +362,39 @@ and their bloom filters have to be recomputed.
 
 Since the valid list of receipts is determined by the EVM state transition, it is not
 necessary to define any further validity rules for receipts in this specification.
+
+### Block Access List Encoding
+
+Block Access Lists (BALs) record all accounts and storage locations accessed during block
+execution, along with their post-execution values. BALs are not included in the block body
+but can be requested separately via the [GetBlockAccessLists] message.
+
+The BAL is RLP-encoded as a list of account changes, sorted lexicographically by address:
+
+    block-access-list = [account-changes₁, account-changes₂, ...]
+
+    account-changes = [
+        address: B_20,
+        storage-changes: [[slot: B_32, [[block-access-index: P, value: B_32], ...]], ...],
+        storage-reads: [slot₁: B_32, slot₂: B_32, ...],
+        balance-changes: [[block-access-index: P, balance: P], ...],
+        nonce-changes: [[block-access-index: P, nonce: P], ...],
+        code-changes: [[block-access-index: P, code: B], ...],
+    ]
+
+`storage-changes` must be sorted lexicographically by slot. Changes within each slot must
+be sorted by `block-access-index` ascending. `storage-reads` must be sorted
+lexicographically by slot.
+
+Where `block-access-index` indicates when the change occurred:
+
+- `0` for pre-execution system contract calls
+- `1...n` for transactions (in block order)
+- `n+1` for post-execution system contract calls and withdrawals
+
+When a BAL is received, it must be validated by computing `keccak256(rlp.encode(bal))` and
+comparing against the `block-access-list-hash` in the corresponding block header. For
+complete BAL generation rules, see [EIP-7928].
 
 ## Protocol Messages
 
@@ -539,19 +576,34 @@ pool.
 
 ### GetReceipts (0x0f)
 
-`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
+`[request-id: P, firstBlockReceiptIndex: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
 
-Require peer to return a Receipts message containing the receipts of the given block
-hashes. The number of receipts that can be requested in a single message may be subject to
-implementation-defined limits.
+Request the peer to return a Receipts message containing the receipt lists of the given
+block hashes. The number of blocks that can be requested in a single message may be
+subject to implementation-defined limits.
+
+`firstBlockReceiptIndex` specifies an offset into the first receipt list which is served
+by the peer. This is intended to allow requesting the next receipts from a partial list
+received earlier.
 
 ### Receipts (0x10)
 
-`[request-id: P, [[receipt₁, receipt₂], ...]]`
+`[request-id: P, lastBlockIncomplete: {0,1}, [[receipt₁, receipt₂, ...], ...]]`
 
-This is the response to GetReceipts, providing the requested block receipts. Each element
-in the response list corresponds to a block hash of the GetReceipts request, and must
-contain the complete list of receipts of the block.
+This is the response to GetReceipts, providing the receipts. There should be a complete
+list of block receipts for each requested block hash, following the order of the request.
+
+Each list of block receipts must be complete, with two exceptions:
+
+- When the request has a non-zero `firstBlockReceiptIndex`, the first block receipt list
+  should start at that index and omit earlier items.
+- When the `lastBlockIncomplete` flag of the response is set to `1`, the server indicates
+  that the receipts of the last block in the response would overflow a message size of 10MB.
+  The remaining items of the last list are missing in that case, and the client can fetch
+  them using another `GetReceipts` request.
+
+If the server does not have the receipts of a certain block in its storage, it should
+end the response at that block.
 
 The recommended soft limit for Receipts responses is 2 MiB.
 
@@ -574,6 +626,31 @@ received updates.
 - Updates can be used to detect the condition where a node is surrounded by syncing peers.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
+
+### GetBlockAccessLists (0x12)
+
+`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
+
+Require peer to return a BlockAccessLists message containing the block access lists of the
+given block hashes. The number of BALs that can be requested in a single message may be
+subject to implementation-defined limits.
+
+BALs are only available for blocks after [EIP-7928] activation and within the retention
+period defined therein.
+
+### BlockAccessLists (0x13)
+
+`[request-id: P, [block-access-list₁, block-access-list₂, ...]]`
+
+This is the response to GetBlockAccessLists, providing the requested BALs. Each element
+in the response list corresponds to a block hash from the GetBlockAccessLists request.
+The RLP empty string (`0x80`) is returned for blocks where the BAL is unavailable.
+
+The BAL must be validated by computing `keccak256(rlp.encode(bal))` and comparing against
+the `block-access-list-hash` in the corresponding block header. See [Block Access List
+Encoding] for the structure of block access lists.
+
+The recommended soft limit for BlockAccessLists responses is 2 MiB.
 
 ### GetCells (0x14)
 
@@ -615,6 +692,21 @@ A peer may respond with an empty list if none of the requested cells are availab
 Version 72 changed the [NewPooledTransactionHashes] message to include custody information 
 which represents cell indicies sending peer has stored. New message types,
 [GetCells] and [Cells] were introduced to support cell-level blob relay.
+
+### eth/71 ([EIP-8159], February 2026)
+
+Version 71 added block-level access lists (BALs) support for the [Amsterdam fork]. The
+block header now includes a `block-access-list-hash` field containing the keccak256 hash
+of the RLP-encoded access list. Two new messages [GetBlockAccessLists] and
+[BlockAccessLists] were added to enable peer-to-peer exchange of BALs for optimized
+synchronization and parallel execution.
+
+### eth/70 ([EIP-7975], June 2025)
+
+In version 70, the [GetReceipts] and [Receipts] messages were modified to allow requesting
+partial block receipt lists. With the rising gas limit on Ethereum mainnet, the list of
+block receipts could eventually become larger than the maximum message size of RLPx.
+>>>>>>> upstream/master
 
 ### eth/69 ([EIP-7642], April 2025)
 
@@ -729,6 +821,9 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
+[GetBlockAccessLists]: #getblockaccesslists-0x12
+[BlockAccessLists]: #blockaccesslists-0x13
+[Block Access List Encoding]: #block-access-list-encoding
 [GetCells]: #getcells-0x14
 [Cells]: #cells-0x15
 [RLPx]: ../rlpx.md
@@ -749,9 +844,13 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
+[EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
+[EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
+[EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Cancun fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
+[Amsterdam fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/amsterdam.md
 [Yellow Paper]: https://ethereum.github.io/yellowpaper/paper.pdf

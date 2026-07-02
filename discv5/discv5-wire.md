@@ -203,12 +203,18 @@ the result set. The recommended result limit for FINDNODE queries is 16 nodes.
     message-type = 0x04
     total        = total number of responses to the request
 
-NODES is the response to a FINDNODE or TOPICQUERY message. Multiple NODES messages may be
-sent as responses to a single query. Implementations may place a limit on the allowed
-maximum for `total`. If exceeded, additional responses may be ignored.
+NODES is sent as a response to FINDNODE, REGTOPIC, or TOPICQUERY. Multiple NODES messages
+may be sent as responses to a single query. Implementations may place a limit on the
+allowed maximum for `total`. If exceeded, additional responses may be ignored.
 
 When handling NODES as a response to FINDNODE, the recipient should verify that the
 received nodes match the requested distances.
+
+When NODES appears as a response to REGTOPIC or TOPICQUERY, it carries auxiliary ENRs
+selected from the responder's view of the service table for the requested topic. These
+ENRs are routing information for the requester to populate or refresh its own service
+table `B(s)`. They are not themselves topic registrants; the actual registered nodes are
+returned via TOPICNODES.
 
 ### TALKREQ Request (0x05)
 
@@ -234,62 +240,102 @@ response data.
 
 ### REGTOPIC Request (0x07)
 
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
+    message-data    = [request-id, topic, ENR, ticket,
+                       [topic-distance₁, topic-distance₂, ..., topic-distanceₙ]]
+    message-type    = 0x07
+    topic           = 32-byte service / topic identifier
+    ENR             = current node record of sender
+    ticket          = opaque byte array containing a ticket previously issued by the
+                      recipient registrar; empty (`0x80`) on first attempt
+    topic-distanceₙ = positive integer log2 distance from `topic` where the sender's
+                      service table `B(topic)` still has space
 
-    message-data = [request-id, topic, ENR, ticket]
-    message-type = 0x07
-    node-record  = current node record of sender
-    ticket       = byte array containing ticket content
+REGTOPIC asks the recipient registrar to register the sender (identified by `ENR`) for
+service `topic`. If the sender has a ticket from a previous registration attempt with this
+registrar, it must present the ticket; otherwise `ticket` is the empty byte array.
 
-REGTOPIC attempts to register the sender for the given topic. If the requesting node has a
-ticket from a previous registration attempt, it must present the ticket. Otherwise
-`ticket` is the empty byte array (RLP: `0x80`). The ticket must be valid and its waiting
-time must have elapsed before using the ticket.
+The `topic-distance` list carries the sender's "send me ENRs at these distances" hint to
+the recipient: when returning auxiliary ENRs, the recipient should prefer ENRs whose log2
+distance to `topic` matches one of the listed values, so the response helps the sender
+populate its service table.
 
-REGTOPIC is always answered by a TICKET response. The requesting node may also receive a
-REGCONFIRMATION response when registration is successful. It may take up to 10s for the
-confirmation to be sent.
+REGTOPIC is always answered with a single REGCONFIRMATION response. The recipient may
+additionally send zero or more NODES responses carrying auxiliary ENRs selected from its
+view of the service table.
 
-### TICKET Response (0x08)
+See the [theory section on tickets] and [theory section on registrar admission control]
+for the registrar's waiting-time semantics.
 
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
+### REGCONFIRMATION Response (0x08)
 
-    message-data = [request-id, ticket, wait-time]
+    message-data = [request-id, total, ticket, wait-time]
     message-type = 0x08
-    ticket       = an opaque byte array representing the ticket
-    wait-time    = time to wait before registering, in seconds
-
-TICKET is the response to REGTOPIC. It contains a ticket which can be used to register for
-the requested topic after `wait-time` has elapsed. See the [theory section on tickets] for
-more information.
-
-### REGCONFIRMATION Response (0x09)
-
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
-
-    message-data = [request-id, topic]
-    message-type = 0x09
     request-id   = request-id of REGTOPIC
+    total        = total number of responses (REGCONFIRMATION + NODES) to the request
+    ticket       = ticket issued by the registrar for the next attempt;
+                   empty byte array (RLP: `0x80`) when the registration was admitted
+    wait-time    = milliseconds to wait before submitting the next REGTOPIC attempt
+                   with the returned `ticket`. When `ticket` is empty, `wait-time` carries
+                   the advertisement lifetime instead.
 
-REGCONFIRMATION notifies the recipient about a successful registration for the given
-topic. This call is sent by the advertisement medium after the time window for
-registration has elapsed on a topic queue.
+REGCONFIRMATION is the response to REGTOPIC. It is sent immediately by the registrar and
+plays two roles, distinguished by the length of `ticket`:
 
-### TOPICQUERY Request (0x0A)
+- If `ticket` is the empty byte array, the advertisement has been admitted to the
+  registrar's ad cache. `wait-time` indicates the advertisement lifetime; the advertiser
+  should renew before that lifetime elapses to remain in the cache.
+- If `ticket` is non-empty, the advertisement was not admitted on this attempt. The
+  sender must wait at least `wait-time` milliseconds and re-attempt the registration with
+  the returned `ticket`. See the [theory section on tickets] and the [theory section on
+  the waiting-time function].
 
-**NOTE: the content and semantics of this message are not final.**
-**Implementations should not respond to or send these messages.**
+The `total` field announces the total number of responses (this REGCONFIRMATION plus any
+NODES messages carrying auxiliary ENRs) that the registrar will send for this request.
 
-    message-data = [request-id, topic]
+### TOPICQUERY Request (0x09)
+
+    message-data    = [request-id, topic,
+                       [topic-distance₁, topic-distance₂, ..., topic-distanceₙ]]
+    message-type    = 0x09
+    topic           = 32-byte service / topic identifier
+    topic-distanceₙ = positive integer log2 distance from `topic` where the sender's
+                      service table `B(topic)` still has space
+
+TOPICQUERY asks the recipient to return registered advertisers for the given `topic` from
+its ad cache. The recipient sends zero or more TOPICNODES responses containing matching
+advertiser ENRs, and may additionally send zero or more NODES responses carrying
+auxiliary ENRs selected from its service-table view (see NODES).
+
+The `topic-distance` list serves the same purpose as in REGTOPIC: it tells the recipient
+which log2 distances from `topic` the sender's service table still has room for, so the
+recipient can choose useful auxiliary ENRs to include in its NODES responses.
+
+See the [theory section on lookup responses] for the discoverer-side termination semantics
+(distinct-advertisers count) and the [theory section on parameters] for `Freturn`.
+
+### TOPICNODES Response (0x0A)
+
+    message-data = [request-id, total, [ENR, ...]]
     message-type = 0x0a
-    topic        = 32-byte topic hash
+    request-id   = request-id of TOPICQUERY
+    total        = total number of responses (NODES + TOPICNODES) to the request
 
-TOPICQUERY requests nodes in the [topic queue] of the given topic. The recipient of this
-request must send one or more NODES messages containing node records registered for the
-topic.
+TOPICNODES is the dedicated response to TOPICQUERY carrying advertiser ENRs that are
+currently registered for the requested topic in the recipient's ad cache. Multiple
+TOPICNODES messages may be sent for a single TOPICQUERY.
+
+The `total` field announces the total number of responses (TOPICNODES messages plus any
+NODES messages carrying auxiliary ENRs) the recipient will send for this request.
+Implementations may place a limit on the allowed maximum for `total`; if exceeded,
+additional responses may be ignored.
+
+The recipient should return only non-expired advertisements from its ad cache. When the
+ad cache contains more than `Freturn` advertisements for the topic, the recipient
+selects which advertisements to return; the exact selection policy is implementation
+defined.
+
+TOPICNODES carries only registered advertisers. Auxiliary routing information for the
+sender's service table is carried separately via NODES responses.
 
 ## Test Vectors
 
@@ -297,7 +343,10 @@ A collection of test vectors for this specification can be found at
 [discv5 wire test vectors].
 
 [handshake section]: ./discv5-theory.md#handshake-steps
-[topic queue]: ./discv5-theory.md#topic-table
 [theory section on tickets]: ./discv5-theory.md#tickets
+[theory section on registrar admission control]: ./discv5-theory.md#admission-control
+[theory section on the waiting-time function]: ./discv5-theory.md#waiting-time-function
+[theory section on lookup responses]: ./discv5-theory.md#lookup-responses
+[theory section on parameters]: ./discv5-theory.md#parameters
 [EIP-778]: ../enr.md
 [discv5 wire test vectors]: ./discv5-wire-test-vectors.md
