@@ -729,8 +729,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
-[GetCells]: #getcells-0x12
-[Cells]: #cells-0x13
+[GetCells]: #getcells-0x14
+[Cells]: #cells-0x15
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -749,6 +749,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
+[EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
