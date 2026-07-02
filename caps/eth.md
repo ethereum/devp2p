@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/71**. See end
+blockchain information between peers. The current protocol version is **eth/72**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -122,6 +122,54 @@ A node should never send a transaction back to a peer that it can determine alre
 of it (either because it was previously sent or because it was informed from this peer
 originally). This is usually achieved by remembering a set of transaction hashes recently
 relayed by the peer.
+
+### Blob Transaction and Cell Exchange
+
+This section describes node behaviors that apply to blob transactions.
+
+A blob transaction contains one or more 128 KiB fixed-size objects called blob. Blobs can
+be split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
+currently defined as 2 KiB and each blob consists of 128 cells encoded with a 1/2 
+code rate. A cell is identified within the erasure-coded blob by its index. Protocol
+messages index cells at the transaction level. Such an index refers to the corresponding
+cell of each blob in the given transaction. This is similar to (but not to be confused with)
+the notion of column in [EIP-7594].
+
+Blob transactions also include metadata such as proofs and commitments required to verify 
+whether a cell belongs to the blob data.
+
+- Commitment: A cryptographic value bound to a blob, serving as the reference against 
+which each cell is verified.
+
+- Proof: A cell-specific value proving that the commitment opens to the corresponding 
+cell, used together with the commitment for cell verification.
+
+Blob transaction exchange is initiated by the [NewPooledTransactionHashes] message. 
+In this message, the peer also announces its cell availability through the `cells` field. 
+Each set bit indicates that the peer holds the corresponding cell for every blob in the 
+announced transactions.
+
+Responses to [GetPooledTransactions] for blob transactions include the traditional
+transaction payload and blob metadata. The blob data itself can be obtained only by
+[GetCells]. Upon receiving the [NewPooledTransactionHashes] message with new blob
+transaction hashes, the node begins fetching their cells. For each transaction, it first
+makes a probabilistic decision between two strategies.
+
+With probability $p$, the node fetches the full blobs. It requests them using the
+[GetCells] message, setting more than half of the total cell indices to 1 in the cells
+field.  Here $p$ is a local parameter greater than or equal to `MIN_P`.
+
+Otherwise, the node fetches only its custody cells, the cells whose indices belong to the
+custody index set of the associated consensus node ID. It requests them using the
+[GetCells] message from peers that announced overlapping availability, but only after
+observing `AVAILABILITY_THRESHOLD` distinct full-availability announcements.
+
+#### Constants
+
+| Name                     | Value | Note                                                                            |
+|--------------------------|-------|---------------------------------------------------------------------------------|
+| `MIN_P`                  | 0.15  | Minimum recommended probability to fetch the full blobs for a given transaction |
+| `AVAILABILITY_THRESHOLD` | 2     | Minimum number of peers required to confirm blob availability                   |
 
 ### Transaction Encoding and Validity
 
@@ -455,11 +503,11 @@ block.
 
 ### NewPooledTransactionHashes (0x08)
 
-`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...]]`
+`[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...], cells: B_16]`
 
 This message announces one or more transactions that have appeared in the network and
 which have not yet been included in a block. The message payload describes a list of of
-transactions, but note that it is encoded as three separate elements.
+transactions, but note that it is encoded as four separate elements.
 
 The `txtypes` element is a byte array containing the announced [transaction types]. The
 other two payload elements refer to the sizes and hashes of the announced transactions.
@@ -468,6 +516,12 @@ All three payload elements must contain an equal number of items.
 `txsizeₙ` refers to the length of the 'consensus encoding' of a typed transaction, i.e.
 the byte size of `tx-type || tx-data` for typed transactions, and the size of the
 RLP-encoded `legacy-tx` for non-typed legacy transactions.
+
+The `cells` element is a bitmap marking which cell indices can be fetched from the sending
+peer. For each bit set to one, the peer stores the cells at that index in every blob of
+all blob transactions included in the announcement. `cells` is only relevant for those
+entries that refer to blob transactions, and can be ignored when no blob transactions are
+announced in the message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
@@ -493,6 +547,9 @@ must not be considered a protocol violation.
 This is the response to GetPooledTransactions, returning the requested transactions from
 the local pool. The items in the list are transactions in the format described in the main
 Ethereum specification.
+
+For blob transactions (type 3), the blob data is elided from the response.
+<!-- TODO: define encoding in tx section -->
 
 The transactions must be in same order as in the request, but it is OK to skip
 transactions which are not available. This way, if the response size limit is reached,
@@ -586,9 +643,47 @@ Encoding] for the structure of block access lists.
 
 The recommended soft limit for BlockAccessLists responses is 2 MiB.
 
+### GetCells (0x14)
+
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
+
+This message requests the peer to return cell data of the given transaction hashes.
+The `cells` element is a bitmap specifying which cell indices are requested. For each bit 
+set, the requester asks for the cell at that index from every blob of all transactions 
+specified by the list of txhashes.
+
+To manage uplink bandwidth usage, a node may rate-limit GetCells requests. The node can
+also observe whether peers respect `MIN_P` and select peers to disconnect based on that
+information.
+
+### Cells (0x15)
+
+`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
+
+This is the response to [GetCells].
+
+Each transaction hash is followed by one or more pairs consisting of an index and the 
+corresponding cells. The index specifies the position of a cell within a blob. 
+Blob transaction can contain multiple blobs, and the same index is applied to all of 
+them. If an index is included in the response, one cell must be returned from each 
+blob of the transaction at that index. The cells are listed in the order in which the 
+blobs appear in the transaction.
+
+A peer may omit entire transactions or entire indices if they are unavailable or 
+constrained. However, if an index is included for a transaction, cells for all blobs 
+of that transaction at that index must be returned.
+
+A peer may respond with an empty list if none of the requested cells are available.
+
 ## Change Log
 
-### eth/71 ([EIP-8159], February 2026)
+### eth/72 ([EIP-8070], July 2026)
+
+Version 72 changed the [NewPooledTransactionHashes] message to include blob transaction
+cell custody information. New message types, [GetCells] and [Cells], were introduced to
+support cell-level blob relay.
+
+### eth/71 ([EIP-8159], June 2026)
 
 Version 71 added block-level access lists (BALs) support for the [Amsterdam fork]. The
 block header now includes a `block-access-list-hash` field containing the keccak256 hash
@@ -718,6 +813,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetBlockAccessLists]: #getblockaccesslists-0x12
 [BlockAccessLists]: #blockaccesslists-0x13
 [Block Access List Encoding]: #block-access-list-encoding
+[GetCells]: #getcells-0x14
+[Cells]: #cells-0x15
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -733,10 +830,12 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4938]: https://eips.ethereum.org/EIPS/eip-4938
 [EIP-5793]: https://eips.ethereum.org/EIPS/eip-5793
+[EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
 [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
+[EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
 [EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
