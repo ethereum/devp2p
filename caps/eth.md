@@ -610,11 +610,11 @@ A peer may respond with an empty list if none of the requested cells are availab
 
 ## Change Log
 
-### eth/ ()
+### eth/72 ([EIP-8070], July 2026)
 
-Version 70 changed the [NewPooledTransactionHashes] message to include custody information 
+Version 72 changed the [NewPooledTransactionHashes] message to include custody information 
 which represents cell indicies sending peer has stored. New message types,
-[GetCells] and [Cells] were introduced to support cell-level messaging.
+[GetCells] and [Cells] were introduced to support cell-level blob relay.
 
 ### eth/69 ([EIP-7642], April 2025)
 
