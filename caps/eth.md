@@ -1,7 +1,7 @@
 # Ethereum Wire Protocol (ETH)
 
 'eth' is a protocol on the [RLPx] transport that facilitates exchange of Ethereum
-blockchain information between peers. The current protocol version is **eth/69**. See end
+blockchain information between peers. The current protocol version is **eth/72**. See end
 of document for a list of changes in past protocol versions.
 
 ### Basic Operation
@@ -125,8 +125,7 @@ relayed by the peer.
 
 ### Blob Transaction and Cell Exchange
 
-This section describes additional constraints and node behaviours that apply only to blob 
-transactions, in addition to the ordinary transaction exchange.
+This section describes node behaviors that apply to blob transactions.
 
 A blob transaction contains one or more 128 KiB fixed-size objects called blob. Blobs can
 be split into cells using the erasure code defined in [EIP-7594]. The size of a cell is
@@ -139,59 +138,45 @@ the notion of column in [EIP-7594].
 Blob transactions also include metadata such as proofs and commitments required to verify 
 whether a cell belongs to the blob data.
 
-- Commitment: A cryptographic value bound to a blob, used in inclusion verification to 
-ensure that any given cell is part of the original blob.
+- Commitment: A cryptographic value bound to a blob, serving as the reference against 
+which each cell is verified.
 
-- Proof: A cell-specific data used during inclusion verification of the corresponding cell.
+- Proof: A cell-specific value proving that the commitment opens to the corresponding 
+cell, used together with the commitment for cell verification.
 
-Blob transaction exchange must be initiated only through the 
-[NewPooledTransactionHashes] message. The peer must also announce the availability of its 
-cells using the `cells` field in the message. If a bit in the field is set, it indicates that 
-the peer holds the corresponding cell for all blobs included in the announced transactions.
+Blob transaction exchange is initiated by the [NewPooledTransactionHashes] message. 
+In this message, the peer also announces its cell availability through the `cells` field. 
+Each set bit indicates that the peer holds the corresponding cell for every blob in the 
+announced transactions.
 
-Responses to [GetPooledTransactions] for blob transactions include the traditional transaction 
-payload and blob metadata. However, the blob data itself can only be obtained 
-as cells via [GetCells].
+Responses to [GetPooledTransactions] for blob transactions include the traditional 
+transaction payload and blob metadata. The blob data itself can be obtained only 
+by [GetCells].
 
 Upon receiving the [NewPooledTransactionHashes] message with new blob transaction hashes, 
-the node begins fetching cells in parallel with transaction fetching. The node first makes 
-a probabilistic decision. 
+the node begins fetching their cells. For each transaction, it first makes a probabilistic 
+decision between two strategies.
 
-If it decides to fetch full blobs with probability $p$, 
-it requests them using the [GetCells] message, setting half of the total cell indices to 1 
+With probability $p$, the node fetches the full blobs. 
+It requests them using the [GetCells] message, setting half of the total cell indices to 1 
 in the cells field. 
-Note that $p$ is a local parameter greater than or equal to `MIN_P`.
+Here $p$ is a local parameter greater than or equal to `MIN_P`.
 
-If it decides not to fetch full blobs, it must instead request its custody cells from peers 
-that announced overlapping availability, using the [GetCells] message, but only after 
-observing `AVAILABILITY_THRESHOLD` distinct full-availability announcements. 
-Custody cells are the cells whose indices belong to the custody index set of the associated 
-consensus node ID.
-In practice, this information can be delivered using engine API from consensus layer. The node 
-must also request an excess of `EXCESSIVE_SAMPLE_SIZE` random indices in addition to its 
-custody set to mitigate targeted and selective data attacks. 
-A node must announce availability only after obtaining all of its custody cells.
+Otherwise, the node fetches only its custody cells, the cells whose indices belong to the 
+custody index set of the associated consensus node ID. 
+It requests them using the [GetCells] message from peers that announced overlapping 
+availability, but only after observing `AVAILABILITY_THRESHOLD` distinct full-availability 
+announcements. 
 
-For ease of explanation, in the former case the node is said to perform the provider role 
-for a given transaction, and in the latter case it is said to perform the sampler role.
-
-A client that wants to store every blobs should distribute its requests as evenly as possible. 
-It must also respect `MIN_P`, which means that over a given period the ratio of requests for 
-half of the cell indices must not exceed `MIN_P` of its total requests. 
-With probability `MIN_P`, it can request half of the cells of a blob transaction from a single
-peer, but with probability 1 – `MIN_P`, it should request those cells collectively from multiple
-peers.
+In the former case the node is said to serve the provider role for a given transaction, 
+and in the latter case it is said to serve the sampler role.
 
 #### Constants
 
 |  **Name**   | **Value** | **Note** |
 |---------|------|---------------------------------------------------------------------------------|
-| `NUMBER_OF_CELLS` | 128 | Number of cells in an extended blob, as defined in [EIP-7594] |
 | `MIN_P` | 0.15 | Minimum recommended probability to fetch the full blobs for a given transaction |
-| `MAX_CELLS_PER_PARTIAL_REQUEST` | 4 (TBD) | Maximum number of cells per [GetCells] request as a sampler |
-| `CELLS_PER_FULL_REQUEST` | 64 | Number of cells per [GetCells] request as a provider |
-| `AVAILABILITY_THRESHOLD` | 4 (TBD) | Minimum number of peers required to confirm blob availability as a sampler |
-| `EXCESSIVE_SAMPLE_SIZE` | 4 (TBD) | Number of additional cells sampled beyond the custody set |
+| `AVAILABILITY_THRESHOLD` | 2 | Minimum number of peers required to confirm blob availability as a sampler |
 
 ### Transaction Encoding and Validity
 
@@ -504,10 +489,11 @@ RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
 The `cells` element is a bitmap marking which cell indices can be fetched from the sending 
 peer. For each bit set to one, the peer stores the cells at that index in every blob of 
-all blob transactions included in the announcemnt. 
+all blob transactions included in the announcement.
 This field is only relevant for those entries that refer to blob 
 transactions. Blob transactions with the same `cells` field may be announced together in a 
-batch within this message.
+batch within this message. This field must be set to nil when no blob transactions are 
+announced in the message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
 
@@ -533,6 +519,9 @@ must not be considered a protocol violation.
 This is the response to GetPooledTransactions, returning the requested transactions from
 the local pool. The items in the list are transactions in the format described in the main
 Ethereum specification.
+
+For blob transactions (type 3), the blob data is elided from the response: the blob field
+of the transaction is set to the RLP nil literal.
 
 The transactions must be in same order as in the request, but it is OK to skip
 transactions which are not available. This way, if the response size limit is reached,
@@ -586,7 +575,7 @@ received updates.
   At the same time, client implementations must take care to not disconnect all syncing
   peers purely on the basis of their BlockRangeUpdate.
 
-### GetCells (0x12)
+### GetCells (0x14)
 
 `[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
 
@@ -595,15 +584,12 @@ The `cells` element is a bitmap specifying which cell indices are requested. For
 set, the requester asks for the cell at that index from every blob of all transactions 
 specified by the list of txhash.
 
-A node should either set at most `MAX_CELLS_PER_PARTIAL_REQUEST` bits (with probability $1–$`MIN_P`) 
-or exactly `CELLS_PER_FULL_REQUEST` bits (with probability `MIN_P`) in the cells field. 
-This mechanism prevents a greedy peer from abusing bandwidth and encourages collective fetch.
-
 To manage uplink bandwidth usage, a node may disconnect peers that send excessive requests. 
 This can be enforced by monitoring metrics such as the number of requested cells over a given 
-period. 
+period. The node may observe whether the peers respect `MIN_P` and select peers to disconnect 
+based on that information.
 
-### Cells (0x13)
+### Cells (0x15)
 
 `[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
 
