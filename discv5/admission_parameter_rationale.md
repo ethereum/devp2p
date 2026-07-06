@@ -286,11 +286,9 @@ The experiments support the following default values and mechanism choices.
 | Component | Recommendation | Rationale |
 |---|---:|---|
 | Advertisement lifetime `E` | `900s` | Provides a bounded cache residency interval and defines the natural expiry cycle used by the registrar. |
-| Cache capacity `C` | `1000` | Balances honest delay and scarcity pressure in the evaluated workloads. Smaller values produce high delay; much larger values reduce delay but allow larger attacker share. |
+| Cache capacity `C` | `1000` | Balances honest delay and scarcity pressure in the evaluated attack scenarios. Smal values produce high delay;  larger values reduce delay but allow larger attacker share in the cache. |
 | Occupancy exponent `Pocc` | `10` | Provides substantial reduction in attacker cache share relative to low values, while avoiding the severe under-utilisation seen at very high values. |
 | Safety constant `G` | `1e-7` | Acts as a small non-zero floor without materially dominating the diversity or occupancy terms in the tested workloads. |
-| Topic-similarity score | enabled | Needed to resist target-topic flooding, with a documented cost for legitimately popular topics. |
-| IP-diversity score | enabled | Strongly increases the cost of prefix-concentrated Sybil registration. |
 
 The central rationale is that the default setting should prioritise cache diversity and abuse resistance while preserving usable, though not maximal, cache utilisation. `Pocc = 10` and `C = 1000` should be understood as pragmatic defaults rather than universal optima. They are appropriate for the evaluated workload and attack rates, but deployments with different resource constraints or threat models may tune them differently.
 
