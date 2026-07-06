@@ -294,17 +294,7 @@ The experiments support the following default values and mechanism choices.
 
 The central rationale is that the default setting should prioritise cache diversity and abuse resistance while preserving usable, though not maximal, cache utilisation. `Pocc = 10` and `C = 1000` should be understood as pragmatic defaults rather than universal optima. They are appropriate for the evaluated workload and attack rates, but deployments with different resource constraints or threat models may tune them differently.
 
-## 11. Limitations
-
-The simulator models a single registrar. It does not simulate the full discovery network, multiple registrar choices, lookup routing, or the effect of clients querying several registrars. The results therefore describe registrar-local admission behaviour, not full end-to-end discovery performance.
-
-The experiments use fixed honest and attacker arrival processes, a specific honest topic distribution, and specific attacker IP models. The absolute values of delay and cache share may change under other workloads. The qualitative trade-offs are more important than the exact numerical values.
-
-The starvation threshold of `2E = 1800s` is also an evaluation convention. It is useful for comparing parameter settings, but it is not a protocol-defined failure condition.
-
-Finally, most experiments are single-seed simulations. For final publication-quality claims, the same experiments should be repeated over multiple seeds and reported with uncertainty intervals. The current results are nevertheless sufficient for an engineering rationale document because the main effects are large and consistent across the evaluated scenarios.
-
-## 12. Summary
+## 11. Summary
 
 The experiments show that admission-control parameter choices cannot be justified by cache utilisation alone. Under abuse, the relevant question is the composition of the cache and the cost imposed on attackers.
 
