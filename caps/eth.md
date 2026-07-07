@@ -658,20 +658,21 @@ information.
 
 ### Cells (0x15)
 
-`[request-id: P, [[txhash₁: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], [txhash₂: B_32, [index₁: P, cell₁: B_2048, cell₂: B_2048, ...], [index₂: P, cell₁: B_2048, cell₂: B_2048, ...]], ...]]` 
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], [[cell₁: B_2048, cell₂: B_2048, ...], [cell₁: B_2048, cell₂: B_2048, ...], ...], cells: B_16]`
 
 This is the response to [GetCells].
 
-Each transaction hash is followed by one or more pairs consisting of an index and the 
-corresponding cells. The index specifies the position of a cell within a blob. 
-Blob transaction can contain multiple blobs, and the same index is applied to all of 
-them. If an index is included in the response, one cell must be returned from each 
-blob of the transaction at that index. The cells are listed in the order in which the 
-blobs appear in the transaction.
+The list of transaction hashes identifies the transactions being answered, and the
+following list has a group of cells per transaction, in the same order. The `cells`
+bitmap specifies which cell indices are included in the response.
 
-A peer may omit entire transactions or entire indices if they are unavailable or 
-constrained. However, if an index is included for a transaction, cells for all blobs 
-of that transaction at that index must be returned.
+For each index set in the `cells` bitmap, one cell is returned from every blob of the
+transaction at that index. Within a transaction's group, cells are listed by ascending
+index, and for each index in the order in which the blobs appear in the transaction.
+
+A peer may omit entire transactions from the list, or clear indices from the `cells`
+bitmap, if they are unavailable or constrained. However, for any index set in the bitmap,
+cells for all blobs of each returned transaction at that index must be returned.
 
 A peer may respond with an empty list if none of the requested cells are available.
 
