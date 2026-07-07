@@ -665,8 +665,10 @@ This is the response to [GetCells].
 The list of transaction hashes identifies the transactions being answered, and the
 following list has a group of cells per transaction, in the same order. The `cells` bitmap
 specifies which cell indices are included in the response. The `cells` bitmap must be a
-subset of the corresponding request's bitmap. If a peer sends a response for cells that
-are not asked, it must be disconnected.
+subset of the corresponding request's bitmap.
+
+Peers sending invalid or not requested element must be disconnected. For example, if a
+peer sends cells that are not consistent with `cells` bitmap, it must be disconnected.
 
 For each index set in the `cells` bitmap, one cell is returned from every blob of the
 transaction at that index. Within a transaction's group, cells are listed by ascending
