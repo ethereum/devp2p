@@ -656,6 +656,8 @@ To manage uplink bandwidth usage, a node may rate-limit GetCells requests. The n
 also observe whether peers respect `MIN_P` and select peers to disconnect based on that
 information.
 
+The recommended soft limit for GetCells requests is 64 hashes. The recipient may enforce an arbitrary limit on the response (size or serving time), which must not be considered a protocol violation.
+
 ### Cells (0x15)
 
 `[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], [[cell₁: B_2048, cell₂: B_2048, ...], [cell₁: B_2048, cell₂: B_2048, ...], ...], cells: B_16]`
@@ -679,6 +681,8 @@ bitmap, if they are unavailable or constrained. However, for any index set in th
 cells for all blobs of each returned transaction at that index must be returned.
 
 A peer may respond with an empty list if none of the requested cells are available.
+
+The recommended soft limit for Cells responses is 2 MiB.
 
 ## Change Log
 
