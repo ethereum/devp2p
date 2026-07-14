@@ -100,37 +100,45 @@ Therefore, the purpose of this experiment is to identify a reasonable operating 
 
 ### 5.2 Cache-occupation attack
 
-![Attacker cache share versus Pocc under cache occupation](figures/fig1_q1_cache_attacker_share.png)
-
-**Figure 1.** Attacker cache share under the cache-occupation attack. Full admission control is compared with the occupancy-only baseline.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig1_q1_cache_attacker_share.png" alt="Attacker cache share versus Pocc under cache occupation" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 1.</strong> Attacker cache share under the cache-occupation attack. </p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig2_q1_cache_utilisation.png" alt="Cache utilisation versus Pocc under cache occupation" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 2.</strong> Average cache utilisation under the cache-occupation attack.</p>
+  </div>
+</div>
 
 Under the cache-occupation attack, full admission control substantially reduces attacker cache share as `Pocc` increases. At `Pocc = 1`, the attacker occupies approximately 52% of the cache. At `Pocc = 10`, the attacker share falls to approximately 36%. At `Pocc = 32`, it falls further to approximately 27%.
 
 The occupancy-only baseline is where the waiting time is computed based only on the occupancy component, with no topic or IP diversity penalties. This baseline does not provide comparable protection. Attacker share remains around 80% across the tested range, which is consistent with the honest to attacker request-rate ratio of 1:4.
 
-![Cache utilisation versus Pocc under cache occupation](figures/fig2_q1_cache_utilisation.png)
-
-**Figure 2.** Average cache utilisation under the cache-occupation attack.
-
 The security improvement from increasing `Pocc` is accompanied by reduced utilisation. With full admission control, average utilisation is approximately 85% at `Pocc = 1`, approximately 28% at `Pocc = 10`, and approximately 11% at `Pocc = 32`. Very high `Pocc` values therefore protect the cache by making the registrar much more selective, but they also leave substantial cache capacity unused.
 
 ### 5.3 Target-topic attack
 
-![Target attacker cache share versus Pocc](figures/fig3_q1_target_attacker_share.png)
-
-**Figure 3.** Target-topic attacker cache share as `Pocc` varies.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig3_q1_target_attacker_share.png" alt="Target attacker cache share versus Pocc" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 3.</strong> Target-topic attacker cache share as <code>Pocc</code> varies.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig4_q1_target_honest_delay.png" alt="Target honest p95 delay versus Pocc" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 4.</strong> Target-topic honest p95 registration delay as <code>Pocc</code> varies.</p>
+  </div>
+</div>
 
 The target-topic attack shows the same qualitative pattern. With full admission control, target attacker share falls from approximately 53% at `Pocc = 1` to approximately 35% at `Pocc = 10`, and approximately 24% at `Pocc = 32`. With occupancy-only admission, the attacker remains around 80% of the target-topic share. This confirms that the diversity terms are not incidental: they are central to preventing repeated registrations for the same topic from dominating the cache.
 
-![Target honest p95 delay versus Pocc](figures/fig4_q1_target_honest_delay.png)
+<div style="text-align: center;">
+  <img src="figures/fig_q1_target_honest_delay_benign_vs_attack.png" alt="Target-topic honest delay under benign popularity and attack" style="width: 30%; min-width: 220px;" />
+</div>
 
-**Figure 4.** Target-topic honest p95 registration delay as `Pocc` varies.
+**Figure 5.** Target-topic honest p95 registration delay when 50% of honest registrations use the target topic, with and without a target-topic attacker. 
 
 The cost of higher `Pocc` is increased delay for honest target-topic registrations. With full admission control, target-topic honest p95 delay increases from about 15300s at `Pocc = 1` to about 33300s at `Pocc = 10`, and about 46800s at `Pocc = 32`. This confirms that larger `Pocc` values do not give a free security improvement.
-
-![Target-topic honest delay under benign popularity and attack](figures/fig_q1_target_honest_delay_benign_vs_attack.png)
-
-**Figure 5.** Target-topic honest p95 registration delay when 50% of honest registrations use the target topic, with and without a target-topic attacker. The benign workload already produces substantial delay, showing that the delay is partly caused by honest contention for a popular topic rather than only by adversarial traffic.
 
 In the above target-topic delay results, the attacked topic is also configured as a popular honest topic: 50% of honest registrations advertise the same service. Consequently, honest advertisers for the target topic contend not only with the attacker, but also with each other under the topic-similarity term. To separate these effects, Figure 5 compares the target-topic attack with an otherwise identical benign workload in which 50% of honest registrations use the target topic but no attacker is present. The benign workload already produces substantial p95 delay, indicating that a large part of the observed waiting time is a cost of enforcing topic diversity for a highly popular service. 
 
@@ -140,7 +148,9 @@ The above comparison does not yet tell us whether the high waiting times are cau
 
 Both the FIFO baseline and the admission-control curve in this comparison use the same honest-only workload. There is no attacker in this experiment. The comparison therefore isolates the cost introduced by the admission-control waiting-time function itself, rather than the additional delay caused by adversarial traffic.
 
-![FIFO versus admission-control delay](figures/fig_q1_fifo_vs_admission_target_honest_delay.png)
+<div style="text-align: center;">
+  <img src="figures/fig_q1_fifo_vs_admission_target_honest_delay.png" alt="FIFO versus admission-control delay" style="width: 30%; min-width: 220px;" />
+</div>
 
 **Figure 6.** Target-topic honest p95 registration delay under an honest-only workload where 50% of honest registrations use the target topic. The FIFO baseline uses the same cache capacity and advertisement lifetime, but admits requests in arrival order rather than applying the admission waiting-time function.
 
@@ -164,19 +174,22 @@ The purpose of this experiment is to determine how capacity affects honest delay
 
 ### 6.2 Cache-occupation attack
 
-![Capacity trade-off under cache occupation](figures/fig5_q2_cache_capacity_tradeoff.png)
-
-**Figure 7.** Capacity trade-off under cache occupation.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig5_q2_cache_capacity_tradeoff.png" alt="Capacity trade-off under cache occupation" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 7.</strong> Capacity trade-off under cache occupation.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig6_q2_target_capacity_tradeoff.png" alt="Capacity trade-off under target-topic attack" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 8.</strong> Capacity trade-off under target-topic attack.</p>
+  </div>
+</div>
 
 Under cache occupation, increasing `C` reduces honest delay. Honest p95 delay falls from approximately 57600s at `C = 100` to approximately 20825s at `C = 1000`, and to approximately 8140s at `C = 5000`.
 
 However, larger capacity also increases attacker cache share. The attacker share is approximately 21% at `C = 100`, approximately 36% at `C = 1000`, and approximately 52% at `C = 5000`. This means that increasing capacity is not equivalent to increasing security. It improves availability for honest registrations, but also gives attackers more room to maintain admitted advertisements.
 
 ### 6.3 Target-topic attack
-
-![Capacity trade-off under target-topic attack](figures/fig6_q2_target_capacity_tradeoff.png)
-
-**Figure 8.** Capacity trade-off under target-topic attack.
 
 The target-topic experiment shows a similar trade-off. Target-topic honest p95 delay falls from approximately 69300s at `C = 100` to approximately 33300s at `C = 1000`, and to approximately 13500s at `C = 5000`. At the same time, target attacker cache share rises from approximately 8% at `C = 100` to approximately 35% at `C = 1000`, and approximately 52% at `C = 5000`.
 
@@ -194,19 +207,22 @@ This is evaluated by comparing full admission control against an ablation in whi
 
 ### 7.2 Results
 
-![IP score ablation: attacker cache share](figures/fig7_q3_ip_attacker_share.png)
-
-**Figure 9.** Attacker cache share with IP scoring enabled and disabled under different attacker prefix assumptions.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig7_q3_ip_attacker_share.png" alt="IP score ablation: attacker cache share" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 9.</strong> Attacker cache share with IP scoring enabled and disabled under different attacker prefix assumptions.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig8_q3_ip_attacker_attempts.png" alt="IP score ablation: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 10.</strong> Attacker attempts per admission with and without IP scoring.</p>
+  </div>
+</div>
 
 The IP score has a strong effect for prefix-concentrated attackers. For a `/24` attacker, where attacker IP addresses are drawn from the same `/24` prefix, attacker cache share is approximately 36% with IP scoring enabled and approximately 82% when IP scoring is disabled. The result is similar for `/16` and `/8` attackers in this configuration.
 
 This similarity is due to how the implemented IP score is computed. The simulator uses a binary IP prefix tree over the IP addresses currently represented in the cache. For a candidate IP address, the score walks down the candidate's prefix path and checks whether each evaluated prefix bucket is already more populated than expected under a balanced distribution of cached IPs. The score only evaluates prefix levels while the expected balanced bucket occupancy is at least one. With a cache size of `C = 1000`, this means the score mainly captures coarse prefix concentration, rather than distinguishing deeply between `/8`, `/16`, and `/24` structure. In this workload, all three attacker models are concentrated enough to overload these coarse prefix buckets, so they receive similar IP-diversity penalties.
 
 For a genuinely diverse attacker, the IP score no longer provides the same protection: attacker share is approximately 80% even with IP scoring enabled. 
-
-![IP score ablation: attacker attempts per admission](figures/fig8_q3_ip_attacker_attempts.png)
-
-**Figure 10.** Attacker attempts per admission with and without IP scoring.
 
 The cost imposed on concentrated attackers is also visible in attempts per admission. Under the `/24` attack, enabling IP scoring increases attacker attempts per admission from about 14 to about 85. This indicates that the IP-diversity term does not merely reduce cache share; it also changes the cost curve faced by the attacker. Concentrated attackers can still obtain admissions, but they must make substantially more attempts per successful admission.
 
@@ -221,15 +237,18 @@ This experiment therefore asks a different type of question from the attack expe
 
 ### 8.2 Results
 
-![Popular honest topic: target honest p95 delay](figures/fig9_q4_popular_topic_delay.png)
-
-**Figure 11.** Target-topic honest p95 delay as the fraction of honest target-topic demand increases.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig9_q4_popular_topic_delay.png" alt="Popular honest topic: target honest p95 delay" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 11.</strong> Target-topic honest p95 delay as the fraction of honest target-topic demand increases.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig10_q4_popular_topic_share.png" alt="Popular honest topic: target-topic cache share" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 12.</strong> Target-topic cache share as a function of honest target-topic demand.</p>
+  </div>
+</div>
 
 When topic scoring is enabled, target-topic honest registrations experience higher delay as the target topic becomes more popular. At 90% target-topic demand, target-topic p95 delay is approximately 16023s with topic scoring enabled and approximately 13972s with topic scoring disabled. The cost is not catastrophic in this workload, but it is measurable.
-
-![Popular honest topic: target-topic cache share](figures/fig10_q4_popular_topic_share.png)
-
-**Figure 12.** Target-topic cache share as a function of honest target-topic demand.
 
 The cache-share result shows the mechanism's intended effect. With topic scoring enabled, target-topic cache share grows sub-linearly with demand. At 90% target-topic demand, the target topic receives approximately 79% of the cache. With topic scoring disabled, the cache share tracks demand more directly; at 90% demand, the target topic receives approximately 90% of the cache.
 
@@ -249,29 +268,35 @@ The experiments fix `Pocc = 10`, `C = 1000`, `E = 900s`, and `G = 1e-7`, then va
 
 ### 9.2 Cache-occupation attack
 
-![Cache occupation: attacker cache share versus attacker rate](figures/fig11_q5_cache_intensity_share.png)
-
-**Figure 13.** Attacker cache share under increasing cache-occupation attack intensity.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig11_q5_cache_intensity_share.png" alt="Cache occupation: attacker cache share versus attacker rate" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 13.</strong> Attacker cache share under increasing cache-occupation attack intensity.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig12_q5_cache_intensity_cost.png" alt="Cache occupation: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 14.</strong> Attacker attempts per admission under increasing cache-occupation attack intensity.</p>
+  </div>
+</div>
 
 Under cache occupation, attacker cache share increases with attacker rate, but less than proportionally. Attacker share is approximately 18% at attacker rate `0.02/s`, approximately 36% at `0.2/s`, and approximately 41% at `0.4/s`.
-
-![Cache occupation: attacker attempts per admission](figures/fig12_q5_cache_intensity_cost.png)
-
-**Figure 14.** Attacker attempts per admission under increasing cache-occupation attack intensity.
 
 The cost to the attacker rises more sharply. Attacker attempts per admission increase from approximately 19 at attacker rate `0.02/s` to approximately 85 at `0.2/s`, and approximately 146 at `0.4/s`. The mechanism therefore does not completely exclude the attacker, but it makes additional admitted cache share increasingly expensive.
 
 ### 9.3 Target-topic attack
 
-![Target-topic attack: target attacker share versus attacker rate](figures/fig13_q5_target_intensity_share.png)
-
-**Figure 15.** Target-topic attacker cache share under increasing attack intensity.
+<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig13_q5_target_intensity_share.png" alt="Target-topic attack: target attacker share versus attacker rate" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 15.</strong> Target-topic attacker cache share under increasing attack intensity.</p>
+  </div>
+  <div style="width: 48%; min-width: 300px;">
+    <img src="figures/fig14_q5_target_intensity_cost.png" alt="Target-topic attack: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
+    <p><strong>Figure 16.</strong> Attacker attempts per admission under increasing target-topic attack intensity.</p>
+  </div>
+</div>
 
 Under the target-topic attack, target attacker share increases from approximately 15% at attacker rate `0.02/s` to approximately 35% at `0.2/s`, and approximately 39% at `0.4/s`.
-
-![Target-topic attack: attacker attempts per admission](figures/fig14_q5_target_intensity_cost.png)
-
-**Figure 16.** Attacker attempts per admission under increasing target-topic attack intensity.
 
 The attacker's cost increases sharply. Attempts per admission rise from approximately 26 at attacker rate `0.02/s` to approximately 97 at `0.2/s`, and approximately 174 at `0.4/s`.
 
