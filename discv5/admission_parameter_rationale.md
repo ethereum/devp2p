@@ -103,12 +103,12 @@ Therefore, the purpose of this experiment is to identify a reasonable operating 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig1_q1_cache_attacker_share.png" alt="Attacker cache share versus Pocc under cache occupation" width="250" />
+      <img src="figures/fig1_q1_cache_attacker_share.png" alt="Attacker cache share versus Pocc under cache occupation" width="350" />
       <br />
       <strong>Figure 1.</strong> Attacker cache share under the cache-occupation attack.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig2_q1_cache_utilisation.png" alt="Cache utilisation versus Pocc under cache occupation" width="250" />
+      <img src="figures/fig2_q1_cache_utilisation.png" alt="Cache utilisation versus Pocc under cache occupation" width="350" />
       <br />
       <strong>Figure 2.</strong> Average cache utilisation under the cache-occupation attack.
     </td>
@@ -126,12 +126,12 @@ The security improvement from increasing `Pocc` is accompanied by reduced utilis
  <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig3_q1_target_attacker_share.png" alt="Target attacker cache share versus Pocc" width="250" />
+      <img src="figures/fig3_q1_target_attacker_share.png" alt="Target attacker cache share versus Pocc" width="350" />
       <br />
       <strong>Figure 3.</strong> Target-topic attacker cache share as <code>Pocc</code> varies.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig4_q1_target_honest_delay.png" alt="Target honest p95 delay versus Pocc" width="250" />
+      <img src="figures/fig4_q1_target_honest_delay.png" alt="Target honest p95 delay versus Pocc" width="350" />
       <br />
       <strong>Figure 4.</strong> Target-topic honest p95 registration delay as <code>Pocc</code> varies.
     </td>
@@ -140,9 +140,9 @@ The security improvement from increasing `Pocc` is accompanied by reduced utilis
 
 The target-topic attack shows the same qualitative pattern. With full admission control, target attacker share falls from approximately 53% at `Pocc = 1` to approximately 35% at `Pocc = 10`, and approximately 24% at `Pocc = 32`. With occupancy-only admission, the attacker remains around 80% of the target-topic share. This confirms that the diversity terms are not incidental: they are central to preventing repeated registrations for the same topic from dominating the cache.
 
-<div style="text-align: center;">
-  <img src="figures/fig_q1_target_honest_delay_benign_vs_attack.png" alt="Target-topic honest delay under benign popularity and attack" style="width: 30%; min-width: 220px;" />
-</div>
+<p align="center">
+  <img src="figures/fig_q1_target_honest_delay_benign_vs_attack.png" alt="Target-topic honest delay under benign popularity and attack" width="350" />
+</p>
 
 **Figure 5.** Target-topic honest p95 registration delay when 50% of honest registrations use the target topic, with and without a target-topic attacker. 
 
@@ -156,9 +156,9 @@ The above comparison does not yet tell us whether the high waiting times are cau
 
 Both the FIFO baseline and the admission-control curve in this comparison use the same honest-only workload. There is no attacker in this experiment. The comparison therefore isolates the cost introduced by the admission-control waiting-time function itself, rather than the additional delay caused by adversarial traffic.
 
-<div style="text-align: center;">
-  <img src="figures/fig_q1_fifo_vs_admission_target_honest_delay.png" alt="FIFO versus admission-control delay" style="width: 30%; min-width: 220px;" />
-</div>
+<p align="center">
+  <img src="figures/fig_q1_fifo_vs_admission_target_honest_delay.png" alt="FIFO versus admission-control delay" width="350" />
+</p>
 
 **Figure 6.** Target-topic honest p95 registration delay under an honest-only workload where 50% of honest registrations use the target topic. The FIFO baseline uses the same cache capacity and advertisement lifetime, but admits requests in arrival order rather than applying the admission waiting-time function.
 
@@ -185,12 +185,12 @@ The purpose of this experiment is to determine how capacity affects honest delay
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig5_q2_cache_capacity_tradeoff.png" alt="Capacity trade-off under cache occupation" width="250" />
+      <img src="figures/fig5_q2_cache_capacity_tradeoff.png" alt="Capacity trade-off under cache occupation" width="350" />
       <br />
       <strong>Figure 7.</strong> Capacity trade-off under cache occupation.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig6_q2_target_capacity_tradeoff.png" alt="Capacity trade-off under target-topic attack" width="250" />
+      <img src="figures/fig6_q2_target_capacity_tradeoff.png" alt="Capacity trade-off under target-topic attack" width="350" />
       <br />
       <strong>Figure 8.</strong> Capacity trade-off under target-topic attack.
     </td>
@@ -222,12 +222,12 @@ This is evaluated by comparing full admission control against an ablation in whi
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig7_q3_ip_attacker_share.png" alt="IP score ablation: attacker cache share" width="250" />
+      <img src="figures/fig7_q3_ip_attacker_share.png" alt="IP score ablation: attacker cache share" width="350" />
       <br />
       <strong>Figure 9.</strong> Attacker cache share with IP scoring enabled and disabled under different attacker prefix assumptions.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig8_q3_ip_attacker_attempts.png" alt="IP score ablation: attacker attempts per admission" width="250" />
+      <img src="figures/fig8_q3_ip_attacker_attempts.png" alt="IP score ablation: attacker attempts per admission" width="350" />
       <br />
       <strong>Figure 10.</strong> Attacker attempts per admission with and without IP scoring.
     </td>
@@ -255,12 +255,12 @@ This experiment therefore asks a different type of question from the attack expe
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig9_q4_popular_topic_delay.png" alt="Popular honest topic: target honest p95 delay" width="250" />
+      <img src="figures/fig9_q4_popular_topic_delay.png" alt="Popular honest topic: target honest p95 delay" width="350" />
       <br />
       <strong>Figure 11.</strong> Target-topic honest p95 delay as the fraction of honest target-topic demand increases.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig10_q4_popular_topic_share.png" alt="Popular honest topic: target-topic cache share" width="250" />
+      <img src="figures/fig10_q4_popular_topic_share.png" alt="Popular honest topic: target-topic cache share" width="350" />
       <br />
       <strong>Figure 12.</strong> Target-topic cache share as a function of honest target-topic demand.
     </td>
@@ -290,12 +290,12 @@ The experiments fix `Pocc = 10`, `C = 1000`, `E = 900s`, and `G = 1e-7`, then va
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig11_q5_cache_intensity_share.png" alt="Cache occupation: attacker cache share versus attacker rate" width="250" />
+      <img src="figures/fig11_q5_cache_intensity_share.png" alt="Cache occupation: attacker cache share versus attacker rate" width="350" />
       <br />
       <strong>Figure 13.</strong> Attacker cache share under increasing cache-occupation attack intensity.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig12_q5_cache_intensity_cost.png" alt="Cache occupation: attacker attempts per admission" width="250" />
+      <img src="figures/fig12_q5_cache_intensity_cost.png" alt="Cache occupation: attacker attempts per admission" width="350" />
       <br />
       <strong>Figure 14.</strong> Attacker attempts per admission under increasing cache-occupation attack intensity.
     </td>
@@ -311,12 +311,12 @@ The cost to the attacker rises more sharply. Attacker attempts per admission inc
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="figures/fig13_q5_target_intensity_share.png" alt="Target-topic attack: target attacker share versus attacker rate" width="250" />
+      <img src="figures/fig13_q5_target_intensity_share.png" alt="Target-topic attack: target attacker share versus attacker rate" width="350" />
       <br />
       <strong>Figure 15.</strong> Target-topic attacker cache share under increasing attack intensity.
     </td>
     <td align="center" width="50%">
-      <img src="figures/fig14_q5_target_intensity_cost.png" alt="Target-topic attack: attacker attempts per admission" width="250" />
+      <img src="figures/fig14_q5_target_intensity_cost.png" alt="Target-topic attack: attacker attempts per admission" width="350" />
       <br />
       <strong>Figure 16.</strong> Attacker attempts per admission under increasing target-topic attack intensity.
     </td>
