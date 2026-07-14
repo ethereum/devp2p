@@ -737,7 +737,7 @@ handle TopDisc messages.
   *S/Kademlia: A Practicable Approach Towards Secure Key-Based Routing.* 2007.\
   <https://telematics.tm.kit.edu/publications/Files/267/SKademlia_2007.pdf>
 
-- Xin Sun, Ruben Torres and Sanjay Rao. *Feasiblity of DDoS Attacks with P2P Systems and
+- Xin Sun, Ruben Torres and Sanjay Rao. *Feasibility of DDoS Attacks with P2P Systems and
   Prevention through Robust Membership Management.* 2007.\
   <https://docs.lib.purdue.edu/cgi/viewcontent.cgi?article=1357&context=ecetr>
 
