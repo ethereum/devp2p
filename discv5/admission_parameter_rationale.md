@@ -100,16 +100,20 @@ Therefore, the purpose of this experiment is to identify a reasonable operating 
 
 ### 5.2 Cache-occupation attack
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig1_q1_cache_attacker_share.png" alt="Attacker cache share versus Pocc under cache occupation" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 1.</strong> Attacker cache share under the cache-occupation attack. </p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig2_q1_cache_utilisation.png" alt="Cache utilisation versus Pocc under cache occupation" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 2.</strong> Average cache utilisation under the cache-occupation attack.</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig1_q1_cache_attacker_share.png" alt="Attacker cache share versus Pocc under cache occupation" width="250" />
+      <br />
+      <strong>Figure 1.</strong> Attacker cache share under the cache-occupation attack.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig2_q1_cache_utilisation.png" alt="Cache utilisation versus Pocc under cache occupation" width="250" />
+      <br />
+      <strong>Figure 2.</strong> Average cache utilisation under the cache-occupation attack.
+    </td>
+  </tr>
+</table>
 
 Under the cache-occupation attack, full admission control substantially reduces attacker cache share as `Pocc` increases. At `Pocc = 1`, the attacker occupies approximately 52% of the cache. At `Pocc = 10`, the attacker share falls to approximately 36%. At `Pocc = 32`, it falls further to approximately 27%.
 
@@ -119,16 +123,20 @@ The security improvement from increasing `Pocc` is accompanied by reduced utilis
 
 ### 5.3 Target-topic attack
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig3_q1_target_attacker_share.png" alt="Target attacker cache share versus Pocc" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 3.</strong> Target-topic attacker cache share as <code>Pocc</code> varies.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig4_q1_target_honest_delay.png" alt="Target honest p95 delay versus Pocc" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 4.</strong> Target-topic honest p95 registration delay as <code>Pocc</code> varies.</p>
-  </div>
-</div>
+ <table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig3_q1_target_attacker_share.png" alt="Target attacker cache share versus Pocc" width="250" />
+      <br />
+      <strong>Figure 3.</strong> Target-topic attacker cache share as <code>Pocc</code> varies.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig4_q1_target_honest_delay.png" alt="Target honest p95 delay versus Pocc" width="250" />
+      <br />
+      <strong>Figure 4.</strong> Target-topic honest p95 registration delay as <code>Pocc</code> varies.
+    </td>
+  </tr>
+</table>
 
 The target-topic attack shows the same qualitative pattern. With full admission control, target attacker share falls from approximately 53% at `Pocc = 1` to approximately 35% at `Pocc = 10`, and approximately 24% at `Pocc = 32`. With occupancy-only admission, the attacker remains around 80% of the target-topic share. This confirms that the diversity terms are not incidental: they are central to preventing repeated registrations for the same topic from dominating the cache.
 
@@ -174,16 +182,20 @@ The purpose of this experiment is to determine how capacity affects honest delay
 
 ### 6.2 Cache-occupation attack
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig5_q2_cache_capacity_tradeoff.png" alt="Capacity trade-off under cache occupation" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 7.</strong> Capacity trade-off under cache occupation.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig6_q2_target_capacity_tradeoff.png" alt="Capacity trade-off under target-topic attack" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 8.</strong> Capacity trade-off under target-topic attack.</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig5_q2_cache_capacity_tradeoff.png" alt="Capacity trade-off under cache occupation" width="250" />
+      <br />
+      <strong>Figure 7.</strong> Capacity trade-off under cache occupation.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig6_q2_target_capacity_tradeoff.png" alt="Capacity trade-off under target-topic attack" width="250" />
+      <br />
+      <strong>Figure 8.</strong> Capacity trade-off under target-topic attack.
+    </td>
+  </tr>
+</table>
 
 Under cache occupation, increasing `C` reduces honest delay. Honest p95 delay falls from approximately 57600s at `C = 100` to approximately 20825s at `C = 1000`, and to approximately 8140s at `C = 5000`.
 
@@ -207,17 +219,20 @@ This is evaluated by comparing full admission control against an ablation in whi
 
 ### 7.2 Results
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig7_q3_ip_attacker_share.png" alt="IP score ablation: attacker cache share" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 9.</strong> Attacker cache share with IP scoring enabled and disabled under different attacker prefix assumptions.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig8_q3_ip_attacker_attempts.png" alt="IP score ablation: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 10.</strong> Attacker attempts per admission with and without IP scoring.</p>
-  </div>
-</div>
-
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig7_q3_ip_attacker_share.png" alt="IP score ablation: attacker cache share" width="250" />
+      <br />
+      <strong>Figure 9.</strong> Attacker cache share with IP scoring enabled and disabled under different attacker prefix assumptions.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig8_q3_ip_attacker_attempts.png" alt="IP score ablation: attacker attempts per admission" width="250" />
+      <br />
+      <strong>Figure 10.</strong> Attacker attempts per admission with and without IP scoring.
+    </td>
+  </tr>
+</table>
 The IP score has a strong effect for prefix-concentrated attackers. For a `/24` attacker, where attacker IP addresses are drawn from the same `/24` prefix, attacker cache share is approximately 36% with IP scoring enabled and approximately 82% when IP scoring is disabled. The result is similar for `/16` and `/8` attackers in this configuration.
 
 This similarity is due to how the implemented IP score is computed. The simulator uses a binary IP prefix tree over the IP addresses currently represented in the cache. For a candidate IP address, the score walks down the candidate's prefix path and checks whether each evaluated prefix bucket is already more populated than expected under a balanced distribution of cached IPs. The score only evaluates prefix levels while the expected balanced bucket occupancy is at least one. With a cache size of `C = 1000`, this means the score mainly captures coarse prefix concentration, rather than distinguishing deeply between `/8`, `/16`, and `/24` structure. In this workload, all three attacker models are concentrated enough to overload these coarse prefix buckets, so they receive similar IP-diversity penalties.
@@ -237,16 +252,20 @@ This experiment therefore asks a different type of question from the attack expe
 
 ### 8.2 Results
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig9_q4_popular_topic_delay.png" alt="Popular honest topic: target honest p95 delay" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 11.</strong> Target-topic honest p95 delay as the fraction of honest target-topic demand increases.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig10_q4_popular_topic_share.png" alt="Popular honest topic: target-topic cache share" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 12.</strong> Target-topic cache share as a function of honest target-topic demand.</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig9_q4_popular_topic_delay.png" alt="Popular honest topic: target honest p95 delay" width="250" />
+      <br />
+      <strong>Figure 11.</strong> Target-topic honest p95 delay as the fraction of honest target-topic demand increases.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig10_q4_popular_topic_share.png" alt="Popular honest topic: target-topic cache share" width="250" />
+      <br />
+      <strong>Figure 12.</strong> Target-topic cache share as a function of honest target-topic demand.
+    </td>
+  </tr>
+</table>
 
 When topic scoring is enabled, target-topic honest registrations experience higher delay as the target topic becomes more popular. At 90% target-topic demand, target-topic p95 delay is approximately 16023s with topic scoring enabled and approximately 13972s with topic scoring disabled. The cost is not catastrophic in this workload, but it is measurable.
 
@@ -268,16 +287,20 @@ The experiments fix `Pocc = 10`, `C = 1000`, `E = 900s`, and `G = 1e-7`, then va
 
 ### 9.2 Cache-occupation attack
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig11_q5_cache_intensity_share.png" alt="Cache occupation: attacker cache share versus attacker rate" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 13.</strong> Attacker cache share under increasing cache-occupation attack intensity.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig12_q5_cache_intensity_cost.png" alt="Cache occupation: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 14.</strong> Attacker attempts per admission under increasing cache-occupation attack intensity.</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig11_q5_cache_intensity_share.png" alt="Cache occupation: attacker cache share versus attacker rate" width="250" />
+      <br />
+      <strong>Figure 13.</strong> Attacker cache share under increasing cache-occupation attack intensity.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig12_q5_cache_intensity_cost.png" alt="Cache occupation: attacker attempts per admission" width="250" />
+      <br />
+      <strong>Figure 14.</strong> Attacker attempts per admission under increasing cache-occupation attack intensity.
+    </td>
+  </tr>
+</table>
 
 Under cache occupation, attacker cache share increases with attacker rate, but less than proportionally. Attacker share is approximately 18% at attacker rate `0.02/s`, approximately 36% at `0.2/s`, and approximately 41% at `0.4/s`.
 
@@ -285,16 +308,20 @@ The cost to the attacker rises more sharply. Attacker attempts per admission inc
 
 ### 9.3 Target-topic attack
 
-<div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig13_q5_target_intensity_share.png" alt="Target-topic attack: target attacker share versus attacker rate" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 15.</strong> Target-topic attacker cache share under increasing attack intensity.</p>
-  </div>
-  <div style="width: 48%; min-width: 300px;">
-    <img src="figures/fig14_q5_target_intensity_cost.png" alt="Target-topic attack: attacker attempts per admission" style="width: 62.5%; min-width: 220px;" />
-    <p><strong>Figure 16.</strong> Attacker attempts per admission under increasing target-topic attack intensity.</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="figures/fig13_q5_target_intensity_share.png" alt="Target-topic attack: target attacker share versus attacker rate" width="250" />
+      <br />
+      <strong>Figure 15.</strong> Target-topic attacker cache share under increasing attack intensity.
+    </td>
+    <td align="center" width="50%">
+      <img src="figures/fig14_q5_target_intensity_cost.png" alt="Target-topic attack: attacker attempts per admission" width="250" />
+      <br />
+      <strong>Figure 16.</strong> Attacker attempts per admission under increasing target-topic attack intensity.
+    </td>
+  </tr>
+</table>
 
 Under the target-topic attack, target attacker share increases from approximately 15% at attacker rate `0.02/s` to approximately 35% at `0.2/s`, and approximately 39% at `0.4/s`.
 
