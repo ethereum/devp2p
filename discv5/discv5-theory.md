@@ -190,7 +190,8 @@ another ordinary message packet.
 
     A -> B    ORDINARY MESSAGE PACKET
 
-In this case, implementations should respond with a new WHOAREYOU challenge referencing the message packet.
+In this case, implementations should re-send the challenge which is already in progress, i.e. the WHOAREYOU 
+packet referencing the earlier message packet, instead of creating a new challenge.
 
 ### Session Cache
 
