@@ -444,6 +444,10 @@ the sending node. Including hashes that the sending node later refuses to honour
 proceeding [GetBlockHeaders] message is considered bad form, and may reduce the reputation
 of the sending node.
 
+This message is deprecated since [The Merge]. Per [EIP-3675], nodes should no longer send
+it on PoS networks and must discard it when it is received. Peers that keep sending it
+should be disconnected.
+
 ### Transactions (0x02)
 
 `[tx₁, tx₂, ...]`
@@ -500,6 +504,10 @@ The recommended soft limit for BlockBodies responses is 2 MiB.
 Specify a single complete block that the peer should know about. `td` is the total
 difficulty of the block, i.e. the sum of all block difficulties up to and including this
 block.
+
+This message is deprecated since [The Merge]. Per [EIP-3675], nodes should no longer send
+it on PoS networks and must discard it when it is received. Peers that keep sending it
+should be disconnected.
 
 ### NewPooledTransactionHashes (0x08)
 
@@ -719,6 +727,13 @@ Version 68 changed the [NewPooledTransactionHashes] message to include types and
 the announced transactions. Prior to this update, the message payload was simply a list of
 hashes: `[txhash₁: B_32, txhash₂: B_32, ...]`.
 
+### eth/67 with the merge ([EIP-3675], September 2022)
+
+The PoW-to-PoS transition deprecated block propagation on the eth protocol. Since [The
+Merge], nodes should no longer send the [NewBlockHashes] and [NewBlock] messages and must
+discard them when they are received. No new wire protocol version was created for this
+change, and the message codes stay assigned.
+
 ### eth/67 with withdrawals ([EIP-4895], March 2022)
 
 PoS validator withdrawals were added by [EIP-4895], which changed the definition of block
@@ -834,6 +849,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
 [transaction types]: https://eips.ethereum.org/EIPS/eip-2718
 [EIP-2976]: https://eips.ethereum.org/EIPS/eip-2976
+[EIP-3675]: https://eips.ethereum.org/EIPS/eip-3675
 [EIP-4788]: https://eips.ethereum.org/EIPS/eip-4788
 [EIP-4895]: https://eips.ethereum.org/EIPS/eip-4895
 [EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
