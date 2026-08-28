@@ -5,7 +5,7 @@ lists requires a software update and, effort is required from the software maint
 ensure the list is up-to-date. As a result, the provided lists are usually small, giving
 the software little choice of initial entry point into the network.
 
-This specification describes a scheme for authenticated, updateable node lists retrievable
+This specification describes a scheme for authenticated, updatable node lists retrievable
 via DNS. In order to use such a list, the client only requires information about the DNS
 name and the public key that signs the list.
 

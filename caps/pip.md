@@ -180,7 +180,7 @@ Request and retrieve block headers from the server.
 
 - `start` Loose, of type either 32byte hash (block hash), or unsigned integer block number
 - `skip` unsigned integer N, specifying the server should return every Nth block
-- `max` unsinged integer, the maximum number of blocks to return
+- `max` unsigned integer, the maximum number of blocks to return
 - `reverse` 0 if the block numbers should be increasing, 1 to return in reverse order
 
 #### Response
