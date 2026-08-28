@@ -1,0 +1,24 @@
+{
+  "name": "devp2p-generate-caps-table",
+  "version": "1.0.0",
+  "description": "Generate a table of features supported by clients",
+  "main": "index.js",
+  "scripts": {
+    "generate": "node index.js",
+    "test": "mocha *.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethereum/devp2p.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ethereum/devp2p/issues"
+  },
+  "homepage": "https://github.com/ethereum/devp2p#readme",
+  "dependencies": {
+    "mocha": "^7.1.2",
+    "pure-svg-table": "^1.0.3"
+  }
+}
