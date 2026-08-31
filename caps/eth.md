@@ -173,8 +173,9 @@ observing `AVAILABILITY_THRESHOLD` distinct full-availability announcements.
 
 ### Transaction Encoding and Validity
 
-Transaction objects exchanged by peers have one of two encodings. In definitions across
-this specification, we refer to transactions of either encoding using the identifier `txₙ`.
+Transaction objects exchanged by peers may be encoded in more than one way. In definitions
+across this specification, we refer to transactions as they appear in blocks using the
+identifier `txₙ`.
 
     tx = {legacy-tx, typed-tx}
 
@@ -196,6 +197,38 @@ Untyped, legacy transactions are given as an RLP list.
 transaction type (`tx-type`) and the remaining bytes are opaque type-specific data.
 
     typed-tx = tx-type || tx-data
+
+#### Pooled Encoding
+
+Certain transaction types carry auxiliary data which is required to validate the
+transaction in the pool, but which is not part of the transaction as it appears in a
+block. Transactions of such a type therefore have a second, 'pooled' encoding, used by
+[PooledTransactions]. In definitions across this specification, we refer to transactions
+in this encoding using the identifier `pooled-txₙ`.
+
+For a transaction whose `tx-type` defines no wrapped form, the pooled encoding is
+identical to `tx`. Types which do define one — currently only type `0x03`, introduced by
+[EIP-4844] — are encoded as:
+
+    wrapped-tx = tx-type || rlp([
+        tx-payload-body,
+        wrapper-version: P,
+        blobs: [blob₁: B_131072, blob₂: B_131072, ...],
+        commitments: [commitment₁: B_48, commitment₂: B_48, ...],
+        proofs: [proof₁: B_48, proof₂: B_48, ...],
+    ])
+
+`tx-payload-body` is the transaction's `tx-data` decoded as an RLP list. `wrapper-version`
+selects the meaning of `proofs` and is defined by [EIP-7594]; the current version is `1`,
+for which `proofs` contains `CELLS_PER_EXT_BLOB` cell proofs per blob. On chains where
+[EIP-7594] is not active, the version-0 wrapper defined by [EIP-4844] is used instead: it
+omits the `wrapper-version` element and carries one blob proof per blob. The two forms are
+distinguished by the number of elements in the RLP list.
+
+The `blobs` element is the empty list in [PooledTransactions] responses from `eth/72`
+onwards; blob data is obtained through [GetCells] instead. See [EIP-8070]. Note that the
+resulting encoding still contains the `wrapper-version` element and an empty `blobs` list,
+so its length is not simply the length of the blob data subtracted from the unelided form.
 
 Transactions must be validated when they are received. Validity depends on the Ethereum
 chain state. The specific kind of validity this specification is concerned with is not
@@ -226,7 +259,7 @@ from their signature.
   current account nonce are valid, and to which degree 'nonce gaps' are acceptable.
 
 Implementations may enforce other validation rules for transactions. For example, it is
-common practice to reject encoded transactions larger than 128 kB.
+common practice to reject transactions whose `tx` encoding is larger than 128 kB.
 
 Unless noted otherwise, implementations must not disconnect peers for sending invalid
 transactions, and should simply discard them instead. This is because the peer might be
@@ -462,6 +495,10 @@ relay transactions to a peer they received that transaction from. In practice th
 often implemented by keeping a per-peer bloom filter or set of transaction hashes which
 have already been sent or received.
 
+Transactions of a type which defines a wrapped [pooled encoding] must not be sent in this
+message. Per [EIP-4844], such transactions are only ever announced with
+[NewPooledTransactionHashes] and served on request via [GetPooledTransactions].
+
 ### GetBlockHeaders (0x03)
 
 `[request-id: P, [startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]]`
@@ -521,9 +558,25 @@ The `txtypes` element is a byte array containing the announced [transaction type
 other two payload elements refer to the sizes and hashes of the announced transactions.
 All three payload elements must contain an equal number of items.
 
-`txsizeₙ` refers to the length of the 'consensus encoding' of a typed transaction, i.e.
-the byte size of `tx-type || tx-data` for typed transactions, and the size of the
-RLP-encoded `legacy-tx` for non-typed legacy transactions.
+`txsizeₙ` is the byte length of the announced transaction in the [pooled encoding], on the
+protocol version negotiated for this connection. It is the length of:
+
+- the RLP encoding of `legacy-tx`, for legacy transactions;
+- `tx-type || tx-data`, for typed transactions whose type defines no wrapped form;
+- the whole `wrapped-tx`, for types which do.
+
+The RLP string header which frames a typed transaction as an element of the enclosing
+[PooledTransactions] list is not counted.
+
+A peer must announce the size of the transaction it holds. A receiver may recompute
+`txsizeₙ` from a transaction it has been served — evaluating it at the protocol version on
+which the announcement was made, which need not be the version it was delivered on — and
+may disconnect a peer whose announcement disagrees. Announcing a transaction and then
+declining to serve it is not a disagreement; see [PooledTransactions].
+
+`txsizeₙ` accounts only for the [PooledTransactions] response. Data fetched separately, in
+particular cells fetched via [GetCells] from `eth/72` onwards, is not included; the `cells`
+element signals that availability instead.
 
 The `cells` element is a bitmap marking which cell indices can be fetched from the sending
 peer. For each bit set to one, the peer stores the cells at that index in every blob of
@@ -550,15 +603,10 @@ must not be considered a protocol violation.
 
 ### PooledTransactions (0x0a)
 
-`[request-id: P, [tx₁, tx₂...]]`
+`[request-id: P, [pooled-tx₁, pooled-tx₂, ...]]`
 
 This is the response to GetPooledTransactions, returning the requested transactions from
-the local pool. The items in the list are transactions in the format described in the main
-Ethereum specification.
-
-For blob transactions (type 3), the blob data is elided from the response.
-
-<!-- TODO: define encoding in tx section -->
+the local pool, in the [pooled encoding].
 
 The transactions must be in same order as in the request, but it is OK to skip
 transactions which are not available. This way, if the response size limit is reached,
@@ -832,6 +880,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [NewPooledTransactionHashes]: #newpooledtransactionhashes-0x08
 [GetPooledTransactions]: #getpooledtransactions-0x09
 [PooledTransactions]: #pooledtransactions-0x0a
+[pooled encoding]: #pooled-encoding
 [GetReceipts]: #getreceipts-0x0f
 [Receipts]: #receipts-0x10
 [BlockRangeUpdate]: #blockrangeupdate-0x11
