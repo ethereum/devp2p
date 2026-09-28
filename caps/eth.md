@@ -331,7 +331,8 @@ disconnect peers sending invalid blocks.
 
 Receipts are the output of the EVM state transition of a transaction. They are made
 available for the purpose of syncing the chain without re-executing transactions. All
-receipts have the same encoding regardless of transaction type.
+receipts have the same encoding regardless of transaction type, except for frame
+transaction receipts (type `0x06`) defined below.
 
     receiptₙ = [
         tx-type: P,
@@ -345,6 +346,25 @@ receipts have the same encoding regardless of transaction type.
         data: B,
     ]
 
+In the protocol version carrying the fork that activates [EIP-8141], a frame transaction
+receipt (`tx-type` `0x06`) is encoded mirroring its consensus `ReceiptPayload`:
+
+    receiptₙ = [
+        tx-type: P,
+        cumulative-gas: P,
+        payer: B_20,
+        [frame-receipt₁, frame-receipt₂, ...],
+    ]
+    frame-receiptₙ = [
+        status: P,
+        [execution-gas-used: P, state-gas-used: P],
+        logs: [log₁, log₂, ...],
+    ]
+
+This is `[tx-type, cumulative-gas, payer, [[status, [execution-gas-used, state-gas-used], logs], ...]]`.
+There is one frame receipt per frame of the transaction, in frame order. The receipt has no
+transaction-level status and no bloom filter.
+
 In the Ethereum Wire Protocol, receipts are always transferred as the complete list of all
 receipts contained in a block. It is also assumed that the block containing the receipts
 is valid and known. When a list of block receipts is received by a peer, it must be
@@ -352,6 +372,15 @@ verified by computing and comparing the merkle trie hash of the list against the
 `receipts-root` of the block. Note that in order to perform this verification, the
 receipts need to be re-encoded into the format used by the Ethereum consensus protocol,
 and their bloom filters have to be recomputed.
+
+A frame transaction receipt is re-encoded for the `receipts-root` computation by removing
+`tx-type` from the list and prefixing the RLP encoding of the remaining list with the type
+byte, as for other [EIP-2718] typed receipts:
+
+    0x06 || rlp([cumulative-gas, payer, [frame-receipt₁, frame-receipt₂, ...]])
+
+No bloom filter is recomputed for this encoding, since the consensus `ReceiptPayload` of a
+frame transaction does not contain one.
 
 Since the valid list of receipts is determined by the EVM state transition, it is not
 necessary to define any further validity rules for receipts in this specification.
@@ -862,6 +891,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
+[EIP-8141]: https://eips.ethereum.org/EIPS/eip-8141
 [EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/london.md
