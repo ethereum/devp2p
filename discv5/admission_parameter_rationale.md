@@ -78,7 +78,7 @@ A registration is classified as starved if it is not admitted within `2E = 1800s
 
 The main metrics are attacker cache share, honest 95 percentile (p95) registration delay, target-topic honest p95 registration delay, cache utilisation, attacker attempts per admission, and honest starvation rate.
 
-Honest advertiser IP addresses are sampled from the public Ethereum discovery DNS node-list dataset rather than selecting honest IPs uniformly at random. We use the [`all.json`](https://github.com/ethereum/discv4-dns-lists/blob/master/all.json) file in the [`ethereum/discv4-dns-lists`](https://github.com/ethereum/discv4-dns-lists) repository. The repository contains EIP-1459 node lists built by the go-ethereum `devp2p` tool, and `all.json` contains the crawl output of nodes found through the Ethereum discovery DHT. 
+Honest advertiser IP addresses are sampled from the public Ethereum discovery DNS node-list dataset rather than selecting honest IPs uniformly at random. We use the [`all.json`](https://github.com/ethereum/discv4-dns-lists/blob/80767568805b3e60220817b5b10683ef87095352/all.json) file in the [`ethereum/discv4-dns-lists`](https://github.com/ethereum/discv4-dns-lists) repository. The repository contains EIP-1459 node lists built by the go-ethereum `devp2p` tool, and `all.json` contains the crawl output of nodes found through the Ethereum discovery DHT. 
 
 ## 5. Q1: Choosing the occupancy exponent `Pocc`
 
