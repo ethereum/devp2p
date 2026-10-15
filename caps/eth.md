@@ -264,10 +264,14 @@ Ethereum block headers are encoded as follows:
 In certain protocol messages, the transaction and ommer lists are relayed together as a
 single item called the 'block body'.
 
-    block-body = [transactions, ommers, withdrawals]
+    block-body = [transactions, ommers, withdrawals, stark-proof]
     transactions = [tx₁, tx₂, ...]
     ommers = [header₁, header₂, ...]
     withdrawals = [withdrawal₁, withdrawal₂, ...]
+    stark-proof = B
+
+`stark-proof` must be present in block bodies after the [EIP-8288] fork, and absent for
+earlier blocks.
 
 For the purpose of block propagation (now defunct), full blocks were relayed as a combined item:
 
@@ -320,6 +324,8 @@ disconnect peers sending invalid blocks.
   computing and comparing the merkle trie hash of the withdrawals list. Note that no
   further validation of withdrawals is possible, since they are injected into the block by
   the consensus layer.
+- After the [EIP-8288] fork, `keccak256(stark-proof)` must match the `stark_proof_hash` in
+  the block header's `recursive_stark` field. This rule was added by [EIP-8288].
 - The `ommers` list may contain at most two headers.
 - `keccak256(ommers)` must match the `ommers-hash` of the block header.
 - The headers contained in the `ommers` list must be valid headers. Their block number
@@ -695,6 +701,13 @@ The recommended soft limit for Cells responses is 2 MiB.
 
 ## Change Log
 
+### eth/72 with recursive STARK proofs ([EIP-8288])
+
+In-mempool signature and proof aggregation was added by [EIP-8288], which changed the
+definition of block bodies to include the `stark-proof` after `withdrawals`. No new wire
+protocol version was created for this change, since it was only a backwards-compatible
+addition to the block validity rules.
+
 ### eth/72 ([EIP-8070], July 2026)
 
 Version 72 changed the [NewPooledTransactionHashes] message to include blob transaction
@@ -863,6 +876,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
 [EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
+[EIP-8288]: https://eips.ethereum.org/EIPS/eip-8288
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/shanghai.md
