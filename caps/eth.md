@@ -259,6 +259,8 @@ Ethereum block headers are encoded as follows:
         parent-beacon-root: B_32,
         requests-hash: B_32,
         block-access-list-hash: B_32,
+        stark-proof-hash: B_32,
+        block-deps-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -302,6 +304,8 @@ headers are processed in sequence during chain synchronization, the following ru
 - `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
   absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
   `keccak256(rlp.encode(block_access_list))`.
+- `stark-proof-hash` and `block-deps-hash` must be present in headers after the [EIP-8288]
+  fork, and absent for earlier blocks. This rule was added by [EIP-8288].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -324,8 +328,8 @@ disconnect peers sending invalid blocks.
   computing and comparing the merkle trie hash of the withdrawals list. Note that no
   further validation of withdrawals is possible, since they are injected into the block by
   the consensus layer.
-- After the [EIP-8288] fork, `keccak256(stark-proof)` must match the `stark_proof_hash` in
-  the block header's `recursive_stark` field. This rule was added by [EIP-8288].
+- After the [EIP-8288] fork, `keccak256(stark-proof)` must match the `stark-proof-hash` of
+  the block header. This rule was added by [EIP-8288].
 - The `ommers` list may contain at most two headers.
 - `keccak256(ommers)` must match the `ommers-hash` of the block header.
 - The headers contained in the `ommers` list must be valid headers. Their block number
@@ -501,7 +505,8 @@ in a single message may be subject to implementation-defined limits.
 This is the response to GetBlockBodies. The items in the list contain the body data of the
 requested blocks. The list may be empty if none of the requested blocks were available.
 
-The recommended soft limit for BlockBodies responses is 2 MiB.
+The recommended soft limit for BlockBodies responses is 2 MiB. After the [EIP-8288] fork,
+a single body's `stark-proof` can be up to 1.25 MiB, so a response may hold few bodies.
 
 ### NewBlock (0x07)
 
@@ -704,9 +709,10 @@ The recommended soft limit for Cells responses is 2 MiB.
 ### eth/72 with recursive STARK proofs ([EIP-8288])
 
 In-mempool signature and proof aggregation was added by [EIP-8288], which changed the
-definition of block bodies to include the `stark-proof` after `withdrawals`. No new wire
-protocol version was created for this change, since it was only a backwards-compatible
-addition to the block validity rules.
+definition of block headers to include `stark-proof-hash` and `block-deps-hash`, and block
+bodies to include the `stark-proof` after `withdrawals`. No new wire protocol version was
+created for this change, since it was only a backwards-compatible addition to the block
+validity rules.
 
 ### eth/72 ([EIP-8070], July 2026)
 
