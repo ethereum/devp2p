@@ -266,14 +266,14 @@ Ethereum block headers are encoded as follows:
 In certain protocol messages, the transaction and ommer lists are relayed together as a
 single item called the 'block body'.
 
-    block-body = [transactions, ommers, withdrawals, stark-proof]
+    block-body = [transactions, ommers, withdrawals, proofs]
     transactions = [tx₁, tx₂, ...]
     ommers = [header₁, header₂, ...]
     withdrawals = [withdrawal₁, withdrawal₂, ...]
-    stark-proof = B
+    proofs = B
 
-`stark-proof` must be present in block bodies after the [EIP-8288] fork, and absent for
-earlier blocks.
+`proofs` contains the `stark_proof` bytes defined by [EIP-8288]. It must be present in
+block bodies after that fork, and absent for earlier blocks.
 
 For the purpose of block propagation (now defunct), full blocks were relayed as a combined item:
 
@@ -328,7 +328,7 @@ disconnect peers sending invalid blocks.
   computing and comparing the merkle trie hash of the withdrawals list. Note that no
   further validation of withdrawals is possible, since they are injected into the block by
   the consensus layer.
-- After the [EIP-8288] fork, `keccak256(stark-proof)` must match the `stark-proof-hash` of
+- After the [EIP-8288] fork, `keccak256(proofs)` must match the `stark-proof-hash` of
   the block header. This rule was added by [EIP-8288].
 - The `ommers` list may contain at most two headers.
 - `keccak256(ommers)` must match the `ommers-hash` of the block header.
@@ -505,8 +505,7 @@ in a single message may be subject to implementation-defined limits.
 This is the response to GetBlockBodies. The items in the list contain the body data of the
 requested blocks. The list may be empty if none of the requested blocks were available.
 
-The recommended soft limit for BlockBodies responses is 2 MiB. After the [EIP-8288] fork,
-a single body's `stark-proof` can be up to 1.25 MiB, so a response may hold few bodies.
+The recommended soft limit for BlockBodies responses is 2 MiB.
 
 ### NewBlock (0x07)
 
@@ -710,7 +709,7 @@ The recommended soft limit for Cells responses is 2 MiB.
 
 In-mempool signature and proof aggregation was added by [EIP-8288], which changed the
 definition of block headers to include `stark-proof-hash` and `block-deps-hash`, and block
-bodies to include the `stark-proof` after `withdrawals`. No new wire protocol version was
+bodies to include `proofs` after `withdrawals`. No new wire protocol version was
 created for this change, since it was only a backwards-compatible addition to the block
 validity rules.
 
