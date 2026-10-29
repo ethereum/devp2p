@@ -682,8 +682,10 @@ Peers sending invalid or not requested element must be disconnected. For example
 peer sends cells that are not consistent with `cells` bitmap, it must be disconnected.
 
 For each index set in the `cells` bitmap, one cell is returned from every blob of the
-transaction at that index. Within a transaction's group, cells are listed by ascending
-index, and for each index in the order in which the blobs appear in the transaction.
+transaction at that index. Within a transaction's group, cells are listed in the order in
+which the blobs appear in the transaction, and for each blob by ascending cell index. The
+group therefore holds `len(blobs) * popcount(cells)` cells, and the cell of blob `b` at the
+`i`-th index set in the bitmap is at position `b * popcount(cells) + i`.
 
 A peer may omit entire transactions from the list, or clear indices from the `cells`
 bitmap, if they are unavailable or constrained. However, for any index set in the bitmap,
