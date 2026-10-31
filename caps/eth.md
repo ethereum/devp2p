@@ -259,15 +259,21 @@ Ethereum block headers are encoded as follows:
         parent-beacon-root: B_32,
         requests-hash: B_32,
         block-access-list-hash: B_32,
+        stark-proof-hash: B_32,
+        block-deps-hash: B_32,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
 single item called the 'block body'.
 
-    block-body = [transactions, ommers, withdrawals]
+    block-body = [transactions, ommers, withdrawals, proofs]
     transactions = [tx₁, tx₂, ...]
     ommers = [header₁, header₂, ...]
     withdrawals = [withdrawal₁, withdrawal₂, ...]
+    proofs = B
+
+`proofs` contains the `stark_proof` bytes defined by [EIP-8288]. It must be present in
+block bodies after that fork, and absent for earlier blocks.
 
 For the purpose of block propagation (now defunct), full blocks were relayed as a combined item:
 
@@ -298,6 +304,8 @@ headers are processed in sequence during chain synchronization, the following ru
 - `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
   absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
   `keccak256(rlp.encode(block_access_list))`.
+- `stark-proof-hash` and `block-deps-hash` must be present in headers after the [EIP-8288]
+  fork, and absent for earlier blocks. This rule was added by [EIP-8288].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -320,6 +328,8 @@ disconnect peers sending invalid blocks.
   computing and comparing the merkle trie hash of the withdrawals list. Note that no
   further validation of withdrawals is possible, since they are injected into the block by
   the consensus layer.
+- After the [EIP-8288] fork, `keccak256(proofs)` must match the `stark-proof-hash` of
+  the block header. This rule was added by [EIP-8288].
 - The `ommers` list may contain at most two headers.
 - `keccak256(ommers)` must match the `ommers-hash` of the block header.
 - The headers contained in the `ommers` list must be valid headers. Their block number
@@ -697,6 +707,14 @@ The recommended soft limit for Cells responses is 2 MiB.
 
 ## Change Log
 
+### eth/72 with recursive STARK proofs ([EIP-8288])
+
+In-mempool signature and proof aggregation was added by [EIP-8288], which changed the
+definition of block headers to include `stark-proof-hash` and `block-deps-hash`, and block
+bodies to include `proofs` after `withdrawals`. No new wire protocol version was
+created for this change, since it was only a backwards-compatible addition to the block
+validity rules.
+
 ### eth/72 ([EIP-8070], July 2026)
 
 Version 72 changed the [NewPooledTransactionHashes] message to include blob transaction
@@ -865,6 +883,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
 [EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
+[EIP-8288]: https://eips.ethereum.org/EIPS/eip-8288
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/shanghai.md
