@@ -368,16 +368,21 @@ The BAL is RLP-encoded as a list of account changes, sorted lexicographically by
 
     account-changes = [
         address: B_20,
-        storage-changes: [[slot: B_32, [[block-access-index: P, value: B_32], ...]], ...],
-        storage-reads: [slot₁: B_32, slot₂: B_32, ...],
+        storage-changes: [[slot: P, [[block-access-index: P, value: P], ...]], ...],
+        storage-reads: [slot₁: P, slot₂: P, ...],
         balance-changes: [[block-access-index: P, balance: P], ...],
         nonce-changes: [[block-access-index: P, nonce: P], ...],
         code-changes: [[block-access-index: P, code: B], ...],
     ]
 
-`storage-changes` must be sorted lexicographically by slot. Changes within each slot must
-be sorted by `block-access-index` ascending. `storage-reads` must be sorted
-lexicographically by slot.
+`slot`, `value`, `balance`, `nonce` and `block-access-index` are RLP integers (`P`): minimal
+big-endian with no leading zeros, so zero encodes as the empty string and a slot key or
+value is never zero-padded to 32 bytes. The header's `block-access-list-hash` commits to
+these bytes, so a 32-byte string encoding of the same key or value is not valid.
+
+`storage-changes` must be sorted by slot value ascending. Changes within each slot must
+be sorted by `block-access-index` ascending. `storage-reads` must be sorted by slot value
+ascending.
 
 Where `block-access-index` indicates when the change occurred:
 
