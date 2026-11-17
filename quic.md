@@ -15,6 +15,10 @@ Certificates should support key material for a P256-curve based key exchange. Th
 configuration must include support for the `TLS_AES_128_GCM_SHA256` cipher suite, and may
 include support for more cipher suites.
 
+Some browsers might reject certificates without any extensions. Certificates must
+therefore include at least one extension. For example, implementations can include
+the `keyUsage` extension with the `digitalSignature` bit set.
+
 ### Certificate Hashes in Discovery
 
 For node implementations that support QUIC, the ENR must include the SHA256 hashes of the
@@ -84,6 +88,17 @@ binding v1` label and a length of `32`.
 The server opens the first bidirectional stream and sends its `handshake`. dialer replies
 with its own id proof on the same stream. The server uses the recovered public key as 
 the node ID of the peer.
+
+## Connection Termination
+
+Currently connection termination protocol is defined only for the browser connections. To
+ensure that the result of request is delivered and processed by the browser, server should
+follow several steps described below.
+
+For any bidirectional stream, once the server closes its send side, the browser should
+close its send side as well. When no streams are open for a session, the browser should
+close the session. If the browser does not, the server closes the session after a timeout
+(e.g. 2 seconds).
 
 ## Sub-Protocol Messaging
 
