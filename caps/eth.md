@@ -312,8 +312,8 @@ disconnect peers sending invalid blocks.
   the block's number. This means that, in addition to the transaction validation rules
   given earlier, validating whether the `tx-type` is permitted at the block number is
   required, and validation of transaction gas must take the block number into account.
-- The sum of the `gas-limit`s of all transactions must not exceed the `gas-limit` of the
-  block.
+- The `gas-limit` of each transaction must not exceed the `gas-limit` of the block.
+  Their sum may exceed it, since a transaction only has to fit in the gas that remains.
 - The `transactions` of the block must be verified against the `txs-root` by computing and
   comparing the merkle trie hash of the transactions list.
 - The `withdrawals` of block body must be verified against the `withdrawals-root` by
