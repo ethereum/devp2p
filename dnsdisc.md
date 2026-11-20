@@ -82,7 +82,7 @@ Example in zone file format:
 To find nodes at a given DNS name, say "mynodes.org":
 
 1. Resolve the TXT record of the name and check whether it contains a valid
-   "enrtree-root=v1" entry. Let's say the `enr-root` hash contained in the entry is
+   "enrtree-root:v1" entry. Let's say the `enr-root` hash contained in the entry is
    "CFZUWDU7JNQR4VTCZVOJZ5ROV4".
 2. Verify the signature on the root against the known public key and check whether the
    sequence number is larger than or equal to any previous number seen for that name.
