@@ -50,8 +50,8 @@ where
   content, excluding the `sig=` part, encoded as URL-safe base64.
 
 Further TXT records on subdomains map hashes to one of three entry types. The subdomain
-name of any entry is the base32 encoding of the (abbreviated) keccak256 hash of its text
-content.
+name of any entry is the base32 encoding of the first 16 bytes of the keccak256 hash of
+its text content.
 
 - `enrtree-branch:<h₁>,<h₂>,...,<hₙ>` is an intermediate tree entry containing hashes of
   subtree entries.
