@@ -26,7 +26,7 @@ the compressed 32-byte binary public key.
 
 Example:
 
-    enrtree://AM5FCQLWIZX2QFPNJAP7VUERCCRNGRHWZG3YYHIUV7BVDQ5FDPRT2@nodes.example.org
+    enrtree://AKPYQIUQIL7PSIACI32J7FGZW56E5FKHEFCCOFHILBIMW3M6LWXS2@nodes.example.org
 
 This URL refers to a node list at the DNS name 'nodes.example.org' and is signed by the
 public key
