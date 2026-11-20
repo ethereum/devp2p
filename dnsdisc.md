@@ -22,7 +22,7 @@ key. The corresponding public key must be known to the client in order to verify
 To refer to a DNS node list, clients use a URL with 'enrtree' scheme. The URL contains the
 DNS name on which the list can be found as well as the public key that signed the list.
 The public key is contained in the username part of the URL and is the base32 encoding of
-the compressed 32-byte binary public key.
+the compressed 33-byte binary public key.
 
 Example:
 
