@@ -107,8 +107,8 @@ further bounded by PoS finality.
 The accounts in the `snap` protocol are analogous to the Ethereum RLP consensus encoding
 (same fields, same order), but in a **slim** format:
 
-- The code hash is `empty list` instead of `Keccak256("")`
-- The root hash is `empty list` instead of `Hash(<empty trie>)`
+- The code hash is the empty string (`0x80`) instead of `Keccak256("")`
+- The root hash is the empty string (`0x80`) instead of `Hash(<empty trie>)`
 
 This is done to avoid having to transfer the same 32+32 bytes for all plain accounts over
 the network.
