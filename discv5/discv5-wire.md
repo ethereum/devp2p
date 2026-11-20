@@ -187,7 +187,7 @@ PONG is the reply to PING.
 
     message-data = [request-id, [distance₁, distance₂, ..., distanceₙ]]
     message-type = 0x03
-    distanceₙ    = requested log2 distance, a positive integer
+    distanceₙ    = requested log2 distance, a non-negative integer
 
 FINDNODE queries for nodes at the given logarithmic distances from the recipient's node
 ID. When distance `0` is requested, the result set should contain the recipient's current
