@@ -527,8 +527,10 @@ RLP-encoded `legacy-tx` for non-typed legacy transactions.
 
 The `cells` element is a bitmap marking which cell indices can be fetched from the sending
 peer. For each bit set to one, the peer stores the cells at that index in every blob of
-all blob transactions included in the announcement. `cells` is only relevant for those
-entries that refer to blob transactions, and can be ignored when no blob transactions are
+all blob transactions included in the announcement. Cell index `i` is bit `i % 8` of byte
+`i / 8`, as in the SSZ serialization of a `Bitvector[128]`, and the `cells` bitmaps of
+[GetCells] and [Cells] use the same layout. `cells` is only relevant for those entries
+that refer to blob transactions, and can be ignored when no blob transactions are
 announced in the message.
 
 The recommended soft limit for this message is 4096 items (~150 KiB).
