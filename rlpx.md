@@ -74,8 +74,8 @@ creating those session keys is the 'handshake' and is carried out between the 'i
 (the node which opened the TCP connection) and the 'recipient' (the node which accepted it).
 
 1. initiator connects to recipient and sends its `auth` message
-2. recipient accepts, decrypts and verifies `auth` (checks that recovery of signature ==
-   `keccak256(ephemeral-pubk)`)
+2. recipient accepts, decrypts and verifies `auth` (recovers `remote-ephemeral-pubk` from the
+   signature)
 3. recipient generates `auth-ack` message from `remote-ephemeral-pubk` and `nonce`
 4. recipient derives secrets and sends the first encrypted frame containing the [Hello] message
 5. initiator receives `auth-ack` and derives secrets
