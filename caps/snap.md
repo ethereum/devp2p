@@ -226,7 +226,7 @@ Notes:
   proof **must** be attached to that and **only** that.
 - If a single account's storage is requested, serving nodes should only return slots
   starting with the requested starting hash, up to the last one or until the packet fills
-  up. It the entire storage range is not being returned, a Merkle proof **must** be
+  up. If the entire storage range is not being returned, a Merkle proof **must** be
   attached.
 - If a proof is attached, the responding node **must** Merkle prove the starting hash
   (even if it does not exist) and the last returned slot (if any exists after the starting
@@ -324,7 +324,7 @@ Caveats:
 `[reqID: P, codes: [code1: B, code2: B, ...]]`
 
 Returns a number of requested contract codes. The order is the same as in the request, but
-there might be gaps if not all codes are available or there might be fewer is QoS limits
+there might be gaps if not all codes are available or there might be fewer if QoS limits
 are reached.
 
 ### GetBlockAccessLists (0x08)
