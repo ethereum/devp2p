@@ -514,7 +514,7 @@ should be disconnected.
 `[txtypes: B, [txsize₁: P, txsize₂: P, ...], [txhash₁: B_32, txhash₂: B_32, ...], cells: B_16]`
 
 This message announces one or more transactions that have appeared in the network and
-which have not yet been included in a block. The message payload describes a list of of
+which have not yet been included in a block. The message payload describes a list of
 transactions, but note that it is encoded as four separate elements.
 
 The `txtypes` element is a byte array containing the announced [transaction types]. The
@@ -654,7 +654,7 @@ The recommended soft limit for BlockAccessLists responses is 2 MiB.
 
 ### GetCells (0x14)
 
-`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells : B_16]`
+`[request-id: P, [txhash₁: B_32, txhash₂: B_32, ...], cells: B_16]`
 
 This message requests the peer to return cell data of the given transaction hashes.
 The `cells` element is a bitmap specifying which cell indices are requested. For each bit 
