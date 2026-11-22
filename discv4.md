@@ -80,7 +80,7 @@ Every packet starts with a header:
 
     packet-header = hash || signature || packet-type
     hash = keccak256(signature || packet-type || packet-data)
-    signature = sign(packet-type || packet-data)
+    signature = sign(keccak256(packet-type || packet-data))
 
 The `hash` exists to make the packet format recognizable when running multiple protocols
 on the same UDP port. It serves no other purpose.
