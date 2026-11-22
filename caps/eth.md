@@ -613,7 +613,7 @@ The recommended soft limit for Receipts responses is 2 MiB.
 
 This is a notification about a change in the available block range on a peer.
 
-With this message, the peer announces that all blocks `b` with `earliest >= b >= latest`
+With this message, the peer announces that all blocks `b` with `earliest <= b <= latest`
 are available via [GetBlockBodies], and also that receipts for these blocks are available
 via [GetReceipts]. Headers are always assumed to be available for the full range of blocks
 from genesis.
