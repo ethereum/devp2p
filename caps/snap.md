@@ -250,7 +250,7 @@ Caveats:
   valuable to slightly force the limit (consider it soft only) when adding the last
   contract to avoid having to split it and prove it.
 - No special signaling is needed if there are no more slots after the last returned one,
-  as the attached Merkle proof for the last account will have all trie nodes right of the
+  as the attached Merkle proof for the last slot will have all trie nodes right of the
   proven path zero.
 
 ### StorageRanges (0x03)
