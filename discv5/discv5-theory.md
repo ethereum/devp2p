@@ -114,7 +114,7 @@ signed its node record. The signature also prevents replay of the handshake.
     id-signature = id_sign(sha256(id-signature-input))
 
 Finally, node A compares the `enr-seq` element of the WHOAREYOU challenge against its own node record
-sequence number. If the sequence number in the challenge is lower, it includes its record into the handshake
+sequence number. If the sequence number in the challenge is zero or lower, it includes its record into the handshake
 message packet. The request is now re-sent, with the message encrypted using the new session keys.
 
     A -> B    FINDNODE handshake message packet, encrypted with new initiator-key
