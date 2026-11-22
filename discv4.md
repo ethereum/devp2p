@@ -163,7 +163,7 @@ refers to a time in the past.
 
 This packet is the response to ENRRequest.
 
-- `request-hash` is the hash of the entire ENRRequest packet being replied to.
+- `request-hash` is the `hash` field of the header of the ENRRequest packet being replied to.
 - `ENR` is the node record.
 
 The recipient of the packet should verify that the node record is signed by the public key
