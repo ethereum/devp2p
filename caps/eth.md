@@ -259,6 +259,7 @@ Ethereum block headers are encoded as follows:
         parent-beacon-root: B_32,
         requests-hash: B_32,
         block-access-list-hash: B_32,
+        slot-number: P,
     ]
 
 In certain protocol messages, the transaction and ommer lists are relayed together as a
@@ -298,6 +299,8 @@ headers are processed in sequence during chain synchronization, the following ru
 - `block-access-list-hash` must be present in headers after the [Amsterdam fork], and
   absent for earlier blocks. This rule was added by [EIP-7928]. The hash is computed as
   `keccak256(rlp.encode(block_access_list))`.
+- `slot-number` must be present in headers after the [Amsterdam fork], and absent for
+  earlier blocks. This rule was added by [EIP-7843].
 
 For complete blocks, we distinguish between the validity of the block's EVM state
 transition, and the (weaker) 'data validity' of the block. The definition of state
@@ -861,6 +864,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7594]: https://eips.ethereum.org/EIPS/eip-7594
 [EIP-7642]: https://eips.ethereum.org/EIPS/eip-7642
 [EIP-7685]: https://eips.ethereum.org/EIPS/eip-7685
+[EIP-7843]: https://eips.ethereum.org/EIPS/eip-7843
 [EIP-7928]: https://eips.ethereum.org/EIPS/eip-7928
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
