@@ -184,8 +184,7 @@ account.
 - `reqID`: ID of the request this is a response for
 - `accounts`: List of consecutive accounts from the trie
   - `accHash`: Hash of the account address (trie path)
-  - `accBody`: Account body in slim format, as an RLP list nested in the entry, not a
-    byte string holding its encoding
+  - `accBody`: Account body in slim format, as an RLP list nested in the entry
 - `proof`: List of trie nodes proving the account range
 
 Notes:
