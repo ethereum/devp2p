@@ -138,6 +138,11 @@ components are byte-aligned to block size of cipher.
     frame-ciphertext = aes(aes-secret, frame-data || frame-padding)
     frame-padding = zero-fill frame-data to 16-byte boundary
 
+Here `aes(aes-secret, ...)` is AES-256 in CTR mode, keyed with the 32-byte `aes-secret`,
+with an all-zero initial counter block. Each side keeps one keystream for sending and one
+for receiving, and each runs on across the header and body of every frame; the counter is
+not reset between frames.
+
 See the [Capability Messaging] section for definitions of `frame-data` and `frame-size.`
 
 ### MAC
@@ -158,10 +163,12 @@ Recipient:
     ingress-mac = keccak256.init((mac-secret ^ recipient-nonce) || auth)
 
 When a frame is sent, the corresponding MAC values are computed by updating the
-`egress-mac` state with the data to be sent. The update is performed by XORing the header
-with the encrypted output of its corresponding MAC. This is done to ensure uniform
-operations are performed for both plaintext MAC and ciphertext. All MACs are sent
-cleartext.
+`egress-mac` state with the data to be sent. Each update encrypts the first 16 bytes of
+the current digest and XORs the result with the header ciphertext (for `header-mac`) or
+with that digest prefix (for `frame-mac`). Here `aes(mac-secret, x)` is the AES-256
+encryption of the single 16-byte block `x` under the 32-byte `mac-secret`. This is done to
+ensure uniform operations are performed for both plaintext MAC and ciphertext. All MACs
+are sent cleartext.
 
     header-mac-seed = aes(mac-secret, keccak256.digest(egress-mac)[:16]) ^ header-ciphertext
     egress-mac = keccak256.update(egress-mac, header-mac-seed)
