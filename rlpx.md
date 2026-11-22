@@ -255,7 +255,7 @@ in Hello because they may be used by a future version.
 - `listenPort` (legacy) specifies the port that the client is listening on (on the
   interface that the present connection traverses). If 0 it indicates the client is
   not listening. This field should be ignored.
-- `nodeId` is the secp256k1 public key corresponding to the node's private key.
+- `nodeKey` is the secp256k1 public key corresponding to the node's private key.
 
 ### Disconnect (0x01)
 
@@ -263,7 +263,7 @@ in Hello because they may be used by a future version.
 
 Inform the peer that a disconnection is imminent; if received, a peer should disconnect
 immediately. When sending, well-behaved hosts give their peers a fighting chance (read:
-wait 2 seconds) to disconnect to before disconnecting themselves.
+wait 2 seconds) to disconnect before disconnecting themselves.
 
 `reason` is an optional integer specifying one of a number of reasons for disconnect:
 
