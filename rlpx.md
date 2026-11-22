@@ -109,7 +109,7 @@ Secrets generated following the exchange of handshake messages:
 
     static-shared-secret = ecdh.agree(privkey, remote-pubk)
     ephemeral-key = ecdh.agree(ephemeral-privkey, remote-ephemeral-pubk)
-    shared-secret = keccak256(ephemeral-key || keccak256(nonce || initiator-nonce))
+    shared-secret = keccak256(ephemeral-key || keccak256(recipient-nonce || initiator-nonce))
     aes-secret = keccak256(ephemeral-key || shared-secret)
     mac-secret = keccak256(ephemeral-key || aes-secret)
 
