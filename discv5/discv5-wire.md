@@ -12,6 +12,8 @@ Here we present the notation that is used throughout this document.
     is recursive encoding as an RLP list\
 `a || b`\
     means binary concatenation of `a` and `b`\
+`uintN`\
+    is an unsigned integer of N bits, encoded as N/8 bytes in big-endian order\
 `xor(a, b)`\
     means binary XOR of `a` and `b`\
 `sha256(x)`\
