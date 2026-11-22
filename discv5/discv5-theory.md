@@ -20,9 +20,9 @@ The 'distance' between two node IDs is the bitwise XOR of the IDs, taken as the 
     distance(n₁, n₂) = n₁ XOR n₂
 
 In many situations, the logarithmic distance (i.e. length of differing suffix in bits) is used in place of the
-actual distance.
+actual distance. It is the bit length of the distance, so it is 0 for equal IDs and at most 256.
 
-    logdistance(n₁, n₂) = log2(distance(n₁, n₂))
+    logdistance(n₁, n₂) = ⌊log2(distance(n₁, n₂))⌋ + 1, or 0 if n₁ = n₂
 
 ### Maintaining The Local Node Record
 
@@ -216,7 +216,7 @@ secure random number generator.
 ## Node Table
 
 Nodes keep information about other nodes in their neighborhood. Neighbor nodes are stored in a routing table
-consisting of 'k-buckets'. For each `0 ≤ i < 256`, every node keeps a k-bucket for nodes of
+consisting of 'k-buckets'. For each `1 ≤ i ≤ 256`, every node keeps a k-bucket for nodes of
 `logdistance(self, n) == i`. The Node Discovery Protocol uses `k = 16`, i.e. every k-bucket contains up to
 16 node entries. The entries are sorted by time last seen — least-recently seen node at the head,
 most-recently seen at the tail.
