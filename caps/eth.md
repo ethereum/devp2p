@@ -467,9 +467,11 @@ have already been sent or received.
 `[request-id: P, [startblock: {P, B_32}, limit: P, skip: P, reverse: {0, 1}]]`
 
 Require peer to return a BlockHeaders message. The response must contain a number of block
-headers, of rising number when `reverse` is `0`, falling when `1`, `skip` blocks apart,
-beginning at block `startblock` (denoted by either number or hash) in the canonical chain,
-and with at most `limit` items.
+headers, of rising number when `reverse` is `0`, falling when `1`, with `skip` blocks
+left out between consecutive headers, beginning at block `startblock` (denoted by either
+number or hash) in the canonical chain, and with at most `limit` items. The numbers of
+consecutive headers thus differ by `skip + 1`: with `skip` set to `0`, the headers are
+adjacent blocks.
 
 ### BlockHeaders (0x04)
 
