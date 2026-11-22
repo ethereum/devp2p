@@ -57,7 +57,7 @@ For Bob to decrypt the message `R || iv || c || d`, he derives the shared 
 authentication keys <code>k<sub>E</sub> || k<sub>M</sub> = KDF(S, 32)</code>. Bob verifies
 the authenticity of the message by checking whether
 <code>d == MAC(sha256(k<sub>M</sub>), iv || c)</code> then obtains the plaintext as
-<code>m = AES(k<sub>E</sub>, iv || c)</code>.
+<code>m = AES(k<sub>E</sub>, iv, c)</code>.
 
 ## Node Identity
 
