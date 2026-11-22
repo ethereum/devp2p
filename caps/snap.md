@@ -174,7 +174,7 @@ Caveats:
 
 ### AccountRange (0x01)
 
-`[reqID: P, accounts: [[accHash: B_32, accBody: B], ...], proof: [node_1: B, node_2, ...]]`
+`[reqID: P, accounts: [[accHash: B_32, accBody: [nonce: P, balance: P, storageRoot: B, codeHash: B]], ...], proof: [node_1: B, node_2, ...]]`
 
 Returns a number of consecutive accounts and the Merkle proofs for the entire range
 (boundary proofs). The left-side proof must be for the requested origin hash (even if an
@@ -184,11 +184,13 @@ account.
 - `reqID`: ID of the request this is a response for
 - `accounts`: List of consecutive accounts from the trie
   - `accHash`: Hash of the account address (trie path)
-  - `accBody`: Account body in slim format
+  - `accBody`: Account body in slim format, as an RLP list nested in the entry
 - `proof`: List of trie nodes proving the account range
 
 Notes:
 
+- An account with hash `0x11..11`, nonce 1, balance 2, no storage and no code has the
+  entry `0xe6a0` `11..11` `c401028080`, not `0xe7a0` `11..11` `85c401028080`.
 - If the account range is the entire state (requested origin was `0x00..0` and all
   accounts fit into the response), no proofs should be sent along the response. This is
   unlikely for accounts, but since it's a common situation for storage slots, this clause
