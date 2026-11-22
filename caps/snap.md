@@ -363,7 +363,7 @@ Rationale:
 
 ### BlockAccessLists (0x09)
 
-`[reqID: P, bals: [bal1: B, bal2: B, ...]]`
+`[reqID: P, bals: [bal1, bal2, ...]]`
 
 Returns the requested block access lists in request order. Each `bal_i` corresponds
 positionally to `hashes[i]` from the request.
@@ -379,9 +379,10 @@ Notes:
   correspondence with the request is required.
 - The responding node is allowed to truncate from the tail to respect the size limit. The
   recommended soft limit for a single response is 2 MiB.
-- Each `bal_i` is the RLP-encoded BAL. It is valid if and only if `keccak256(bal_i)`
-  equals the `block_access_list_hash` field of the header identified by `hashes[i]`; see
-  [EIP-7928] for the BAL encoding.
+- Each `bal_i` is a BAL, embedded as an RLP list and not wrapped in a byte string, as in
+  [EIP-8189]. It is valid if and only if `keccak256(rlp.encode(bal_i))` equals the
+  `block_access_list_hash` field of the header identified by `hashes[i]`; see [EIP-7928]
+  for the BAL encoding.
 
 Rationale:
 
