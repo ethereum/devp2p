@@ -102,7 +102,7 @@ as well as any extra data after the list.
     to = [recipient-ip, recipient-udp-port, 0]
 
 The `expiration` field is an absolute UNIX time stamp. Packets containing a time stamp
-that lies in the past are expired may not be processed.
+that lies in the past are expired and may not be processed.
 
 The `enr-seq` field is the current ENR sequence number of the sender. This field is
 optional.
