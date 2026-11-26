@@ -189,10 +189,10 @@ when EIP-8288 is part of the mempool fork. Before that, nodes must not send wrap
 and must ignore received ones without penalty; message size limits still apply.
 
 Wrapper exchange is initiated by the [NewProofWrapperHashes] message. Nodes should announce
-newly validated wrappers to every eth/75 peer and, on connection, up to 64 held wrappers covering
-at least one pending transaction, most recent first. Nodes should not announce a wrapper
-hash already exchanged with the peer, but may re-announce it after a local interval or once
-it has left their bounded record of the connection. On receipt, a node may use the inline
+newly validated wrappers to every eth/75 peer and, on connection, up to 64 held wrappers
+covering at least one pending transaction, most recent first. Nodes should not announce a
+wrapper hash already exchanged with the peer, but may re-announce it after a local interval
+or once it has left their bounded record of the connection. On receipt, a node may use the inline
 transaction metadata to choose and order fetches. It requests wrappers using
 [GetProofWrappers], from one announcer at a time, and tries another announcer after an
 empty response or timeout.
