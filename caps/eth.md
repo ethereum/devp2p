@@ -238,6 +238,41 @@ Wrapper messages are subject to the following peer-penalty rules:
 Nodes should bound served ProofWrappers bytes globally and divide the budget fairly between
 peers, for example 32 MiB/s in total and at most 8 MiB/s per peer.
 
+From eth/76, nodes also relay mode `1` wrappers, which carry one recursive proof in place of
+direct witnesses. eth/76 announcements carry coverage hints, `deps-hash` and `txs-hash`. A
+node may skip fetching a wrapper when both hints match a held wrapper validated under the
+current rules. Matching `deps-hash` alone does not identify the transactions.
+
+Nodes should announce a wrapper on eth/76 only if, compared with the union of held,
+validated wrappers exchanged with or announced by the peer under the same rules, it adds
+transaction coverage, reduces proof bytes or estimated verification work for the peer, or
+supplies a recursive proof for an EIP-8288 inclusion list where the peer has only direct
+witnesses. Different proof bytes alone do not justify another announcement. Mode `0`
+offers are compared only against mode `0` coverage.
+
+Before fetching a wrapper, a node may request its transaction hashes using
+[GetProofWrapperManifests], but should do so only when comparing them with held coverage
+may avoid the fetch. Otherwise it should request the wrapper directly.
+
+An aggregate cannot reconstruct missing direct witnesses. While connected to eth/75 peers,
+nodes should fetch offered mode `0` wrappers not already covered by retained mode `0`
+wrappers, even when aggregates cover the same transactions, and should retain and announce
+validated mode `0` wrappers covering pending transactions. Message forms follow the
+negotiated version, not the wrapper mode: eth/75 peers receive only mode `0` wrappers, in
+full, through the eth/75 message forms.
+
+eth/76 adds the following rules to those above:
+
+- Wrappers must be validated before re-aggregation.
+- Announcement hints, inline metadata and manifests must match the reconstructed wrapper
+  before proof verification. A mismatch must cause discard, and should cause disconnection,
+  independently of proof validity.
+- Hints and manifests are claims of their sender. Fetch decisions based only on them must
+  not suppress fetching the same wrapper from another announcer or mark its coverage as
+  validated, and mismatches are attributed only to their sender.
+- Wrappers validated only under previous rules must not be used to suppress announcements
+  or fetches.
+
 ### Transaction Encoding and Validity
 
 Transaction objects exchanged by peers have one of two encodings. In definitions across
@@ -494,6 +529,25 @@ The complete canonical RLP encoding must not exceed `MAX_WRAPPER_BYTES` (2 MiB),
 wrapper hash is `keccak256` of it. Wrappers with non-canonical encoding, extra fields or
 trailing bytes are malformed. Decoders must accept structurally valid dependencies with
 unknown or disabled scheme identifiers; scheme support is checked by EIP-8288 validation.
+
+From eth/76, mode `1` (recursive proof) is also defined:
+
+    content = [deps, recursive-stark: B]
+
+where `recursive-stark` is a single non-empty proof covering all `deps`.
+
+In eth/76 [ProofWrappers] responses to a request with `compact` set to `1`, the responder
+may replace a transaction encoding with a reference `[encoding-hash: B_32]` if that is
+smaller. It should do so when prior exchanges indicate the requester holds the encoding.
+`encoding-hash` is `keccak256` of the pooled transaction bytes, excluding their RLP string
+prefix. References are RLP lists, while transactions are byte strings.
+
+The requester resolves references from any locally cached, validated encoding, regardless
+of which peer supplied it, and checks their hashes. The reconstructed wrapper determines
+the wrapper hash and size limit, and must not exceed the announced `length`. If an encoding
+is missing, the requester must discard the item without penalizing the peer, and should
+request it again with `compact` set to `0`. References in a response to a request with
+`compact` set to `0` are malformed.
 
 ## Protocol Messages
 
@@ -871,6 +925,16 @@ value exceeds its bound, or it describes more than 17 transactions. Once the wra
 arrives, the metadata must match its transactions exactly, and must be empty where required
 above. Metadata establishes neither coverage nor validity.
 
+In eth/76, the message has the following form:
+
+`[[mode₁: P, length₁: P, hash₁: B_32, deps-hash₁: B_32, txs-hash₁: B_32, txs-meta₁], ...]`
+
+`mode` is `0` or `1`. `deps-hash` is `keccak256` of the concatenated entries of the
+wrapper's `deps` list, and `txs-hash` is `keccak256` of its concatenated, ascending
+consensus transaction hashes. `txs-meta` is as above for mode `0`, and must be the empty
+list for mode `1`. The concatenated hashes of a non-empty `txs-meta` must hash to
+`txs-hash`. All other rules of the eth/75 form apply.
+
 ### GetProofWrappers (0x19)
 
 `[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
@@ -878,6 +942,13 @@ above. Metadata establishes neither coverage nor validity.
 This message requests 1 to 32 distinct proof wrappers by hash. Each hash must have been
 announced by the recipient on this connection. The recipient treats hashes it has not
 announced as unavailable, and must not penalize the request.
+
+In eth/76, the message has the following form:
+
+`[request-id: P, compact: P, [hash₁: B_32, hash₂: B_32, ...]]`
+
+`compact` is `0` or `1`. With `0`, returned wrappers must contain complete transaction
+encodings. With `1`, the responder may use hash references (see [Proof Wrapper Encoding]).
 
 ### ProofWrappers (0x1a)
 
@@ -898,7 +969,42 @@ limit must not be penalized, and an empty response does not count towards a limi
 sources tried for a wrapper. Omissions before the last returned wrapper may be scored in
 proportion to the wrappers withheld. Unanswered requests should count against the peer.
 
+In eth/76, responses may carry either mode, and the requester reconstructs referenced
+encodings before checking a wrapper against its announcement.
+
+### GetProofWrapperManifests (0x1b)
+
+`[request-id: P, [hash₁: B_32, hash₂: B_32, ...]]`
+
+This message requests the manifests of 1 to 32 distinct proof wrappers, each announced by
+the recipient on this connection. The recipient treats other hashes as in
+[GetProofWrappers]. A wrapper's manifest is the strictly ascending list of all its consensus
+transaction hashes, regardless of its mode and transaction count.
+
+### ProofWrapperManifests (0x1c)
+
+`[request-id: P, [[hash₁: B_32, [txhash₁: B_32, txhash₂: B_32, ...]], ...]]`
+
+This is the response to GetProofWrapperManifests, returning the manifests of available
+validated wrappers, paired with their hashes. The ordering, omission, soft limit,
+empty-response and scoring rules of [ProofWrappers] apply, with complete manifests in place
+of wrappers. Served manifests count towards the serving budget.
+
+A manifest is malformed if it is empty, its hashes are not strictly ascending, its RLP
+encoding is not smaller than the announced wrapper `length`, or its concatenated hashes do
+not hash to the sender's announced `txs-hash`. There is no 17-transaction limit. A manifest
+must also match the wrapper if the requester fetches it from the same peer.
+
 ## Change Log
+
+### eth/76 ([EIP-XXXX])
+
+Version 76 added relay of [EIP-8288] recursive proof wrappers (mode `1`). The
+[NewProofWrapperHashes] message gained the `deps-hash` and `txs-hash` coverage hints, and
+[GetProofWrappers] gained the `compact` flag, allowing [ProofWrappers] responses to
+reference transaction encodings by hash. Two new messages, [GetProofWrapperManifests] and
+[ProofWrapperManifests], were added with message IDs 0x1b and 0x1c. Peers use the message
+forms of the negotiated version, so eth/75 peers keep receiving mode `0` wrappers in full.
 
 ### eth/75 ([EIP-8437])
 
@@ -1070,6 +1176,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [GetProofWrappers]: #getproofwrappers-0x19
 [ProofWrappers]: #proofwrappers-0x1a
 [Proof Wrapper Encoding]: #proof-wrapper-encoding
+[GetProofWrapperManifests]: #getproofwrappermanifests-0x1b
+[ProofWrapperManifests]: #proofwrappermanifests-0x1c
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -1097,6 +1205,7 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-8288]: https://eips.ethereum.org/EIPS/eip-8288
 [EIP-8437]: https://eips.ethereum.org/EIPS/eip-8437
 [EIP-8512]: https://eips.ethereum.org/EIPS/eip-8512
+[EIP-XXXX]: https://github.com/ethereum/EIPs/pull/12713
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/shanghai.md
