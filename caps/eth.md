@@ -389,6 +389,24 @@ When a BAL is received, it must be validated by computing `keccak256(rlp.encode(
 comparing against the `block-access-list-hash` in the corresponding block header. For
 complete BAL generation rules, see [EIP-7928].
 
+### Dependency Proof Encoding
+
+After the [EIP-8288] fork, every block commits to a dependency proof through the
+`dependency-proof-hash` field of its header. The proof can be requested separately via the
+[GetDependencyProofs] message. It is transmitted as the serialized proof bytes defined in
+EIP-8288:
+
+    dependency-proof = B
+
+A block without dependencies has an empty `dependency-proof`, and its
+`dependency-proof-hash` is `keccak256` of the empty byte string. A non-empty proof must not
+be larger than EIP-8288's `MAX_DEPENDENCY_PROOF_BYTES`.
+
+When a dependency proof is received, it must be validated by comparing
+`keccak256(dependency-proof)` against the `dependency-proof-hash` in the corresponding
+block header. The size may be checked before hashing. Verifying the proof against
+`block-deps-hash` is part of block validation under EIP-8288, not of the wire protocol.
+
 ## Protocol Messages
 
 In most messages, the first element of the message data list is the `request-id`. For
@@ -695,7 +713,51 @@ A peer may respond with an empty list if none of the requested cells are availab
 
 The recommended soft limit for Cells responses is 2 MiB.
 
+### GetDependencyProofs (0x16)
+
+`[request-id: P, [blockhash₁: B_32, blockhash₂: B_32, ...]]`
+
+Require peer to return a DependencyProofs message containing the dependency proofs of the
+given block hashes. The number of proofs that can be requested in a single message may be
+subject to implementation-defined limits.
+
+Proofs are only available for blocks after [EIP-8288] activation and within the retention
+period defined therein. Implementations should rate-limit GetDependencyProofs requests per
+peer.
+
+### DependencyProofs (0x17)
+
+`[request-id: P, [dependency-proof₁, dependency-proof₂, ...]]`
+
+This is the response to GetDependencyProofs. The *n*-th element corresponds to the *n*-th
+block hash of the request. The RLP empty string (`0x80`) is returned for blocks where the
+proof is unavailable. See [Dependency Proof Encoding] for validation of returned proofs.
+
+The response may contain fewer elements than the request. It then covers a prefix of the
+request, and the requester treats the remaining hashes as not served, not as unavailable,
+and may request them again.
+
+An empty element for a block whose `dependency-proof-hash` is not the hash of the empty
+byte string means the proof is unavailable. It must not be treated as an invalid response,
+and the requester should request the proof from another peer.
+
+The response is invalid if it contains more elements than the request had hashes, or a
+non-empty element that is larger than `MAX_DEPENDENCY_PROOF_BYTES` or does not match its
+header. Invalid responses must be discarded, and the peer should be disconnected.
+
+The recommended soft limit for DependencyProofs responses is 2 MiB. A response containing a
+single proof larger than the soft limit is valid.
+
 ## Change Log
+
+### eth/74 ([EIP-8512])
+
+Version 74 added peer-to-peer exchange of [EIP-8288] dependency proofs, so that nodes
+validating blocks by re-execution can obtain them during synchronization. Two new
+messages, [GetDependencyProofs] and [DependencyProofs], were added with message IDs 0x16
+and 0x17, following [Cells]. Version 74 extends eth/72. It may be negotiated before
+EIP-8288 activates; until then, no proofs exist and peers answer GetDependencyProofs with
+empty elements.
 
 ### eth/72 ([EIP-8070], July 2026)
 
@@ -842,6 +904,9 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [Block Access List Encoding]: #block-access-list-encoding
 [GetCells]: #getcells-0x14
 [Cells]: #cells-0x15
+[GetDependencyProofs]: #getdependencyproofs-0x16
+[DependencyProofs]: #dependencyproofs-0x17
+[Dependency Proof Encoding]: #dependency-proof-encoding
 [RLPx]: ../rlpx.md
 [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 [EIP-1559]: https://eips.ethereum.org/EIPS/eip-1559
@@ -865,6 +930,8 @@ Version numbers below 60 were used during the Ethereum PoC development phase.
 [EIP-7975]: https://eips.ethereum.org/EIPS/eip-7975
 [EIP-8070]: https://eips.ethereum.org/EIPS/eip-8070
 [EIP-8159]: https://eips.ethereum.org/EIPS/eip-8159
+[EIP-8288]: https://eips.ethereum.org/EIPS/eip-8288
+[EIP-8512]: https://eips.ethereum.org/EIPS/eip-8512
 [The Merge]: https://eips.ethereum.org/EIPS/eip-3675
 [London hard fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/london.md
 [Shanghai fork]: https://github.com/ethereum/execution-specs/blob/8dbde99b132ff8d8fcc9cfb015a9947ccc8b12d6/network-upgrades/mainnet-upgrades/shanghai.md
