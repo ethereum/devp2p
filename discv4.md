@@ -120,6 +120,10 @@ sent in addition to pong in order to receive an endpoint proof.
 
 Pong is the reply to ping.
 
+`to` is the endpoint of the ping sender as the recipient observed it: the IP address and
+UDP port from which the ping was received, with the TCP port of the ping's `from` field.
+It lets the ping sender learn its external address.
+
 `ping-hash` should be equal to `hash` of the corresponding ping packet. Implementations
 should ignore unsolicited pong packets that do not contain the hash of the most recent
 ping packet.
