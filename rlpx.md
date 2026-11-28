@@ -198,7 +198,9 @@ The initial [Hello] message is encoded as follows:
 where `msg-id` is an RLP-encoded integer identifying the message and `msg-data` is an RLP
 list containing the message data.
 
-All messages following Hello are compressed using the Snappy algorithm.
+Once both sides have sent their Hello, and both advertise version 5 or later, all further
+messages are compressed using the Snappy algorithm. Hello itself is never compressed, nor
+is a Disconnect sent before the peer's Hello has been received.
 
     frame-data = msg-id || snappyCompress(msg-data)
     frame-size = length of frame-data encoded as a 24bit big-endian integer
